@@ -8,12 +8,12 @@ Specific library versions, values in configuration files, environment variables,
 This is specifically true for analysis that need extreme accuracy, such as automatic exploit generation.
 
 `archr` is an implementation of such a _target-centric_ analysis paradigm.
-It consists of two concepts: a `Bow`, which describes the specification of the target itself, how it is configured, how it will be launched, and how it would be interacted with, and an `Arrow`, which specializes this target for specific analysis actions, such as tracing, symbolic execution, and so on.
+It consists of two concepts: a `Target`, which describes the specification of the target itself, how it is configured, how it will be launched, and how it would be interacted with, and an `Arrow`, which specializes this target for specific analysis actions, such as tracing, symbolic execution, and so on.
 
-The following `Bow`s are planned:
+The following `Target`s are planned:
 
-* DockerBow, which is a combination of (a) a docker image, (b) environment variables, (c) command to launch the target with, and (d) endpoint information (network port #, or stdin). Note that all this information can be generated from a dockerfile.
-* LocalBow, which just describes running the target in the local system
+* DockerImageTarget, which is a combination of (a) a docker image, (b) environment variables, (c) command to launch the target with, and (d) endpoint information (network port #, or stdin). Note that all this information can be generated from a dockerfile.
+* LocalTarget, which just describes running the target in the local system
 
 Arrows would be able to request certain customizations of the bow, such as disabling ASLR, relaxing security policies (for ptrace), etc.
 The following `Arrow`s are planned:
