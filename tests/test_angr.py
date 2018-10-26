@@ -1,6 +1,9 @@
 import archr
 import os
 
+def setup_module():
+	os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
+
 def test_env_angr():
 	t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
 	project = t.fire_angr_project()

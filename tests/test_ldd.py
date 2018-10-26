@@ -1,4 +1,8 @@
 import archr
+import os
+
+def setup_module():
+	os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
 
 def test_cat_ldd():
 	t = archr.targets.DockerImageTarget('archr-test:cat').build().start()
