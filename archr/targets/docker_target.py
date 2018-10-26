@@ -1,5 +1,6 @@
 import subprocess
 import docker
+import json
 
 from . import Target
 
@@ -83,3 +84,11 @@ class DockerImageTarget(Target):
             docker_args + command_args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
         )
+
+    @property
+    def ip_address(self):
+        if self.container is None:
+            return None
+        return json.loads(
+            subprocess.Popen(["docker", "inspect", self.container.id], stdout=subprocess.PIPE).communicate()[0].decode()
+        )[0]['NetworkSettings']['IPAddress']
