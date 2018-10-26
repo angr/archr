@@ -63,21 +63,23 @@ class DockerImageTarget(Target):
             privileged=True, security_opt=["seccomp=unconfined"], #for now, hopefully...
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
         )
-        try: os.makedirs(self.mounted_path)
+        try: os.makedirs(self.local_path)
         except OSError: pass
-        os.system("sudo mount -o bind %s %s" % (self.merged_path, self.mounted_path))
+        os.system("sudo mount -o bind %s %s" % (self._merged_path, self.local_path))
         return self
 
     def stop(self):
         if self.container:
             self.container.kill()
-        os.system("sudo umount %s" % self.mounted_path)
-        os.rmdir(self.mounted_path)
+        os.system("sudo umount %s" % self.local_path)
+        os.rmdir(self.local_path)
 
     def run_command(
         self, args=None, args_prefix=None, args_suffix=None, aslr=True,
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ): #pylint:disable=arguments-differ
+        assert self.container is not None
+
         command_args = args or self.target_args
         if args_prefix:
             command_args = args_prefix + command_args
@@ -113,19 +115,19 @@ class DockerImageTarget(Target):
         return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k ]
 
     @property
-    def merged_path(self):
+    def _merged_path(self):
         return self.container.attrs['GraphDriver']['Data']['MergedDir']
 
     @property
-    def mounted_path(self):
+    def local_path(self):
         return "/tmp/archr_mounts/%s" % self.container.id
 
-    def _container_path(self, path):
-        if not path.startswith(self.mounted_path):
-            path = os.path.join(self.mounted_path, path.lstrip("/"))
+    def resolve_local_path(self, path):
+        if not path.startswith(self.local_path):
+            path = os.path.join(self.local_path, path.lstrip("/"))
         realpath = os.path.realpath(path)
-        if not realpath.startswith(self.mounted_path):
-            realpath = os.path.join(self.mounted_path, realpath.lstrip("/"))
+        if not realpath.startswith(self.local_path):
+            realpath = os.path.join(self.local_path, realpath.lstrip("/"))
         return realpath
 
     #
@@ -138,7 +140,6 @@ class DockerImageTarget(Target):
     #   return self.container.exec_run('../rr/bin/rr dump -d /home/victim/.local/share/rr/latest-trace').output
 
     def fire_ldd(self):
-        assert self.container is not None
         mem_map_str,_ = self.run_command([ "ldd", self.target_path ], aslr=False).communicate()
         entries = [l.strip() for l in mem_map_str.decode('utf-8').splitlines()]
         parsed = { }
@@ -156,10 +157,10 @@ class DockerImageTarget(Target):
             return self.project
         lib_mapping = self.fire_ldd()
 
-        the_libs = [ self._container_path(lib) for lib in lib_mapping if lib.startswith("/") ]
+        the_libs = [ self.resolve_local_path(lib) for lib in lib_mapping if lib.startswith("/") ]
         lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in lib_mapping.items() }
         bin_opts = { "base_addr": 0x555555554000 }
-        the_binary = self._container_path(self.target_path)
+        the_binary = self.resolve_local_path(self.target_path)
 
         p = angr.Project(the_binary, force_load_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts)
         self.project = p
@@ -167,5 +168,5 @@ class DockerImageTarget(Target):
 
     def fire_angr_full_init_state(self):
         project = self.fire_angr_project()
-        s = project.factory.full_init_state(concrete_fs=True, chroot=self.mounted_path, args=self.target_args, env=self.target_env)
+        s = project.factory.full_init_state(concrete_fs=True, chroot=self.local_path, args=self.target_args, env=self.target_env)
         return s

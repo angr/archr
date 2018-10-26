@@ -6,9 +6,9 @@ def setup_module():
 
 def test_env_mount():
 	t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
-	assert os.path.exists(os.path.join(t.mounted_path, "./"+t.target_path))
+	assert os.path.exists(os.path.join(t.local_path, "./"+t.target_path))
 	t.stop()
-	assert not os.path.exists(os.path.join(t.mounted_path, "./"+t.target_path))
+	assert not os.path.exists(os.path.join(t.local_path, "./"+t.target_path))
 
 if __name__ == '__main__':
 	test_env_mount()
