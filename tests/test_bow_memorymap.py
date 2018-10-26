@@ -6,7 +6,8 @@ def setup_module():
 
 def test_cat_ldd():
 	t = archr.targets.DockerImageTarget('archr-test:cat').build().start()
-	s = t.fire_ldd()
+	b = archr.bows.MemoryMapBow(t)
+	s = b.fire()
 	assert s == {'linux-vdso.so.1': 140737354113024, '/lib/x86_64-linux-gnu/libc.so.6': 140737345503232, '/lib64/ld-linux-x86-64.so.2': 140737351864320}
 	t.stop()
 

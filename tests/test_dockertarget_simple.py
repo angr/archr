@@ -1,5 +1,6 @@
 import socket
 import archr
+import time
 import os
 
 def setup_module():
@@ -44,7 +45,11 @@ def test_nccat_simple():
 	t = archr.targets.DockerImageTarget('archr-test:nccat').build().start()
 	p = t.run_command()
 	assert t.tcp_ports == [ 1337 ]
-	s = socket.create_connection((t.ipv4_address, 1337))
+	try:
+		s = socket.create_connection((t.ipv4_address, 1337))
+	except ConnectionRefusedError:
+		time.sleep(5)
+		s = socket.create_connection((t.ipv4_address, 1337))
 	s.send(b"Hello\n")
 	assert s.recv(6) == b"Hello\n"
 	t.stop()
