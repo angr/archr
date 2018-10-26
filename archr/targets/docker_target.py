@@ -2,6 +2,7 @@ import subprocess
 import logging
 import docker
 import json
+import angr
 import os
 
 l = logging.getLogger("archr.target.docker_target")
@@ -34,6 +35,7 @@ class DockerImageTarget(Target):
         self.image = None
         self.container = None
         self.subprocess = None
+        self.project = None
 
     def build(self, *args, **kwargs):
         self.image = self._client.images.get(self.image_id)
@@ -118,6 +120,14 @@ class DockerImageTarget(Target):
     def mounted_path(self):
         return "/tmp/archr_mounts/%s" % self.container.id
 
+    def _container_path(self, path):
+        if not path.startswith(self.mounted_path):
+            path = os.path.join(self.mounted_path, path.lstrip("/"))
+        realpath = os.path.realpath(path)
+        if not realpath.startswith(self.mounted_path):
+            realpath = os.path.join(self.mounted_path, realpath.lstrip("/"))
+        return realpath
+
     #
     # The things below will eventually be arrows?
     #
@@ -141,38 +151,21 @@ class DockerImageTarget(Target):
             parsed[libname] = libaddr
         return parsed
 
-    #def angr_project(self):
-    #   if self.project:
-    #       return self.project
-    #   fsdir = self._get_fs()
-    #   lib_paths = [os.path.join(fsdir, 'usr/lib'),
-    #                os.path.join(fsdir, 'lib'),
-    #                os.path.join(fsdir, 'lib/i386-linux-gnu')]
-    #   lib_opts = { lib : {'base_addr' : libaddr} for lib, libaddr in self.get_memory_map() }
-    #   the_binary = os.path.join(fsdir, self.target_path.lstrip("/"))
-    #   p = angr.Project(the_binary, load_options={'ld_path':lib_paths, 'lib_opts':lib_opts})
-    #   self.project = p
-    #   return p
+    def fire_angr_project(self):
+        if self.project:
+            return self.project
+        lib_mapping = self.fire_ldd()
 
-    #def angr_full_init_state(self, crashing_input):
-    #   args = None
-    #   if not self.extracted_fs:
-    #       self._get_fs()
-    #   if not self.project:
-    #       self.angr_project()
-    #   if crashing_input:
-    #       if crashing_input.type == 'args':
-    #           args = crashing_input.input_args
-    #   s = self.project.factory.full_init_state(concrete_fs=True, chroot=self.extracted_fs, args=None)
-    #   # TODO: Preconstrain input based on the crash other than args
-    #   return s
+        the_libs = [ self._container_path(lib) for lib in lib_mapping if lib.startswith("/") ]
+        lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in lib_mapping.items() }
+        bin_opts = { "base_addr": 0x555555554000 }
+        the_binary = self._container_path(self.target_path)
 
-    #def _get_fs(self):
-    #   if self.extracted_fs:
-    #       return self.extracted_fs
-    #   fsdir = tempfile.mkdtemp()
-    #   tarstuff = self.save()
-    #   cmdline = 'tar -C %s -x --exclude="/dev" -f %s' % (fsdir, tarstuff)
-    #   os.system(cmdline)
-    #   self.extracted_fs = fsdir
-    #   return fsdir
+        p = angr.Project(the_binary, force_load_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts)
+        self.project = p
+        return p
+
+    def fire_angr_full_init_state(self):
+        project = self.fire_angr_project()
+        s = project.factory.full_init_state(concrete_fs=True, chroot=self.mounted_path, args=self.target_args, env=self.target_env)
+        return s
