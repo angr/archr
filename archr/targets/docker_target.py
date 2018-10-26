@@ -108,11 +108,17 @@ class DockerImageTarget(Target):
 
     @property
     def tcp_ports(self):
-        return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'tcp' in k ]
+        try:
+            return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'tcp' in k ]
+        except KeyError:
+            return [ ]
 
     @property
     def udp_ports(self):
-        return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k ]
+        try:
+            return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k ]
+        except KeyError:
+            return [ ]
 
     @property
     def _merged_path(self):
@@ -129,44 +135,3 @@ class DockerImageTarget(Target):
         if not realpath.startswith(self.local_path):
             realpath = os.path.join(self.local_path, realpath.lstrip("/"))
         return realpath
-
-    #
-    # The things below will eventually be arrows?
-    #
-
-    #def rr_trace(self):
-    #   binargs = ['../rr/bin/rr', 'record', '-n'] + binargs
-    #   self.container.exec_run('pkill rr')
-    #   return self.container.exec_run('../rr/bin/rr dump -d /home/victim/.local/share/rr/latest-trace').output
-
-    def fire_ldd(self):
-        mem_map_str,_ = self.run_command([ "ldd", self.target_path ], aslr=False).communicate()
-        entries = [l.strip() for l in mem_map_str.decode('utf-8').splitlines()]
-        parsed = { }
-        for entry in entries:
-            if '=>' in entry:
-                libname, paren_addr = entry.split('=>')[1].split()
-            else:
-                libname, paren_addr = entry.split()
-            libaddr = int(paren_addr.strip("()"), 16)
-            parsed[libname] = libaddr
-        return parsed
-
-    def fire_angr_project(self):
-        if self.project:
-            return self.project
-        lib_mapping = self.fire_ldd()
-
-        the_libs = [ self.resolve_local_path(lib) for lib in lib_mapping if lib.startswith("/") ]
-        lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in lib_mapping.items() }
-        bin_opts = { "base_addr": 0x555555554000 }
-        the_binary = self.resolve_local_path(self.target_path)
-
-        p = angr.Project(the_binary, force_load_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts)
-        self.project = p
-        return p
-
-    def fire_angr_full_init_state(self):
-        project = self.fire_angr_project()
-        s = project.factory.full_init_state(concrete_fs=True, chroot=self.local_path, args=self.target_args, env=self.target_env)
-        return s
