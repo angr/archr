@@ -1,2 +1,2 @@
 from ubuntu:latest
-entrypoint /bin/false
+entrypoint ["/bin/false"]
