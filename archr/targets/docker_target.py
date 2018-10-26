@@ -86,9 +86,17 @@ class DockerImageTarget(Target):
         )
 
     @property
-    def ip_address(self):
+    def ipv4_address(self):
         if self.container is None:
             return None
         return json.loads(
             subprocess.Popen(["docker", "inspect", self.container.id], stdout=subprocess.PIPE).communicate()[0].decode()
         )[0]['NetworkSettings']['IPAddress']
+
+    @property
+    def tcp_ports(self):
+        return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'tcp' in k ]
+
+    @property
+    def udp_ports(self):
+        return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k ]

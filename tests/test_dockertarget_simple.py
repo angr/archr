@@ -43,7 +43,8 @@ def test_entrypoint_env():
 def test_nccat_simple():
 	t = archr.targets.DockerImageTarget('archr-test:nccat').build().start()
 	p = t.run_command()
-	s = socket.create_connection((t.ip_address, 1337))
+	assert t.tcp_ports == [ 1337 ]
+	s = socket.create_connection((t.ipv4_address, 1337))
 	s.send(b"Hello\n")
 	assert s.recv(6) == b"Hello\n"
 	t.stop()
