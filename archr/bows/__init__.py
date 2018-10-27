@@ -1,3 +1,5 @@
+import sys
+
 class Bow:
 	def __init__(self, target):
 		"""
@@ -15,4 +17,7 @@ class Bow:
 from .angr_project import angrProjectBow
 from .angr_state import angrStateBow
 from .memory_map import MemoryMapBow
-from .tube import TubeBow
+from .nc import NetCatBow
+
+if 'nose' not in sys.modules:
+	from .tube import TubeBow

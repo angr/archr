@@ -1,9 +1,9 @@
 import socket
-import pwnlib
+import nclib
 
 from . import Bow
 
-class TubeBow(Bow):
+class NetCatBow(Bow):
 	"""
 	Returns a pwntools tube connected to a running instance of the target.
 	"""
@@ -16,17 +16,14 @@ class TubeBow(Bow):
 		"""
 		if self.target.tcp_ports:
 			self.target.run_command()
-			r = pwnlib.tubes.remote.remote(self.target.ipv4_address, self.target.tcp_ports[0])
+			r = nclib.Netcat((self.target.ipv4_address, self.target.tcp_ports[0]))
 			return r
 		elif self.target.udp_ports:
 			self.target.run_command()
-			r = pwnlib.tubes.remote.remote(self.target.ipv4_address, self.target.tcp_ports[0], typ='udp')
+			r = nclib.Netcat((self.target.ipv4_address, self.target.tcp_ports[0]), udp=True)
 			return r
 		else:
 			sl, sr = socket.socketpair()
 			self.target.run_command(stdin=sr, stdout=sr, stderr=sr if stderr else None)
-			r = pwnlib.tubes.sock.sock(pwnlib.timeout.Timeout.default)
-			r.sock = sl
-			r.rhost = 'archr'
-			r.rport = 0
+			r = nclib.Netcat(sock=sl)
 			return r
