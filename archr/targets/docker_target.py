@@ -2,7 +2,6 @@ import subprocess
 import logging
 import docker
 import json
-import angr
 import os
 
 l = logging.getLogger("archr.target.docker_target")
