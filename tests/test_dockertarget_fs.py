@@ -10,5 +10,13 @@ def test_env_mount():
 	t.stop()
 	assert not os.path.exists(os.path.join(t.local_path, "./"+t.target_path))
 
+def test_env_injection():
+	t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
+	t.inject_path("/etc/passwd", "/poo")
+	with open("/etc/passwd") as lf, open(os.path.join(t.local_path, "poo")) as rf:
+		assert lf.read() == rf.read()
+	t.stop()
+
 if __name__ == '__main__':
 	test_env_mount()
+	test_env_injection()

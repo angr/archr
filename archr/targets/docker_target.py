@@ -1,8 +1,10 @@
 import subprocess
 import logging
+import tarfile
 import docker
 import json
 import os
+import io
 
 l = logging.getLogger("archr.target.docker_target")
 
@@ -46,8 +48,14 @@ class DockerImageTarget(Target):
         self.target_path = self.target_path or self.target_args[0]
         return self
 
-    def inject_file(self, from_path, to_path, perms=None):
-        pass
+    def inject_path(self, from_path, to_path=None):
+        f = io.BytesIO()
+        t = tarfile.open(fileobj=f, mode='w')
+        t.add(from_path, arcname=to_path)
+        t.close()
+        f.seek(0)
+        b = f.read()
+        self.container.put_archive("/", b)
 
     def remove(self):
         if self.container:

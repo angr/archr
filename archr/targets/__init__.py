@@ -69,7 +69,7 @@ class Target(ABC):
 
 
     @abstractmethod
-    def inject_file(self, from_path, to_path, perms=None):
+    def inject_path(self, from_path, to_path=None):
         """
         Inject a file into the target.
         :return:
