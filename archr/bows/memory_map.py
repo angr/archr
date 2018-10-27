@@ -11,13 +11,6 @@ class MemoryMapBow(Bow):
 
     def fire(self): #pylint:disable=arguments-differ
         mem_map_str,_ = self.target.run_command([ "ldd", self.target.target_path ], aslr=False).communicate()
-        entries = [l.strip() for l in mem_map_str.decode('utf-8').splitlines()]
-        parsed = { }
-        for entry in entries:
-            if '=>' in entry:
-                libname, paren_addr = entry.split('=>')[1].split()
-            else:
-                libname, paren_addr = entry.split()
-            libaddr = int(paren_addr.strip("()"), 16)
-            parsed[libname] = libaddr
-        return parsed
+        return parse_ldd(mem_map_str)
+
+from ..utils import parse_ldd
