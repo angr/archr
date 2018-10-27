@@ -13,8 +13,12 @@ def test_env_mount():
 def test_env_injection():
 	t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
 	t.inject_path("/etc/passwd", "/poo")
-	with open("/etc/passwd") as lf, open(os.path.join(t.local_path, "poo")) as rf:
+	with open("/etc/passwd") as lf, open(t.resolve_local_path("/poo")) as rf:
 		assert lf.read() == rf.read()
+
+	t.inject_paths([("/bin", "/poobin"), ("/lib64", "/poolib")])
+	assert len(os.listdir("/bin")) == len(os.listdir(t.resolve_local_path("/poobin")))
+	assert len(os.listdir("/lib64")) == len(os.listdir(t.resolve_local_path("/poolib")))
 	t.stop()
 
 if __name__ == '__main__':

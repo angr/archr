@@ -48,14 +48,29 @@ class DockerImageTarget(Target):
         self.target_path = self.target_path or self.target_args[0]
         return self
 
-    def inject_path(self, from_path, to_path=None):
+    def inject_paths(self, files):
+        """
+        Injects files or directories into the target.
+
+        :param list files: A list of (src,dst) tuples.
+        """
         f = io.BytesIO()
         t = tarfile.open(fileobj=f, mode='w')
-        t.add(from_path, arcname=to_path)
+        for src,dst in files:
+            t.add(src, arcname=dst)
         t.close()
         f.seek(0)
         b = f.read()
         self.container.put_archive("/", b)
+
+    def inject_path(self, src, dst=None):
+        """
+        Injects a file or directory into the target.
+
+        :param str src: the source path (on the host)
+        :param str dst: the dst path (on the target)
+        """
+        self.inject_paths([(src, dst)])
 
     def remove(self):
         if self.container:

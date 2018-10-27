@@ -69,9 +69,17 @@ class Target(ABC):
 
 
     @abstractmethod
-    def inject_path(self, from_path, to_path=None):
+    def inject_path(self, src, dst=None):
         """
         Inject a file into the target.
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def inject_paths(self, files):
+        """
+        Inject different files into the target.
         :return:
         """
         pass
