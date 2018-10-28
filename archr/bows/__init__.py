@@ -8,6 +8,12 @@ class Bow:
         """
         self.target = target
 
+    def nock(self):
+        """
+        Prepare the arrow (inject it into the target).
+        """
+        raise NotImplementedError()
+
     def fire(self, *args, **kwargs):
         """
         Fire the bow at the target.

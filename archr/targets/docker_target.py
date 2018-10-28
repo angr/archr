@@ -72,6 +72,17 @@ class DockerImageTarget(Target):
         """
         self.inject_paths([(src, dst)])
 
+    def inject_tarball(self, tarball_path, target_path):
+        """
+        Extracts a tarball into the target.
+
+        :param str tarball_path: The content of the tarball.
+        :param str target_path: The path to extract to.
+        """
+        with open(tarball_path) as t:
+            b = t.read()
+        self.container.put_archive(target_path, b)
+
     def remove(self):
         if self.container:
             self.container.remove(force=True)
