@@ -144,8 +144,9 @@ class DockerImageTarget(Target):
         :param str tarball_path: The content of the tarball.
         :param str target_path: The path to extract to.
         """
-        with open(tarball_path) as t:
+        with open(tarball_path, "rb") as t:
             b = t.read()
+        assert self.run_command(["mkdir", "-p", target_path]).wait() == 0
         self.container.put_archive(target_path, b)
 
     def retrieve_tarball_contents(self, target_path):
@@ -170,9 +171,9 @@ class DockerImageTarget(Target):
         t = tarfile.open(fileobj=f, mode='r')
         return t.extractfile(os.path.basename(target_path)).read()
 
-    def retrieve_path(self, target_path, local_path):
+    def retrieve_into(self, target_path, local_path):
         """
-        Retrieves a path on the target to a path remotely.
+        Retrieves a path on the target into a path locally.
 
         :param str target_path: The path to retrieve.
         :param str local_path: The path to put it locally.
@@ -181,15 +182,49 @@ class DockerImageTarget(Target):
         f.write(self.retrieve_tarball_contents(target_path))
         f.seek(0)
         t = tarfile.open(fileobj=f, mode='r')
-        t.extractall(os.path.join(local_path, os.path.dirname(target_path).lstrip("/")), members=[m for m in t.getmembers() if m.path.startswith(target_path.lstrip("/"))])
+
+        to_extract = [ m for m in t.getmembers() if m.path.startswith(os.path.basename(target_path).lstrip("/")) ]
+        if not to_extract:
+            raise FileNotFoundError("%s not found on target" % target_path)
+
+        #local_extract_dir = os.path.join(local_path, os.path.dirname(target_path).lstrip("/"))
+        #with contextlib.suppress(FileExistsError):
+        #   os.makedirs(local_extract_dir)
+        #assert os.path.exists(local_extract_dir)
+
+        with contextlib.suppress(FileExistsError):
+            os.makedirs(local_path)
+        t.extractall(local_path, members=to_extract)
+
+    def _resolve_glob(self, target_glob):
+        """
+        WARNING: THIS IS INSECURE OUT OF LAZINESS AND WILL FAIL WITH SPACES IN FILES OR MULTIPLE FILES
+        """
+        stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
+        paths = stdout.split()
+        return paths
+
+    def retrieve_glob_contents(self, target_glob):
+        """
+        Retrieves a globbed path on the target.
+
+        :param str target_path: The path to retrieve.
+        """
+        paths = self._resolve_glob(target_glob)
+        if len(paths) == 0:
+            raise FileNotFoundError("no match for glob in retrieve_glob_contents")
+        if len(paths) != 1:
+            raise ValueError("retrieve_glob_contents requires a single glob match")
+        return self.retrieve_file_contents(paths[0].decode('utf-8'))
 
     @contextlib.contextmanager
-    def retrieval_context(self, target_path, local_thing=None):
+    def retrieval_context(self, target_path, local_thing=None, glob=False):
         """
         This is a context manager that retrieves a file from the target upon exiting.
 
         :param str target_path: the path on the target to retrieve
         :param local_thing: Can be a file path (str) or a write()able object (where the file will be written upon retrieval), or None, in which case a temporary file will be yielded.
+        :param glob: Whether to glob the target_path.
         """
 
         with contextlib.ExitStack() as stack:
@@ -208,7 +243,7 @@ class DockerImageTarget(Target):
             try:
                 yield to_yield
             finally:
-                local_file.write(self.retrieve_file_contents(target_path))
+                local_file.write(self.retrieve_glob_contents(target_path) if glob else self.retrieve_file_contents(target_path))
 
     #
     # Info access
@@ -265,7 +300,7 @@ class DockerImageTarget(Target):
         )
 
     @contextlib.contextmanager
-    def run_context(self, *args, **kwargs):
+    def run_context(self, *args, timeout=10, **kwargs):
         """
         A context around run_command. Yields a subprocess.
         """
@@ -273,7 +308,10 @@ class DockerImageTarget(Target):
         p = self.run_command(*args, **kwargs)
         try:
             yield p
-            p.wait()
+            p.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self.restart()
+            raise
         finally:
             # TODO: probably insufficient
             p.terminate()

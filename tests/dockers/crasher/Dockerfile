@@ -1,3 +1,3 @@
 from ubuntu:latest
 copy crasher /
-entrypoint /crasher
+entrypoint [ "/crasher" ]

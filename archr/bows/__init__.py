@@ -7,12 +7,13 @@ class Bow:
         :param Target target: the target to work on
         """
         self.target = target
+        self.nock()
 
     def nock(self):
         """
         Prepare the arrow (inject it into the target).
         """
-        raise NotImplementedError()
+        pass
 
     def fire(self, *args, **kwargs):
         """
@@ -24,6 +25,7 @@ from .angr_project import angrProjectBow
 from .angr_state import angrStateBow
 from .memory_map import MemoryMapBow
 from .nc import NetCatBow
+from .qemu_tracer import QEMUTracerBow
 
 if 'nose' not in sys.modules:
     from .tube import TubeBow
