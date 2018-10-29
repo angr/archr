@@ -1,4 +1,5 @@
 import subprocess
+import contextlib
 import logging
 import tarfile
 import docker
@@ -48,6 +49,54 @@ class DockerImageTarget(Target):
         self.target_path = self.target_path or self.target_args[0]
         return self
 
+    #
+    # Lifecycle
+    #
+
+    def remove(self):
+        if self.container:
+            self.container.remove(force=True)
+
+    def start(self):
+        self.container = self._client.containers.run(
+            self.image,
+            entrypoint=['/bin/sh'], command=[], environment=self.target_env,
+            detach=True, auto_remove=True,
+            stdin_open=True, stdout=True, stderr=True,
+            privileged=True, security_opt=["seccomp=unconfined"], #for now, hopefully...
+            #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
+        )
+        try: os.makedirs(self.local_path)
+        except OSError: pass
+        os.system("sudo mount -o bind %s %s" % (self._merged_path, self.local_path))
+        return self
+
+    def stop(self):
+        if self.container:
+            self.container.kill()
+        os.system("sudo umount %s" % self.local_path)
+        os.rmdir(self.local_path)
+
+    #
+    # File access
+    #
+
+    @property
+    def _merged_path(self):
+        return self.container.attrs['GraphDriver']['Data']['MergedDir']
+
+    @property
+    def local_path(self):
+        return "/tmp/archr_mounts/%s" % self.container.id
+
+    def resolve_local_path(self, path):
+        if not path.startswith(self.local_path):
+            path = os.path.join(self.local_path, path.lstrip("/"))
+        realpath = os.path.realpath(path)
+        if not realpath.startswith(self.local_path):
+            realpath = os.path.join(self.local_path, realpath.lstrip("/"))
+        return realpath
+
     def inject_paths(self, files):
         """
         Injects files or directories into the target.
@@ -83,29 +132,70 @@ class DockerImageTarget(Target):
             b = t.read()
         self.container.put_archive(target_path, b)
 
-    def remove(self):
-        if self.container:
-            self.container.remove(force=True)
+    def retrieve_tarball_contents(self, target_path):
+        """
+        Retrieves files from the target in the form of tarball contents.
 
-    def start(self):
-        self.container = self._client.containers.run(
-            self.image,
-            entrypoint=['/bin/sh'], command=[], environment=self.target_env,
-            detach=True, auto_remove=True,
-            stdin_open=True, stdout=True, stderr=True,
-            privileged=True, security_opt=["seccomp=unconfined"], #for now, hopefully...
-            #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
-        )
-        try: os.makedirs(self.local_path)
-        except OSError: pass
-        os.system("sudo mount -o bind %s %s" % (self._merged_path, self.local_path))
-        return self
+        :param str target_path: The path to retrieve.
+        """
+        stream, _ = self.container.get_archive(target_path)
+        return b''.join(stream)
 
-    def stop(self):
-        if self.container:
-            self.container.kill()
-        os.system("sudo umount %s" % self.local_path)
-        os.rmdir(self.local_path)
+    def retrieve_file_contents(self, target_path):
+        """
+        Retrieves the contents of a file from the target.
+
+        :param str target_path: The path to retrieve.
+        :returns bytes: the contents of the file
+        """
+        f = io.BytesIO()
+        f.write(self.retrieve_tarball_contents(target_path))
+        f.seek(0)
+        t = tarfile.open(fileobj=f, mode='r')
+        return t.extractfile(os.path.basename(target_path)).read()
+
+    def retrieve_path(self, target_path, local_path):
+        """
+        Retrieves a path on the target to a path remotely.
+
+        :param str target_path: The path to retrieve.
+        :param str local_path: The path to put it locally.
+        """
+        f = io.BytesIO()
+        f.write(self.retrieve_tarball_contents(target_path))
+        f.seek(0)
+        t = tarfile.open(fileobj=f, mode='r')
+        t.extractall(os.path.join(local_path, os.path.dirname(target_path).lstrip("/")), members=[m for m in t.getmembers() if m.path.startswith(target_path.lstrip("/"))])
+
+    #
+    # Info access
+    #
+
+    @property
+    def ipv4_address(self):
+        if self.container is None:
+            return None
+        return json.loads(
+            subprocess.Popen(["docker", "inspect", self.container.id], stdout=subprocess.PIPE).communicate()[0].decode()
+        )[0]['NetworkSettings']['IPAddress']
+
+    @property
+    def tcp_ports(self):
+        try:
+            return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'tcp' in k ]
+        except KeyError:
+            return [ ]
+
+    @property
+    def udp_ports(self):
+        try:
+            return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k ]
+        except KeyError:
+            return [ ]
+
+    #
+    # Execution
+    #
 
     def run_command(
         self, args=None, args_prefix=None, args_suffix=None, aslr=True,
@@ -130,41 +220,3 @@ class DockerImageTarget(Target):
             docker_args + command_args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
         )
-
-    @property
-    def ipv4_address(self):
-        if self.container is None:
-            return None
-        return json.loads(
-            subprocess.Popen(["docker", "inspect", self.container.id], stdout=subprocess.PIPE).communicate()[0].decode()
-        )[0]['NetworkSettings']['IPAddress']
-
-    @property
-    def tcp_ports(self):
-        try:
-            return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'tcp' in k ]
-        except KeyError:
-            return [ ]
-
-    @property
-    def udp_ports(self):
-        try:
-            return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k ]
-        except KeyError:
-            return [ ]
-
-    @property
-    def _merged_path(self):
-        return self.container.attrs['GraphDriver']['Data']['MergedDir']
-
-    @property
-    def local_path(self):
-        return "/tmp/archr_mounts/%s" % self.container.id
-
-    def resolve_local_path(self, path):
-        if not path.startswith(self.local_path):
-            path = os.path.join(self.local_path, path.lstrip("/"))
-        realpath = os.path.realpath(path)
-        if not realpath.startswith(self.local_path):
-            realpath = os.path.join(self.local_path, realpath.lstrip("/"))
-        return realpath

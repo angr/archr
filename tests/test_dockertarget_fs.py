@@ -1,3 +1,5 @@
+import tempfile
+import shutil
 import archr
 import os
 
@@ -21,6 +23,27 @@ def test_env_injection():
     assert len(os.listdir("/lib64")) == len(os.listdir(t.resolve_local_path("/poolib")))
     t.stop()
 
+def test_env_retrieval():
+    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
+    assert t.retrieve_file_contents("/etc/passwd").startswith(b"root:")
+    t.inject_path("/etc/passwd", "/poo")
+    with open("/etc/passwd", 'rb') as lf:
+        assert lf.read() == t.retrieve_file_contents("/poo")
+
+    tmpdir = tempfile.mkdtemp()
+    try:
+        assert not os.path.exists(os.path.join(tmpdir, ".dockerenv"))
+        t.retrieve_path("/.dockerenv", tmpdir)
+        assert os.path.exists(os.path.join(tmpdir, ".dockerenv"))
+        assert not os.path.exists(os.path.join(tmpdir, "etc/passwd"))
+        t.retrieve_path("/etc", tmpdir)
+        assert os.path.exists(os.path.join(tmpdir, "etc/passwd"))
+        with open(os.path.join(tmpdir, "etc/passwd"), 'rb') as rf:
+            assert rf.read().startswith(b"root:")
+    finally:
+        shutil.rmtree(tmpdir)
+
 if __name__ == '__main__':
     test_env_mount()
     test_env_injection()
+    test_env_retrieval()
