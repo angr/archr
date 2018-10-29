@@ -70,6 +70,9 @@ class DockerImageTarget(Target):
         )
         return self
 
+    def restart(self):
+        self.container.restart()
+
     def mount_local(self, where=None):
         if self._local_path:
             return self
