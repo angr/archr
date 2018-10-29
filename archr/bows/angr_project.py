@@ -15,6 +15,7 @@ class angrProjectBow(Bow):
         super(angrProjectBow, self).__init__(target)
         self.mapping_bow = mapping_bow
         self.project = None
+        self.target.mount_local()
 
     def fire(self, **kwargs): #pylint:disable=arguments-differ
         if self.project is None:

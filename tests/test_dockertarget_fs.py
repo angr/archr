@@ -9,13 +9,13 @@ def setup_module():
     os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
 
 def test_env_mount():
-    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
+    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start().mount_local()
     assert os.path.exists(os.path.join(t.local_path, "./"+t.target_path))
     t.stop()
     assert not os.path.exists(os.path.join(t.local_path, "./"+t.target_path))
 
 def test_env_injection():
-    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
+    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start().mount_local()
     t.inject_path("/etc/passwd", "/poo")
     with open("/etc/passwd") as lf, open(t.resolve_local_path("/poo")) as rf:
         assert lf.read() == rf.read()

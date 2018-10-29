@@ -12,6 +12,7 @@ class angrStateBow(Bow):
     def __init__(self, target, project_bow):
         super(angrStateBow, self).__init__(target)
         self.project_bow = project_bow
+        self.target.mount_local()
 
     def fire(self, **kwargs): #pylint:disable=arguments-differ
         project = self.project_bow.fire()

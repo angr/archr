@@ -39,6 +39,7 @@ class DockerImageTarget(Target):
         self.container = None
         self.subprocess = None
         self.project = None
+        self._local_path = None
 
     #
     # Lifecycle
@@ -67,16 +68,25 @@ class DockerImageTarget(Target):
             privileged=True, security_opt=["seccomp=unconfined"], #for now, hopefully...
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
         )
-        try: os.makedirs(self.local_path)
-        except OSError: pass
+        return self
+
+    def mount_local(self, where=None):
+        if self._local_path:
+            return self
+
+        self._local_path = where or "/tmp/archr_mounts/%s" % self.container.id
+        with contextlib.suppress(OSError):
+            os.makedirs(self.local_path)
         os.system("sudo mount -o bind %s %s" % (self._merged_path, self.local_path))
         return self
 
     def stop(self):
         if self.container:
             self.container.kill()
-        os.system("sudo umount %s" % self.local_path)
-        os.rmdir(self.local_path)
+        if self._local_path:
+            os.system("sudo umount %s" % self.local_path)
+            os.rmdir(self.local_path)
+        return self
 
     #
     # File access
@@ -88,7 +98,9 @@ class DockerImageTarget(Target):
 
     @property
     def local_path(self):
-        return "/tmp/archr_mounts/%s" % self.container.id
+        if self._local_path is None:
+            raise ArchrError("target.mount_local() must be run before target.local_path can be accessed.")
+        return self._local_path
 
     def resolve_local_path(self, path):
         if not path.startswith(self.local_path):
@@ -262,3 +274,5 @@ class DockerImageTarget(Target):
         finally:
             # TODO: probably insufficient
             p.terminate()
+
+from ..errors import ArchrError
