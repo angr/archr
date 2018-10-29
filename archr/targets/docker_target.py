@@ -1,5 +1,6 @@
 import subprocess
 import contextlib
+import tempfile
 import logging
 import tarfile
 import docker
@@ -39,6 +40,10 @@ class DockerImageTarget(Target):
         self.subprocess = None
         self.project = None
 
+    #
+    # Lifecycle
+    #
+
     def build(self, *args, **kwargs):
         self.image = self._client.images.get(self.image_id)
         self.target_args = (
@@ -48,10 +53,6 @@ class DockerImageTarget(Target):
         self.target_env = self.target_env or self.image.attrs['Config']['Env']
         self.target_path = self.target_path or self.target_args[0]
         return self
-
-    #
-    # Lifecycle
-    #
 
     def remove(self):
         if self.container:
@@ -167,6 +168,33 @@ class DockerImageTarget(Target):
         t = tarfile.open(fileobj=f, mode='r')
         t.extractall(os.path.join(local_path, os.path.dirname(target_path).lstrip("/")), members=[m for m in t.getmembers() if m.path.startswith(target_path.lstrip("/"))])
 
+    @contextlib.contextmanager
+    def retrieval_context(self, target_path, local_thing=None):
+        """
+        This is a context manager that retrieves a file from the target upon exiting.
+
+        :param str target_path: the path on the target to retrieve
+        :param local_thing: Can be a file path (str) or a write()able object (where the file will be written upon retrieval), or None, in which case a temporary file will be yielded.
+        """
+
+        with contextlib.ExitStack() as stack:
+            if type(local_thing) in (str, bytes):
+                to_yield = local_thing
+                local_file = stack.enter_context(open(local_thing, "wb"))
+            elif local_thing is None:
+                to_yield = tempfile.mktemp()
+                local_file = stack.enter_context(open(to_yield, "wb"))
+            elif hasattr(local_thing, "write"):
+                to_yield = local_thing
+                local_file = local_thing
+            else:
+                raise ValueError("local_thing argument to retrieval_context() must be a str, a write()able object, or None")
+
+            try:
+                yield to_yield
+            finally:
+                local_file.write(self.retrieve_file_contents(target_path))
+
     #
     # Info access
     #
@@ -220,3 +248,17 @@ class DockerImageTarget(Target):
             docker_args + command_args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
         )
+
+    @contextlib.contextmanager
+    def run_context(self, *args, **kwargs):
+        """
+        A context around run_command. Yields a subprocess.
+        """
+
+        p = self.run_command(*args, **kwargs)
+        try:
+            yield p
+            p.wait()
+        finally:
+            # TODO: probably insufficient
+            p.terminate()

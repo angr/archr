@@ -54,7 +54,15 @@ def test_nccat_simple():
     assert s.recv(6) == b"Hello\n"
     t.stop()
 
+def test_context_env():
+    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
+    with t.run_command() as p:
+        stdout,_ = p.communicate()
+    assert sum(1 for i in stdout.split(b'\n') if i == b"ARCHR=YES") == 1
+    t.stop()
+
 if __name__ == '__main__':
+    test_context_env()
     test_cat()
     test_cat_stderr()
     test_entrypoint_true()

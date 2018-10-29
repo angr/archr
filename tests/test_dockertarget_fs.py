@@ -1,7 +1,9 @@
+import contextlib
 import tempfile
 import shutil
 import archr
 import os
+import io
 
 def setup_module():
     os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
@@ -42,8 +44,47 @@ def test_env_retrieval():
             assert rf.read().startswith(b"root:")
     finally:
         shutil.rmtree(tmpdir)
+    t.stop()
+
+def test_retrieval_context():
+    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
+
+    # first, try temporary file
+    with t.retrieval_context("/tmp/foo") as o:
+        assert o.startswith("/tmp")
+        t.run_command(["cp", "/etc/passwd", "/tmp/foo"]).wait()
+    with open(o) as f:
+        assert f.read().startswith("root:")
+    os.unlink(o)
+
+    # then, try named file
+    with tempfile.NamedTemporaryFile() as tf:
+        with t.retrieval_context("/tmp/foo", tf.name) as o:
+            assert o == tf.name
+            t.run_command(["cp", "/etc/passwd", "/tmp/foo"]).wait()
+        with open(tf.name) as f:
+            assert f.read().startswith("root:")
+
+    # then, try named BytesIO
+    f = io.BytesIO()
+    with t.retrieval_context("/tmp/foo", f) as o:
+        assert o is f
+        t.run_command(["cp", "/etc/passwd", "/tmp/foo"]).wait()
+    f.seek(0)
+    assert f.read().startswith(b"root:")
+
+    # now, try a stack with a retrieval and a run context
+    with contextlib.ExitStack() as stack:
+        g = io.BytesIO()
+        stack.enter_context(t.retrieval_context("/tmp/foo", g))
+        stack.enter_context(t.run_context(["cp", "/etc/passwd", "/tmp/foo"]))
+    g.seek(0)
+    assert g.read().startswith(b"root:")
+
+    t.stop()
 
 if __name__ == '__main__':
+    test_retrieval_context()
     test_env_mount()
     test_env_injection()
     test_env_retrieval()
