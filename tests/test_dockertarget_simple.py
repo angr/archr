@@ -34,6 +34,13 @@ def test_entrypoint_false():
     assert p.returncode == 1
     t.stop()
 
+def test_entrypoint_crasher():
+    t = archr.targets.DockerImageTarget('archr-test:crasher').build().start()
+    p = t.run_command()
+    p.wait()
+    assert p.returncode == 139
+    t.stop()
+
 def test_entrypoint_env():
     t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
     p = t.run_command()
@@ -43,7 +50,7 @@ def test_entrypoint_env():
 
 def test_nccat_simple():
     t = archr.targets.DockerImageTarget('archr-test:nccat').build().start()
-    p = t.run_command()
+    t.run_command()
     assert t.tcp_ports == [ 1337 ]
     try:
         s = socket.create_connection((t.ipv4_address, 1337))
@@ -62,6 +69,7 @@ def test_context_env():
     t.stop()
 
 if __name__ == '__main__':
+    test_entrypoint_crasher()
     test_context_env()
     test_cat()
     test_cat_stderr()
