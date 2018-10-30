@@ -15,12 +15,14 @@ def test_env_angr():
     state = asb.fire()
     initial_stack = state.solver.eval(state.memory.load(state.regs.rsp, 200), cast_to=bytes)
     assert b"ARCHR=YES" in initial_stack
-    assert state.regs.sp & ~claripy.BVV(0xfff, project.arch.bits) == apb._mem_mapping['[stack-end]']
+
+    assert state.solver.eval_one(state.posix.brk == apb._mem_mapping['[heap]'])
+    assert state.solver.eval_one((state.regs.sp + 0xfff) & ~claripy.BVV(0xfff, project.arch.bits) == apb._mem_mapping['[stack-end]'])
 
     # now screw with the memory map
     apb._mem_mapping['[stack-end]'] = 0x1337000
     state = asb.fire()
-    assert state.regs.sp & ~claripy.BVV(0xfff, project.arch.bits) == apb._mem_mapping['[stack-end]']
+    assert state.solver.eval_one((state.regs.sp + 0xfff) & ~claripy.BVV(0xfff, project.arch.bits) == apb._mem_mapping['[stack-end]'])
 
 if __name__ == '__main__':
     test_env_angr()
