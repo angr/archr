@@ -16,5 +16,9 @@ class angrStateBow(Bow):
 
     def fire(self, **kwargs): #pylint:disable=arguments-differ
         project = self.project_bow.fire()
-        s = project.factory.full_init_state(concrete_fs=True, chroot=self.target.local_path, args=self.target.target_args, env=self.target.target_env, **kwargs)
+        s = project.factory.full_init_state(
+            concrete_fs=True, chroot=self.target.local_path,
+            stack_end=self.project_bow._mem_mapping['[stack-end]'], args=self.target.target_args, env=self.target.target_env,
+            **kwargs
+        )
         return s

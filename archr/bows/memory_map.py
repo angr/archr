@@ -9,11 +9,11 @@ class MemoryMapBow(Bow):
     Gets a memory map of the target.
     """
 
-    def fire(self): #pylint:disable=arguments-differ
-        ldd_map_str,_ = self.target.run_command([ "ldd", self.target.target_path ], aslr=False).communicate()
+    def fire(self, aslr=False): #pylint:disable=arguments-differ
+        ldd_map_str,_ = self.target.run_command([ "ldd", self.target.target_path ], aslr=aslr).communicate()
         lib_addrs = parse_ldd(ldd_map_str)
 
-        mapped_addrs,_ = self.target.run_command([ "cat", "/proc/self/maps" ], aslr=False).communicate()
+        mapped_addrs,_ = self.target.run_command([ "cat", "/proc/self/maps" ], aslr=aslr).communicate()
         lib_addrs['[stack-end]'] = int(next(m for m in mapped_addrs.splitlines() if m.endswith(b'[stack]')).split(b'-')[1].split(b' ')[0], 16)
 
         lib_addrs.update({

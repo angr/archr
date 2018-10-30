@@ -14,14 +14,16 @@ class angrProjectBow(Bow):
     def __init__(self, target, mapping_bow):
         super(angrProjectBow, self).__init__(target)
         self.mapping_bow = mapping_bow
-        self.project = None
         self.target.mount_local()
+
+        self.project = None
+        self._mem_mapping = None
 
     def fire(self, **kwargs): #pylint:disable=arguments-differ
         if self.project is None:
-            lib_mapping = self.mapping_bow.fire()
-            the_libs = [ self.target.resolve_local_path(lib) for lib in lib_mapping if lib.startswith("/") ]
-            lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in lib_mapping.items() }
+            self._mem_mapping = self.mapping_bow.fire()
+            the_libs = [ self.target.resolve_local_path(lib) for lib in self._mem_mapping if lib.startswith("/") ]
+            lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in self._mem_mapping.items() }
             bin_opts = { "base_addr": 0x555555554000 }
             the_binary = self.target.resolve_local_path(self.target.target_path)
 
