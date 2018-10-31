@@ -1,6 +1,5 @@
 import subprocess
 import contextlib
-import tempfile
 import logging
 import tarfile
 import docker
@@ -19,7 +18,7 @@ class DockerImageTarget(Target):
 
     def __init__(
         self, image_name,
-        pull=False, target_args=None, target_path=None, target_env=None,
+        pull=False,
         **kwargs
                  #target_port=None,
                  #target_arch=None,
@@ -32,13 +31,8 @@ class DockerImageTarget(Target):
         if pull:
             self._client.images.pull(self.image_id)
 
-        self.target_args = target_args
-        self.target_path = target_path
-        self.target_env = target_env
         self.image = None
         self.container = None
-        self.subprocess = None
-        self.project = None
         self._local_path = None
 
     #
@@ -55,10 +49,6 @@ class DockerImageTarget(Target):
         self.target_path = self.target_path or self.target_args[0]
         return self
 
-    def remove(self):
-        if self.container:
-            self.container.remove(force=True)
-
     def start(self):
         self.container = self._client.containers.run(
             self.image,
@@ -73,16 +63,6 @@ class DockerImageTarget(Target):
     def restart(self):
         self.container.restart()
 
-    def mount_local(self, where=None):
-        if self._local_path:
-            return self
-
-        self._local_path = where or "/tmp/archr_mounts/%s" % self.container.id
-        with contextlib.suppress(OSError):
-            os.makedirs(self.local_path)
-        os.system("sudo mount -o bind %s %s" % (self._merged_path, self.local_path))
-        return self
-
     def stop(self):
         if self.container:
             self.container.kill()
@@ -90,6 +70,10 @@ class DockerImageTarget(Target):
             os.system("sudo umount %s" % self.local_path)
             os.rmdir(self.local_path)
         return self
+
+    def remove(self):
+        if self.container:
+            self.container.remove(force=True)
 
     #
     # File access
@@ -113,12 +97,17 @@ class DockerImageTarget(Target):
             realpath = os.path.join(self.local_path, realpath.lstrip("/"))
         return realpath
 
-    def inject_contents(self, files, modes=None):
-        """
-        Injects files or into the target.
+    def mount_local(self, where=None):
+        if self._local_path:
+            return self
 
-        :param list files: A dict of { dst_path: byte_contents }
-        """
+        self._local_path = where or "/tmp/archr_mounts/%s" % self.container.id
+        with contextlib.suppress(OSError):
+            os.makedirs(self.local_path)
+        os.system("sudo mount -o bind %s %s" % (self._merged_path, self.local_path))
+        return self
+
+    def inject_contents(self, files, modes=None):
         f = io.BytesIO()
         t = tarfile.open(fileobj=f, mode='w')
         for dst,content in files.items():
@@ -135,11 +124,6 @@ class DockerImageTarget(Target):
 
 
     def inject_paths(self, files):
-        """
-        Injects files or directories into the target.
-
-        :param list files: A dict of { dst_path: src_path }
-        """
         f = io.BytesIO()
         t = tarfile.open(fileobj=f, mode='w')
         for dst,src in files.items():
@@ -149,137 +133,23 @@ class DockerImageTarget(Target):
         b = f.read()
         self.container.put_archive("/", b)
 
-    def inject_path(self, src, dst=None):
-        """
-        Injects a file or directory into the target.
-
-        :param str src: the source path (on the host)
-        :param str dst: the dst path (on the target)
-        """
-        self.inject_paths({dst: src})
-
     def inject_tarball(self, tarball_path, target_path):
-        """
-        Extracts a tarball into the target.
-
-        :param str tarball_path: The content of the tarball.
-        :param str target_path: The path to extract to.
-        """
         with open(tarball_path, "rb") as t:
             b = t.read()
         assert self.run_command(["mkdir", "-p", target_path]).wait() == 0
         self.container.put_archive(target_path, b)
 
     def retrieve_tarball(self, target_path):
-        """
-        Retrieves files from the target in the form of tarball contents.
-
-        :param str target_path: The path to retrieve.
-        """
         stream, _ = self.container.get_archive(target_path)
         return b''.join(stream)
 
-    def retrieve_contents(self, target_path):
-        """
-        Retrieves the contents of a file from the target.
-
-        :param str target_path: The path to retrieve.
-        :returns bytes: the contents of the file
-        """
-        f = io.BytesIO()
-        f.write(self.retrieve_tarball(target_path))
-        f.seek(0)
-        t = tarfile.open(fileobj=f, mode='r')
-        return t.extractfile(os.path.basename(target_path)).read()
-
-    def retrieve_into(self, target_path, local_path):
-        """
-        Retrieves a path on the target into a path locally.
-
-        :param str target_path: The path to retrieve.
-        :param str local_path: The path to put it locally.
-        """
-        f = io.BytesIO()
-        f.write(self.retrieve_tarball(target_path))
-        f.seek(0)
-        t = tarfile.open(fileobj=f, mode='r')
-
-        to_extract = [ m for m in t.getmembers() if m.path.startswith(os.path.basename(target_path).lstrip("/")) ]
-        if not to_extract:
-            raise FileNotFoundError("%s not found on target" % target_path)
-
-        #local_extract_dir = os.path.join(local_path, os.path.dirname(target_path).lstrip("/"))
-        #with contextlib.suppress(FileExistsError):
-        #   os.makedirs(local_extract_dir)
-        #assert os.path.exists(local_extract_dir)
-
-        with contextlib.suppress(FileExistsError):
-            os.makedirs(local_path)
-        t.extractall(local_path, members=to_extract)
-
-    def _resolve_glob(self, target_glob):
+    def resolve_glob(self, target_glob):
         """
         WARNING: THIS IS INSECURE OUT OF LAZINESS AND WILL FAIL WITH SPACES IN FILES OR MULTIPLE FILES
         """
         stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
         paths = stdout.split()
         return paths
-
-    def retrieve_glob(self, target_glob):
-        """
-        Retrieves a globbed path on the target.
-
-        :param str target_path: The path to retrieve.
-        """
-        paths = self._resolve_glob(target_glob)
-        if len(paths) == 0:
-            raise FileNotFoundError("no match for glob in retrieve_glob")
-        if len(paths) != 1:
-            raise ValueError("retrieve_glob requires a single glob match")
-        return self.retrieve_contents(paths[0].decode('utf-8'))
-
-    @contextlib.contextmanager
-    def retrieval_context(self, target_path, local_thing=None, glob=False):
-        """
-        This is a context manager that retrieves a file from the target upon exiting.
-
-        :param str target_path: the path on the target to retrieve
-        :param local_thing: Can be a file path (str) or a write()able object (where the file will be written upon retrieval), or None, in which case a temporary file will be yielded.
-        :param glob: Whether to glob the target_path.
-        """
-
-        with contextlib.ExitStack() as stack:
-            if type(local_thing) in (str, bytes):
-                to_yield = local_thing
-                local_file = stack.enter_context(open(local_thing, "wb"))
-            elif local_thing is None:
-                to_yield = tempfile.mktemp()
-                local_file = stack.enter_context(open(to_yield, "wb"))
-            elif hasattr(local_thing, "write"):
-                to_yield = local_thing
-                local_file = local_thing
-            else:
-                raise ValueError("local_thing argument to retrieval_context() must be a str, a write()able object, or None")
-
-            try:
-                yield to_yield
-            finally:
-                local_file.write(self.retrieve_glob(target_path) if glob else self.retrieve_contents(target_path))
-
-    @contextlib.contextmanager
-    def replacement_context(self, target_path, temp_contents, saved_contents=None):
-        """
-        Provides a context within which a file on the target is overwritten with different contents.
-        Will yield the old contents.
-
-        :param str target_path: the path on the target
-        :param bytes temp_contents: the contents to overwrite the target with
-        :param bytes saved_contents: the original contents of the file, to avoid needlessly retrieving it
-        """
-        saved_contents = saved_contents if saved_contents is not None else self.retrieve_contents(target_path)
-        self.inject_contents({target_path: temp_contents})
-        yield saved_contents
-        self.inject_contents({target_path: saved_contents})
 
     #
     # Info access
@@ -335,40 +205,4 @@ class DockerImageTarget(Target):
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
         )
 
-    @contextlib.contextmanager
-    def run_context(self, *args, timeout=10, **kwargs):
-        """
-        A context around run_command. Yields a subprocess.
-        """
-
-        p = self.run_command(*args, **kwargs)
-        try:
-            yield p
-            p.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            self.restart()
-            raise
-        finally:
-            # TODO: probably insufficient
-            p.terminate()
-
-    @contextlib.contextmanager
-    def shellcode_context(self, *args, asm_code=None, bin_code=None, **kwargs):
-        """
-        A context that runs the target with shellcode injected over the entrypoint.
-        Useful for operating in the normal process context of the target.
-
-        :param *args: args to pass to run_context()
-        :param **kwargs: kwargs to pass to run_context()
-        :param str asm_code: assembly to assemble into shellcode
-        :param bytes bin_code: binary code to inject directly
-        """
-
-        original_binary = self.retrieve_contents(self.target_path)
-        hooked_binary = hook_entry(original_binary, asm_code=asm_code, bin_code=bin_code)
-        with self.replacement_context(self.target_path, hooked_binary, saved_contents=original_binary):
-            with self.run_context(*args, **kwargs) as p:
-                yield p
-
 from ..errors import ArchrError
-from ..utils import hook_entry
