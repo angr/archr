@@ -158,10 +158,10 @@ class Target(ABC):
         """
         try:
             local_glob = glob.glob(self.resolve_local_path(target_glob))
-            return local_glob[len(self.local_path):]
+            return [ g[len(self.local_path):] for g in local_glob ]
         except ArchrError:
             stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
-            paths = stdout.split()
+            paths = [ p.decode('utf-8') for p in stdout.split() ]
             return paths
 
     def inject_path(self, src, dst=None):
@@ -257,7 +257,7 @@ class Target(ABC):
             raise FileNotFoundError("no match for glob in retrieve_glob")
         if len(paths) != 1:
             raise ValueError("retrieve_glob requires a single glob match")
-        return self.retrieve_contents(paths[0].decode('utf-8'))
+        return self.retrieve_contents(paths[0])
 
     @contextlib.contextmanager
     def retrieval_context(self, target_path, local_thing=None, glob=False): #pylint:disable=redefined-outer-name
