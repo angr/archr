@@ -93,33 +93,14 @@ class Target(ABC):
         """
         pass
 
-
     @abstractmethod
-    def inject_paths(self, files):
-        """
-        Inject different files or directories into the target.
-
-        :param list files: A dict of { dst_path: src_path }
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def inject_contents(self, files, modes=None):
-        """
-        Injects files or into the target.
-
-        :param list files: A dict of { dst_path: byte_contents }
-        """
-        pass
-
-    @abstractmethod
-    def inject_tarball(self, tarball_path, target_path):
+    def inject_tarball(self, target_path, tarball_path=None, tarball_contents=None):
         """
         Extracts a tarball into the target.
 
-        :param str tarball_path: The content of the tarball.
         :param str target_path: The path to extract to.
+        :param str tarball_path: The path to the tarball.
+        :param str tarball_contents: Alternatively, the content of the tarball.
         """
         pass
 
@@ -166,6 +147,41 @@ class Target(ABC):
         :param str dst: the dst path (on the target)
         """
         self.inject_paths({dst: src})
+
+    def inject_paths(self, files):
+        """
+        Inject different files or directories into the target.
+
+        :param list files: A dict of { dst_path: src_path }
+        :return:
+        """
+        f = io.BytesIO()
+        t = tarfile.open(fileobj=f, mode='w')
+        for dst,src in files.items():
+            t.add(src, arcname=dst)
+        t.close()
+        f.seek(0)
+        self.inject_tarball("/", tarball_contents=f.read())
+
+    def inject_contents(self, files, modes=None):
+        """
+        Injects files or into the target.
+
+        :param list files: A dict of { dst_path: byte_contents }
+        :param list modes: An optional dict of { dst_path: permissions }
+        """
+        f = io.BytesIO()
+        t = tarfile.open(fileobj=f, mode='w')
+        for dst,content in files.items():
+            i = tarfile.TarInfo(name=dst)
+            i.size = len(content)
+            i.mode = 0o777
+            if modes and dst in modes:
+                i.mode = modes[dst]
+            t.addfile(i, fileobj=io.BytesIO(content))
+        t.close()
+        f.seek(0)
+        self.inject_tarball("/", tarball_contents=f.read())
 
     def retrieve_into(self, target_path, local_path):
         """

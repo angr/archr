@@ -1,11 +1,9 @@
 import subprocess
 import contextlib
 import logging
-import tarfile
 import docker
 import json
 import os
-import io
 
 l = logging.getLogger("archr.target.docker_target")
 
@@ -99,37 +97,12 @@ class DockerImageTarget(Target):
         os.system("sudo mount -o bind %s %s" % (self._merged_path, self.local_path))
         return self
 
-    def inject_contents(self, files, modes=None):
-        f = io.BytesIO()
-        t = tarfile.open(fileobj=f, mode='w')
-        for dst,content in files.items():
-            i = tarfile.TarInfo(name=dst)
-            i.size = len(content)
-            i.mode = 0o777
-            if modes and dst in modes:
-                i.mode = modes[dst]
-            t.addfile(i, fileobj=io.BytesIO(content))
-        t.close()
-        f.seek(0)
-        b = f.read()
-        self.container.put_archive("/", b)
-
-
-    def inject_paths(self, files):
-        f = io.BytesIO()
-        t = tarfile.open(fileobj=f, mode='w')
-        for dst,src in files.items():
-            t.add(src, arcname=dst)
-        t.close()
-        f.seek(0)
-        b = f.read()
-        self.container.put_archive("/", b)
-
-    def inject_tarball(self, tarball_path, target_path):
-        with open(tarball_path, "rb") as t:
-            b = t.read()
+    def inject_tarball(self, target_path, tarball_path=None, tarball_contents=None):
+        if tarball_contents is None:
+            with open(tarball_path, "rb") as t:
+                tarball_contents = t.read()
         assert self.run_command(["mkdir", "-p", target_path]).wait() == 0
-        self.container.put_archive(target_path, b)
+        self.container.put_archive(target_path, tarball_contents)
 
     def retrieve_tarball(self, target_path):
         stream, _ = self.container.get_archive(target_path)
