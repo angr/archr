@@ -263,6 +263,20 @@ class DockerImageTarget(Target):
             finally:
                 local_file.write(self.retrieve_glob(target_path) if glob else self.retrieve_contents(target_path))
 
+    @contextlib.contextmanager
+    def replacement_context(self, target_path, temp_contents):
+        """
+        Provides a context within which a file on the target is overwritten with different contents.
+        Will yield the old contents.
+
+        :param str target_path: the path on the target
+        :param bytes temp_contents: the contents to overwrite the target with
+        """
+        saved_contents = self.retrieve_contents(target_path)
+        self.inject_contents({target_path: temp_contents})
+        yield saved_contents
+        self.inject_contents({target_path: saved_contents})
+
     #
     # Info access
     #
