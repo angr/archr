@@ -113,15 +113,33 @@ class DockerImageTarget(Target):
             realpath = os.path.join(self.local_path, realpath.lstrip("/"))
         return realpath
 
+    def inject_contents(self, files):
+        """
+        Injects files or into the target.
+
+        :param list files: A dict of { dst_path: byte_contents }
+        """
+        f = io.BytesIO()
+        t = tarfile.open(fileobj=f, mode='w')
+        for dst,content in files.items():
+            i = tarfile.TarInfo(name=dst)
+            i.size = len(content)
+            t.addfile(i, fileobj=io.BytesIO(content))
+        t.close()
+        f.seek(0)
+        b = f.read()
+        self.container.put_archive("/", b)
+
+
     def inject_paths(self, files):
         """
         Injects files or directories into the target.
 
-        :param list files: A list of (src,dst) tuples.
+        :param list files: A dict of { dst_path: src_path }
         """
         f = io.BytesIO()
         t = tarfile.open(fileobj=f, mode='w')
-        for src,dst in files:
+        for dst,src in files.items():
             t.add(src, arcname=dst)
         t.close()
         f.seek(0)
@@ -135,7 +153,7 @@ class DockerImageTarget(Target):
         :param str src: the source path (on the host)
         :param str dst: the dst path (on the target)
         """
-        self.inject_paths([(src, dst)])
+        self.inject_paths({dst: src})
 
     def inject_tarball(self, tarball_path, target_path):
         """

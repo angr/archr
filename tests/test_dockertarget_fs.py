@@ -20,7 +20,7 @@ def test_env_injection():
     with open("/etc/passwd") as lf, open(t.resolve_local_path("/poo")) as rf:
         assert lf.read() == rf.read()
 
-    t.inject_paths([("/bin", "/poobin"), ("/lib64", "/poolib")])
+    t.inject_paths({"/poobin": "/bin", "/poolib": "/lib64"})
     assert len(os.listdir("/bin")) == len(os.listdir(t.resolve_local_path("/poobin")))
     assert len(os.listdir("/lib64")) == len(os.listdir(t.resolve_local_path("/poolib")))
     t.stop()
@@ -89,6 +89,13 @@ def test_retrieval_context():
     g.seek(0)
     assert g.read().startswith(b"root:")
 
+    t.stop()
+
+def test_content_injection():
+    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
+    t.inject_contents({"/foo": b"asdf", "/bar": b"fdsa"})
+    assert t.retrieve_contents("/foo") == b"asdf"
+    assert t.retrieve_contents("/bar") == b"fdsa"
     t.stop()
 
 def test_glob_retrieval():
