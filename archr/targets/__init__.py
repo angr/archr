@@ -32,6 +32,7 @@ class Target(ABC):
         self.target_args = target_args
         self.target_path = target_path
         self.target_env = target_env
+        self._local_path = None
 
     @abstractmethod
     def mount_local(self, where=None):
@@ -39,13 +40,6 @@ class Target(ABC):
         Mounts the target on the local filesystem.
 
         :param str where: the path to mount it to
-        """
-        pass
-
-    @property
-    def local_path(self):
-        """
-        Returns the local mounted path on the host.
         """
         pass
 
@@ -74,13 +68,14 @@ class Target(ABC):
         """
         pass
 
-    @abstractmethod
     def stop(self):
         """
         Start the target.
         :return:
         """
-        pass
+        if self._local_path:
+            os.system("sudo umount %s" % self.local_path)
+            os.rmdir(self.local_path)
 
     @abstractmethod
     def restart(self):
@@ -153,6 +148,15 @@ class Target(ABC):
 
     def __enter__(self): return self.start()
     def __exit__(self, *args): return self.stop()
+
+    @property
+    def local_path(self):
+        """
+        The local mounted path on the host.
+        """
+        if self._local_path is None:
+            raise ArchrError("target.mount_local() must be run before target.local_path can be accessed.")
+        return self._local_path
 
     def inject_path(self, src, dst=None):
         """
@@ -296,3 +300,4 @@ class Target(ABC):
 
 from .docker_target import DockerImageTarget
 from ..utils import hook_entry
+from ..errors import ArchrError

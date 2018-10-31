@@ -66,9 +66,7 @@ class DockerImageTarget(Target):
     def stop(self):
         if self.container:
             self.container.kill()
-        if self._local_path:
-            os.system("sudo umount %s" % self.local_path)
-            os.rmdir(self.local_path)
+        super().stop()
         return self
 
     def remove(self):
@@ -82,12 +80,6 @@ class DockerImageTarget(Target):
     @property
     def _merged_path(self):
         return self.container.attrs['GraphDriver']['Data']['MergedDir']
-
-    @property
-    def local_path(self):
-        if self._local_path is None:
-            raise ArchrError("target.mount_local() must be run before target.local_path can be accessed.")
-        return self._local_path
 
     def resolve_local_path(self, path):
         if not path.startswith(self.local_path):
@@ -204,5 +196,3 @@ class DockerImageTarget(Target):
             docker_args + command_args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
         )
-
-from ..errors import ArchrError
