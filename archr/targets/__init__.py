@@ -117,6 +117,30 @@ class Target(ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def ipv4_address(self):
+        """
+        The ipv4 address that this target receives traffic on.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def tcp_ports(self):
+        """
+        The TCP ports that this target listens on.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def udp_ports(self):
+        """
+        The UDP ports that this target listens on.
+        """
+        pass
+
     #
     # Convenience methods
     #
