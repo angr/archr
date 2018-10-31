@@ -103,6 +103,11 @@ def test_glob_retrieval():
     assert t.retrieve_glob("/etc/hostna*").startswith(t.container.id[:5].encode('utf-8'))
     t.stop()
 
+    # and now, with mounts
+    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start().mount_local()
+    assert t.retrieve_glob("/etc/hostna*").startswith(t.container.id[:5].encode('utf-8'))
+    t.stop()
+
 def test_temporary_replacement():
     with open("/etc/passwd", 'rb') as pw:
         opw = pw.read()

@@ -2,8 +2,12 @@ import subprocess
 import contextlib
 import tempfile
 import tarfile
+import logging
+import glob
 import os
 import io
+
+l = logging.getLogger("archr.targets")
 
 from abc import ABC
 from abc import abstractmethod
@@ -113,16 +117,6 @@ class Target(ABC):
         """
         pass
 
-    @abstractmethod
-    def resolve_glob(self, target_glob):
-        """
-        Should resolve a glob on the target.
-
-        :param string target_glob: the glob
-        :returns list: a list of the resulting paths (as strings)
-        """
-        pass
-
     #
     # Convenience methods
     #
@@ -144,12 +138,31 @@ class Target(ABC):
         The local equivalent of target_path on the host.
         :returns str: the local path
         """
+        if not target_path.startswith("/"):
+            l.warning("Non-absolute path resolution is hit and miss, depending on context. Be careful.")
+
         if not target_path.startswith(self.local_path):
             target_path = os.path.join(self.local_path, target_path.lstrip("/"))
         realpath = os.path.realpath(target_path)
         if not realpath.startswith(self.local_path):
             realpath = os.path.join(self.local_path, realpath.lstrip("/"))
         return realpath
+
+    def resolve_glob(self, target_glob):
+        """
+        Should resolve a glob on the target.
+        WARNING: THE DEFAULT IMPLEMENTATION OF THIS IS INSECURE OUT OF LAZINESS AND WILL FAIL WITH SPACES IN FILES OR MULTIPLE FILES
+
+        :param string target_glob: the glob
+        :returns list: a list of the resulting paths (as strings)
+        """
+        try:
+            local_glob = glob.glob(self.resolve_local_path(target_glob))
+            return local_glob[len(self.local_path):]
+        except ArchrError:
+            stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
+            paths = stdout.split()
+            return paths
 
     def inject_path(self, src, dst=None):
         """
@@ -247,7 +260,7 @@ class Target(ABC):
         return self.retrieve_contents(paths[0].decode('utf-8'))
 
     @contextlib.contextmanager
-    def retrieval_context(self, target_path, local_thing=None, glob=False):
+    def retrieval_context(self, target_path, local_thing=None, glob=False): #pylint:disable=redefined-outer-name
         """
         This is a context manager that retrieves a file from the target upon exiting.
 

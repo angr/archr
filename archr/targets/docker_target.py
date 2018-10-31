@@ -100,14 +100,6 @@ class DockerImageTarget(Target):
         stream, _ = self.container.get_archive(target_path)
         return b''.join(stream)
 
-    def resolve_glob(self, target_glob):
-        """
-        WARNING: THIS IS INSECURE OUT OF LAZINESS AND WILL FAIL WITH SPACES IN FILES OR MULTIPLE FILES
-        """
-        stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
-        paths = stdout.split()
-        return paths
-
     #
     # Info access
     #
