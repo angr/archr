@@ -149,7 +149,7 @@ class DockerImageTarget(Target):
         assert self.run_command(["mkdir", "-p", target_path]).wait() == 0
         self.container.put_archive(target_path, b)
 
-    def retrieve_tarball_contents(self, target_path):
+    def retrieve_tarball(self, target_path):
         """
         Retrieves files from the target in the form of tarball contents.
 
@@ -158,7 +158,7 @@ class DockerImageTarget(Target):
         stream, _ = self.container.get_archive(target_path)
         return b''.join(stream)
 
-    def retrieve_file_contents(self, target_path):
+    def retrieve_contents(self, target_path):
         """
         Retrieves the contents of a file from the target.
 
@@ -166,7 +166,7 @@ class DockerImageTarget(Target):
         :returns bytes: the contents of the file
         """
         f = io.BytesIO()
-        f.write(self.retrieve_tarball_contents(target_path))
+        f.write(self.retrieve_tarball(target_path))
         f.seek(0)
         t = tarfile.open(fileobj=f, mode='r')
         return t.extractfile(os.path.basename(target_path)).read()
@@ -179,7 +179,7 @@ class DockerImageTarget(Target):
         :param str local_path: The path to put it locally.
         """
         f = io.BytesIO()
-        f.write(self.retrieve_tarball_contents(target_path))
+        f.write(self.retrieve_tarball(target_path))
         f.seek(0)
         t = tarfile.open(fileobj=f, mode='r')
 
@@ -204,7 +204,7 @@ class DockerImageTarget(Target):
         paths = stdout.split()
         return paths
 
-    def retrieve_glob_contents(self, target_glob):
+    def retrieve_glob(self, target_glob):
         """
         Retrieves a globbed path on the target.
 
@@ -212,10 +212,10 @@ class DockerImageTarget(Target):
         """
         paths = self._resolve_glob(target_glob)
         if len(paths) == 0:
-            raise FileNotFoundError("no match for glob in retrieve_glob_contents")
+            raise FileNotFoundError("no match for glob in retrieve_glob")
         if len(paths) != 1:
-            raise ValueError("retrieve_glob_contents requires a single glob match")
-        return self.retrieve_file_contents(paths[0].decode('utf-8'))
+            raise ValueError("retrieve_glob requires a single glob match")
+        return self.retrieve_contents(paths[0].decode('utf-8'))
 
     @contextlib.contextmanager
     def retrieval_context(self, target_path, local_thing=None, glob=False):
@@ -243,7 +243,7 @@ class DockerImageTarget(Target):
             try:
                 yield to_yield
             finally:
-                local_file.write(self.retrieve_glob_contents(target_path) if glob else self.retrieve_file_contents(target_path))
+                local_file.write(self.retrieve_glob(target_path) if glob else self.retrieve_contents(target_path))
 
     #
     # Info access

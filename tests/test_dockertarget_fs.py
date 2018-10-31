@@ -27,10 +27,10 @@ def test_env_injection():
 
 def test_env_retrieval():
     t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
-    assert t.retrieve_file_contents("/etc/passwd").startswith(b"root:")
+    assert t.retrieve_contents("/etc/passwd").startswith(b"root:")
     t.inject_path("/etc/passwd", "/poo")
     with open("/etc/passwd", 'rb') as lf:
-        assert lf.read() == t.retrieve_file_contents("/poo")
+        assert lf.read() == t.retrieve_contents("/poo")
 
     tmpdir = tempfile.mkdtemp()
     try:
@@ -93,7 +93,7 @@ def test_retrieval_context():
 
 def test_glob_retrieval():
     t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
-    assert t.retrieve_glob_contents("/etc/hostna*").startswith(t.container.id[:5].encode('utf-8'))
+    assert t.retrieve_glob("/etc/hostna*").startswith(t.container.id[:5].encode('utf-8'))
     t.stop()
 
 if __name__ == '__main__':

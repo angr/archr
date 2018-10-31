@@ -8,7 +8,7 @@ def setup_module():
 def test_arrow_injection():
     t = archr.targets.DockerImageTarget('archr-test:crasher').build().start()
     archr.bows.QEMUTracerBow(t)
-    assert t.retrieve_file_contents("/tmp/shellphish_qemu/fire").startswith(b"#!/bin/sh")
+    assert t.retrieve_contents("/tmp/shellphish_qemu/fire").startswith(b"#!/bin/sh")
 
 def test_crasher_trace():
     t = archr.targets.DockerImageTarget('archr-test:crasher').build().start()
