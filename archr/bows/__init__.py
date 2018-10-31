@@ -27,6 +27,3 @@ from .memory_map import MemoryMapBow
 from .nc import NetCatBow
 from .qemu_tracer import QEMUTracerBow
 from .datascout import DataScoutBow
-
-if 'nose' not in sys.modules:
-    from .tube import TubeBow

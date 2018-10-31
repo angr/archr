@@ -5,7 +5,7 @@ from . import Bow
 
 class NetCatBow(Bow):
     """
-    Returns a pwntools tube connected to a running instance of the target.
+    Returns an nclib instance connected to a running instance of the target.
     """
 
     def fire(self, stderr=True): #pylint:disable=arguments-differ
