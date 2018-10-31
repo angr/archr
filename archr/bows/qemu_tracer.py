@@ -39,7 +39,7 @@ _trace_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
 class QEMUTracerBow(Bow):
 	def nock(self):
 		with arrows.bundle("shellphish_qemu") as b:
-			self.target.inject_tarball(b, "/tmp/shellphish_qemu")
+			self.target.inject_tarball("/tmp/shellphish_qemu", tarball_path=b)
 
 	def fire(self, *args, testcase=(), **kwargs): #pylint:disable=arguments-differ
 		if type(testcase) in [ str, bytes ]:
