@@ -10,7 +10,7 @@ def test_hook():
 	nfb = archr.utils.hook_entry(ofb, "mov rax, 60; mov rdi, 42; syscall")
 	with open(nfn, 'wb') as nff:
 		nff.write(nfb)
-	os.chmod(nfn, 755)
+	os.chmod(nfn, 0o755)
 	assert subprocess.Popen(["/bin/false"]).wait() == 1
 	assert subprocess.Popen([nfn]).wait() == 42
 	os.unlink(nfn)
