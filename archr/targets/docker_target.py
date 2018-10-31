@@ -113,7 +113,7 @@ class DockerImageTarget(Target):
             realpath = os.path.join(self.local_path, realpath.lstrip("/"))
         return realpath
 
-    def inject_contents(self, files):
+    def inject_contents(self, files, modes=None):
         """
         Injects files or into the target.
 
@@ -124,6 +124,9 @@ class DockerImageTarget(Target):
         for dst,content in files.items():
             i = tarfile.TarInfo(name=dst)
             i.size = len(content)
+            i.mode = 0o777
+            if modes and dst in modes:
+                i.mode = modes[dst]
             t.addfile(i, fileobj=io.BytesIO(content))
         t.close()
         f.seek(0)
@@ -264,15 +267,16 @@ class DockerImageTarget(Target):
                 local_file.write(self.retrieve_glob(target_path) if glob else self.retrieve_contents(target_path))
 
     @contextlib.contextmanager
-    def replacement_context(self, target_path, temp_contents):
+    def replacement_context(self, target_path, temp_contents, saved_contents=None):
         """
         Provides a context within which a file on the target is overwritten with different contents.
         Will yield the old contents.
 
         :param str target_path: the path on the target
         :param bytes temp_contents: the contents to overwrite the target with
+        :param bytes saved_contents: the original contents of the file, to avoid needlessly retrieving it
         """
-        saved_contents = self.retrieve_contents(target_path)
+        saved_contents = saved_contents if saved_contents is not None else self.retrieve_contents(target_path)
         self.inject_contents({target_path: temp_contents})
         yield saved_contents
         self.inject_contents({target_path: saved_contents})
@@ -348,4 +352,23 @@ class DockerImageTarget(Target):
             # TODO: probably insufficient
             p.terminate()
 
+    @contextlib.contextmanager
+    def shellcode_context(self, *args, asm_code=None, bin_code=None, **kwargs):
+        """
+        A context that runs the target with shellcode injected over the entrypoint.
+        Useful for operating in the normal process context of the target.
+
+        :param *args: args to pass to run_context()
+        :param **kwargs: kwargs to pass to run_context()
+        :param str asm_code: assembly to assemble into shellcode
+        :param bytes bin_code: binary code to inject directly
+        """
+
+        original_binary = self.retrieve_contents(self.target_path)
+        hooked_binary = hook_entry(original_binary, asm_code=asm_code, bin_code=bin_code)
+        with self.replacement_context(self.target_path, hooked_binary, saved_contents=original_binary):
+            with self.run_context(*args, **kwargs) as p:
+                yield p
+
 from ..errors import ArchrError
+from ..utils import hook_entry

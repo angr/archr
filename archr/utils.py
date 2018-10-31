@@ -1,4 +1,6 @@
 import subprocess
+import cle
+import io
 
 def parse_ldd(mem_map_str):
     entries = [l.strip() for l in mem_map_str.decode('utf-8').splitlines()]
@@ -15,3 +17,12 @@ def parse_ldd(mem_map_str):
 def lib_dependencies(filepath):
     mem_map_str,_ = subprocess.Popen([ "ldd", filepath ], stdout=subprocess.PIPE).communicate()
     return [ lib for lib in parse_ldd(mem_map_str) if lib != "linux-vdso.so.1" ]
+
+def hook_entry(binary, asm_code=None, bin_code=None):
+    main_bin = io.BytesIO(binary)
+    b = cle.Loader(main_bin, auto_load_libs=False)
+    start_addr = b.main_object.addr_to_offset(b.main_object.entry)
+    main_bin.seek(start_addr)
+    main_bin.write(b.main_object.arch.asm(asm_code) if asm_code else bin_code)
+    main_bin.seek(0)
+    return main_bin.read()
