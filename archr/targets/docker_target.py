@@ -79,14 +79,6 @@ class DockerImageTarget(Target):
     def _merged_path(self):
         return self.container.attrs['GraphDriver']['Data']['MergedDir']
 
-    def resolve_local_path(self, path):
-        if not path.startswith(self.local_path):
-            path = os.path.join(self.local_path, path.lstrip("/"))
-        realpath = os.path.realpath(path)
-        if not realpath.startswith(self.local_path):
-            realpath = os.path.join(self.local_path, realpath.lstrip("/"))
-        return realpath
-
     def mount_local(self, where=None):
         if self._local_path:
             return self

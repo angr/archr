@@ -139,6 +139,18 @@ class Target(ABC):
             raise ArchrError("target.mount_local() must be run before target.local_path can be accessed.")
         return self._local_path
 
+    def resolve_local_path(self, target_path):
+        """
+        The local equivalent of target_path on the host.
+        :returns str: the local path
+        """
+        if not target_path.startswith(self.local_path):
+            target_path = os.path.join(self.local_path, target_path.lstrip("/"))
+        realpath = os.path.realpath(target_path)
+        if not realpath.startswith(self.local_path):
+            realpath = os.path.join(self.local_path, realpath.lstrip("/"))
+        return realpath
+
     def inject_path(self, src, dst=None):
         """
         Injects a file or directory into the target.
