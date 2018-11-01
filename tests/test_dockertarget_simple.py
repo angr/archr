@@ -40,7 +40,7 @@ def test_entrypoint_env():
     with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
         p = t.run_command()
         stdout,_ = p.communicate()
-        assert sum(1 for i in stdout.split(b'\n') if i == b"ARCHR=YES") == 1
+        assert b"ARCHR=YES" in stdout.split(b'\n')
 
 def test_nccat_simple():
     with archr.targets.DockerImageTarget('archr-test:nccat').build() as t:
@@ -58,7 +58,7 @@ def test_context_env():
     with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
         with t.run_command() as p:
             stdout,_ = p.communicate()
-        assert sum(1 for i in stdout.split(b'\n') if i == b"ARCHR=YES") == 1
+        assert b"ARCHR=YES" in stdout.split(b'\n')
 
 if __name__ == '__main__':
     test_entrypoint_crasher()

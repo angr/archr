@@ -31,7 +31,6 @@ class DockerImageTarget(Target):
 
         self.image = None
         self.container = None
-        self._local_path = None
 
     #
     # Lifecycle

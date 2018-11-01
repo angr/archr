@@ -1,6 +1,7 @@
 import subprocess
 import tempfile
 import struct
+import shutil
 import archr
 import os
 
@@ -35,17 +36,29 @@ def test_sendfile_shellcode():
 def setup_module():
     os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
 
+def datascout_checks(t):
+    b = archr.bows.DataScoutBow(t)
+    env, aux = b.fire()
+
+    assert b"ARCHR=YES" in env
+    m = archr.bows.MemoryMapBow(t)
+    mm = m.fire()
+    assert mm['/lib64/ld-linux-x86-64.so.2'] in struct.unpack("<%dQ"%(len(aux)/8), aux)
+
 def test_datascout():
     with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
-        b = archr.bows.DataScoutBow(t)
-        env, aux = b.fire()
+        datascout_checks(t)
 
-        assert sum(1 for i in env if i == b"ARCHR=YES")
-        m = archr.bows.MemoryMapBow(t)
-        mm = m.fire()
-        assert mm['/lib64/ld-linux-x86-64.so.2'] in struct.unpack("<%dQ"%(len(aux)/8), aux)
+def test_datascout_local():
+    # copy to a writable location
+    tf = tempfile.mktemp()
+    shutil.copy("/usr/bin/env", tf)
+    with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build() as t:
+        datascout_checks(t)
+    os.unlink(tf)
 
 if __name__ == '__main__':
     test_echo_shellcode()
     test_sendfile_shellcode()
+    test_datascout_local()
     test_datascout()

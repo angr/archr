@@ -55,6 +55,8 @@ class QEMUTracerBow(Bow):
 
 	@contextlib.contextmanager
 	def fire_context(self, timeout=10, record_trace=True, record_magic=False, save_core=False, **kwargs):
+		assert self.target.target_path.startswith("/"), "The qemu tracer currently chdirs into a temporary directory, and cannot handle relative argv[0] paths."
+
 		tmp_prefix = tempfile.mktemp(dir="/tmp/", prefix="tracer-")
 		target_trace_filename = tmp_prefix + ".trace" if record_trace else None
 		target_magic_filename = tmp_prefix + ".magic" if record_magic else None
@@ -87,10 +89,10 @@ class QEMUTracerBow(Bow):
 			r.returncode = r.process.returncode
 
 			# did a crash occur?
-			if r.returncode == 139:
+			if r.returncode in [ 139, -11 ]:
 				r.crashed = True
 				r.signal = signal.SIGSEGV
-			elif r.returncode == 132:
+			elif r.returncode == [ 132, -9 ]:
 				r.crashed = True
 				r.signal = signal.SIGILL
 

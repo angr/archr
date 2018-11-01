@@ -146,7 +146,7 @@ class Target(ABC):
     #
 
     def __enter__(self): return self.start()
-    def __exit__(self, *args): return self.stop()
+    def __exit__(self, *args): self.stop()
 
     @property
     def local_path(self):
@@ -364,5 +364,6 @@ class Target(ABC):
 
 
 from .docker_target import DockerImageTarget
+from .local_target import LocalTarget
 from ..utils import hook_entry
 from ..errors import ArchrError
