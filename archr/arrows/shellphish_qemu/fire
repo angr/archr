@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 
 ulimit -c unlimited
 ulimit -f unlimited
