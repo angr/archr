@@ -36,16 +36,14 @@ def setup_module():
     os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
 
 def test_datascout():
-    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start()
-    b = archr.bows.DataScoutBow(t)
-    env, aux = b.fire()
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+        b = archr.bows.DataScoutBow(t)
+        env, aux = b.fire()
 
-    assert sum(1 for i in env if i == b"ARCHR=YES")
-    m = archr.bows.MemoryMapBow(t)
-    mm = m.fire()
-    assert mm['/lib64/ld-linux-x86-64.so.2'] in struct.unpack("<%dQ"%(len(aux)/8), aux)
-    # arbitrary check
-    t.stop()
+        assert sum(1 for i in env if i == b"ARCHR=YES")
+        m = archr.bows.MemoryMapBow(t)
+        mm = m.fire()
+        assert mm['/lib64/ld-linux-x86-64.so.2'] in struct.unpack("<%dQ"%(len(aux)/8), aux)
 
 if __name__ == '__main__':
     test_echo_shellcode()
