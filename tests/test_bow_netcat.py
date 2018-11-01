@@ -7,7 +7,7 @@ def setup_module():
     os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
 
 def netcat_checks(t):
-    b = archr.bows.NetCatBow(t)
+    b = archr.arsenal.NetCatBow(t)
     try:
         r = b.fire()
     except nclib.NetcatError:
@@ -26,7 +26,7 @@ def test_netcat_network_local():
 
 def test_netcat_stdio():
     with archr.targets.DockerImageTarget('archr-test:cat').build() as t:
-        b = archr.bows.NetCatBow(t)
+        b = archr.arsenal.NetCatBow(t)
         r = b.fire()
         r.send(b"hello!")
         assert r.readuntil(b"hello!", timeout=5) == b"hello!"

@@ -8,7 +8,7 @@ import re
 import io
 import os
 
-l = logging.getLogger("archr.bows.qemu_tracer")
+l = logging.getLogger("archr.arsenal.qemu_tracer")
 
 from .. import arrows
 from . import Bow

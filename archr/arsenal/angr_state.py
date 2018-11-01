@@ -1,6 +1,6 @@
 import logging
 
-l = logging.getLogger("archr.bows.angr_state")
+l = logging.getLogger("archr.arsenal.angr_state")
 
 from . import Bow
 

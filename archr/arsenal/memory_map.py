@@ -1,6 +1,6 @@
 import logging
 
-l = logging.getLogger("archr.bows.memory_map")
+l = logging.getLogger("archr.arsenal.memory_map")
 
 from . import Bow
 

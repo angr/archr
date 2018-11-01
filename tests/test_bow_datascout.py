@@ -9,7 +9,7 @@ def test_echo_shellcode():
     with open("/bin/false", 'rb') as off:
         ofb = off.read()
     nfn = tempfile.mktemp()
-    nfb = archr.utils.hook_entry(ofb, archr.bows.datascout.echo_shellcode(b"TESTING THIS THING!"))
+    nfb = archr.utils.hook_entry(ofb, archr.arsenal.datascout.echo_shellcode(b"TESTING THIS THING!"))
     with open(nfn, 'wb') as nff:
         nff.write(nfb)
     os.chmod(nfn, 0o755)
@@ -23,7 +23,7 @@ def test_sendfile_shellcode():
     with open("/bin/false", 'rb') as off:
         ofb = off.read()
     nfn = tempfile.mktemp()
-    nfb = archr.utils.hook_entry(ofb, archr.bows.datascout.sendfile_shellcode(b"/proc/self/cmdline"))
+    nfb = archr.utils.hook_entry(ofb, archr.arsenal.datascout.sendfile_shellcode(b"/proc/self/cmdline"))
     with open(nfn, 'wb') as nff:
         nff.write(nfb)
     os.chmod(nfn, 0o755)
@@ -37,11 +37,11 @@ def setup_module():
     os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
 
 def datascout_checks(t):
-    b = archr.bows.DataScoutBow(t)
+    b = archr.arsenal.DataScoutBow(t)
     env, aux = b.fire()
 
     assert b"ARCHR=YES" in env
-    m = archr.bows.MemoryMapBow(t)
+    m = archr.arsenal.MemoryMapBow(t)
     mm = m.fire()
     assert mm['/lib64/ld-linux-x86-64.so.2'] in struct.unpack("<%dQ"%(len(aux)/8), aux)
 

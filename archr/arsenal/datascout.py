@@ -1,6 +1,6 @@
 import logging
 
-l = logging.getLogger("archr.bows.datascout")
+l = logging.getLogger("archr.arsenal.datascout")
 
 from . import Bow
 

@@ -8,18 +8,18 @@ def setup_module():
 
 def test_arrow_injection_docker():
     with archr.targets.DockerImageTarget('archr-test:crasher').build() as t:
-        archr.bows.QEMUTracerBow(t)
+        archr.arsenal.QEMUTracerBow(t)
         assert t.retrieve_contents("/tmp/shellphish_qemu/fire").startswith(b"#!/bin/sh")
 
 def test_arrow_injection_local():
     with contextlib.suppress(FileNotFoundError):
         os.unlink("/tmp/shellphish_qemu/fire")
     with archr.targets.LocalTarget([os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher")]).build() as t:
-        archr.bows.QEMUTracerBow(t)
+        archr.arsenal.QEMUTracerBow(t)
         assert t.retrieve_contents("/tmp/shellphish_qemu/fire").startswith(b"#!/bin/sh")
 
 def crasher_checks(t):
-    b = archr.bows.QEMUTracerBow(t)
+    b = archr.arsenal.QEMUTracerBow(t)
     r = b.fire(save_core=True)
 
     # arbitrary check

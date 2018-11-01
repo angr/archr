@@ -2,7 +2,7 @@ import logging
 import angr
 import os
 
-l = logging.getLogger("archr.bows.angr")
+l = logging.getLogger("archr.arsenal.angr")
 
 from . import Bow
 

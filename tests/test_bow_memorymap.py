@@ -6,7 +6,7 @@ def setup_module():
 
 def test_cat_ldd():
     with archr.targets.DockerImageTarget('archr-test:cat').build() as t:
-        b = archr.bows.MemoryMapBow(t)
+        b = archr.arsenal.MemoryMapBow(t)
         s = b.fire()
         assert s == {
             'linux-vdso.so.1': 0x7ffff7ffa000,
@@ -21,7 +21,7 @@ def test_cat_ldd():
 
 def test_cat_ldd_local():
     with archr.targets.LocalTarget(["/bin/cat"]).build() as t:
-        b = archr.bows.MemoryMapBow(t)
+        b = archr.arsenal.MemoryMapBow(t)
         s = b.fire()
         assert s == {
             'linux-vdso.so.1': 0x7ffff7ffa000,
