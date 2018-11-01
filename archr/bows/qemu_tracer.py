@@ -74,6 +74,7 @@ class QEMUTracerBow(Bow):
 			if local_core_filename:
 				target_core_glob = os.path.join('/tmp', "qemu_*.core")
 				r.core_path = exit_stack.enter_context(self.target.retrieval_context(target_core_glob, local_core_filename, glob=True))
+				self.target.run_command(["sh", "-c", "rm /tmp/qemu_*.core"]).wait()
 
 			r.process = exit_stack.enter_context(self.target.run_context(target_cmd, timeout=timeout))
 
