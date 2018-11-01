@@ -60,6 +60,7 @@ class DockerImageTarget(Target):
 
     def restart(self):
         self.container.restart()
+        return self
 
     def stop(self):
         if self.container:
@@ -70,6 +71,7 @@ class DockerImageTarget(Target):
     def remove(self):
         if self.container:
             self.container.remove(force=True)
+        return self
 
     #
     # File access
