@@ -5,7 +5,6 @@ import logging
 import signal
 import time
 import re
-import os
 
 l = logging.getLogger("archr.arsenal.qemu_tracer")
 
@@ -52,7 +51,7 @@ class QEMUTracerBow(Bow):
         tmp_prefix = tempfile.mktemp(dir="/tmp/", prefix="tracer-")
         target_trace_filename = tmp_prefix + ".trace" if record_trace else None
         target_magic_filename = tmp_prefix + ".magic" if record_magic else None
-        target_tempdir = tempfile.mkdtemp(prefix="tracer")
+        target_tempdir = tempfile.mktemp(prefix="tracer") # not mkdtemp, because that'd create the dir locally
         local_core_filename = tmp_prefix + ".core" if save_core else None
 
         target_cmd = self._build_command(target_tempdir, trace_filename=target_trace_filename, magic_filename=target_magic_filename, **kwargs)
