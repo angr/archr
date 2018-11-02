@@ -79,11 +79,12 @@ class QEMUTracerBow(Bow):
                 r.signal = signal.SIGILL
 
         if local_core_filename:
-            target_cores = self.target.resolve_glob(os.path.join(target_tempdir, "qemu_*.core"))
+            target_cores = self.target.resolve_glob("/tmp/qemu_*.core")
             if len(target_cores) != 1:
                 raise ArchrError("expected 1 core file but found %d" % len(target_cores))
             self.target.retrieve_into(target_cores[0], local_core_filename)
             r.core_path = local_core_filename
+            self.target.run_command(["sh", "-c", "rm /tmp/qemu_*.core"]).wait()
 
         if target_trace_filename:
             trace = self.target.retrieve_contents(target_trace_filename)
