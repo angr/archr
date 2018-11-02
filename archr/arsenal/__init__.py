@@ -31,4 +31,5 @@ from .memory_map import MemoryMapBow
 from .nc import NetCatBow
 from .qemu_tracer import QEMUTracerBow
 from .datascout import DataScoutBow
+from .gdbserver import GDBServerBow
 from .. import arrows
