@@ -54,7 +54,7 @@ class QEMUTracerBow(Bow):
         target_tempdir = tempfile.mktemp(prefix="tracer") # not mkdtemp, because that'd create the dir locally
         local_core_filename = tmp_prefix + ".core" if save_core else None
 
-        target_cmd = self._build_command(target_tempdir, trace_filename=target_trace_filename, magic_filename=target_magic_filename, **kwargs)
+        target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename, **kwargs)
 
         with self.target.run_context(target_cmd, timeout=timeout) as p:
             r = TraceResults()
@@ -111,7 +111,7 @@ class QEMUTracerBow(Bow):
     def qemu_variant(self):
         return "shellphish-qemu-linux-x86_64"
 
-    def _build_command(self, tempdir, trace_filename=None, library_path=None, magic_filename=None, report_bad_args=False, seed=None):
+    def _build_command(self, trace_filename=None, library_path=None, magic_filename=None, report_bad_args=False, seed=None):
         """
         Here, we build the tracing command.
         """
@@ -120,7 +120,7 @@ class QEMUTracerBow(Bow):
         # First, the arrow invocation
         #
 
-        cmd_args = [ "/tmp/shellphish_qemu/fire", tempdir, self.qemu_variant ]
+        cmd_args = [ "/tmp/shellphish_qemu/fire", self.qemu_variant ]
 
         #
         # Next, we build QEMU options.
