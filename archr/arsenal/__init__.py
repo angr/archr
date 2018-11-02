@@ -1,6 +1,8 @@
 import sys
 
 class Bow:
+    REQUIRED_ARROW = None
+
     def __init__(self, target):
         """
         Initializes the bow.
@@ -13,7 +15,9 @@ class Bow:
         """
         Prepare the arrow (inject it into the target).
         """
-        pass
+        if self.REQUIRED_ARROW:
+            with arrows.bundle(self.REQUIRED_ARROW) as b:
+                self.target.inject_path(b, "/tmp/%s" % self.REQUIRED_ARROW)
 
     def fire(self, *args, **kwargs):
         """
@@ -27,3 +31,4 @@ from .memory_map import MemoryMapBow
 from .nc import NetCatBow
 from .qemu_tracer import QEMUTracerBow
 from .datascout import DataScoutBow
+from .. import arrows
