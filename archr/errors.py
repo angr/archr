@@ -1,2 +1,2 @@
 class ArchrError(Exception):
-	pass
+    pass
