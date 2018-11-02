@@ -15,7 +15,12 @@ setup(
     version='8.18.10.5',
     python_requires='>=3.5',
     packages=packages,
+    package_data = {
+        'archr': ['arrows/*.sh', 'arrows/*/*']
+    },
     install_requires=[
+        'angr',
+        'shellphish_qemu',
     ],
     description='Target-centric program analysis.',
     url='https://github.com/angr/archr',
