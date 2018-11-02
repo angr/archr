@@ -335,6 +335,7 @@ class Target(ABC):
         p = self.run_command(*args, **kwargs)
         try:
             yield p
+            p.stdin.close()
             p.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             self.restart()
