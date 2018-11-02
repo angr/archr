@@ -5,12 +5,10 @@ import logging
 import signal
 import time
 import re
-import io
 import os
 
 l = logging.getLogger("archr.arsenal.qemu_tracer")
 
-from .. import arrows
 from . import Bow
 
 class TraceResults:
@@ -29,10 +27,6 @@ class TraceResults:
 	base_address = None
 	magic_contents = None
 	core_path = None
-
-	# internal stuff
-	_trace_file = None
-	_magic_file = None
 
 _trace_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
 
@@ -63,19 +57,9 @@ class QEMUTracerBow(Bow):
 
 		target_cmd = self._build_command(target_tempdir, trace_filename=target_trace_filename, magic_filename=target_magic_filename, **kwargs)
 
-		with contextlib.ExitStack() as exit_stack:
+		with self.target.run_context(target_cmd, timeout=timeout) as p:
 			r = TraceResults()
-
-			# add retrievers for important files
-			if target_trace_filename:
-				r._trace_file = exit_stack.enter_context(self.target.retrieval_context(target_trace_filename, io.BytesIO()))
-			if target_magic_filename:
-				r._magic_file = exit_stack.enter_context(self.target.retrieval_context(target_magic_filename, io.BytesIO()))
-			if local_core_filename:
-				target_core_glob = os.path.join(target_tempdir, "qemu_*.core")
-				r.core_path = exit_stack.enter_context(self.target.retrieval_context(target_core_glob, local_core_filename, glob=True))
-
-			r.process = exit_stack.enter_context(self.target.run_context(target_cmd, timeout=timeout))
+			r.process = p
 
 			try:
 				yield r
@@ -94,14 +78,23 @@ class QEMUTracerBow(Bow):
 				r.crashed = True
 				r.signal = signal.SIGILL
 
-		if record_trace:
-			r._trace_file.seek(0)
+		if local_core_filename:
+			target_cores = self.target.resolve_glob(os.path.join(target_tempdir, "qemu_*.core"))
+			if len(target_cores) != 1:
+				raise ArchrError("expected 1 core file but found %d" % len(target_cores))
+			self.target.retrieve_into(target_cores[0], local_core_filename)
+			r.core_path = local_core_filename
+
+		if target_trace_filename:
+			trace = self.target.retrieve_contents(target_trace_filename)
+			trace_iter = iter(trace.splitlines())
+
 			# Find where qemu loaded the binary. Primarily for PIE
-			r.base_address = int(next(t.split()[1] for t in r._trace_file if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
+			r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
 
 			# record the trace
 			r.trace = [
-				int(_trace_re.match(t).group('addr'), 16) for t in r._trace_file if t.startswith(b"Trace ") #pylint:disable=not-an-iterable
+				int(_trace_re.match(t).group('addr'), 16) for t in trace_iter if t.startswith(b"Trace ")
 			]
 
 			# grab the faulting address
@@ -110,9 +103,8 @@ class QEMUTracerBow(Bow):
 
 			l.debug("Trace consists of %d basic blocks", len(r.trace))
 
-		if record_magic:
-			r._magic_file.seek(0)
-			r.magic_contents = r._magic_file.read()
+		if target_magic_filename:
+			r.magic_contents = self.target.retrieve_contents(target_magic_filename)
 			assert len(r.magic_contents) == 0x1000, "Magic content read from QEMU improper size, should be a page in length"
 
 	@property
@@ -175,3 +167,5 @@ class QEMUTracerBow(Bow):
 		cmd_args += self.target.target_args
 
 		return cmd_args
+
+from ..errors import ArchrError
