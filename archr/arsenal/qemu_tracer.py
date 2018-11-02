@@ -84,7 +84,7 @@ class QEMUTracerBow(Bow):
                 raise ArchrError("expected 1 core file but found %d" % len(target_cores))
             self.target.retrieve_into(target_cores[0], local_core_filename)
             r.core_path = local_core_filename
-            self.target.run_command(["sh", "-c", "rm /tmp/qemu_*.core"]).wait()
+            self.target.run_command(["rm", target_cores[0]]).wait()
 
         if target_trace_filename:
             trace = self.target.retrieve_contents(target_trace_filename)
