@@ -51,7 +51,6 @@ class QEMUTracerBow(Bow):
         tmp_prefix = tempfile.mktemp(dir="/tmp/", prefix="tracer-")
         target_trace_filename = tmp_prefix + ".trace" if record_trace else None
         target_magic_filename = tmp_prefix + ".magic" if record_magic else None
-        target_tempdir = tempfile.mktemp(prefix="tracer") # not mkdtemp, because that'd create the dir locally
         local_core_filename = tmp_prefix + ".core" if save_core else None
 
         target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename, **kwargs)
@@ -152,7 +151,7 @@ class QEMUTracerBow(Bow):
         if 'cgc' in self.qemu_variant:
             cmd_args += ["-m", "8G"]
 
-        if 'cgc' not in self.qemu_variant:
+        if 'cgc' not in self.qemu_variant and "LD_BIND_NOW=1" not in self.target.target_env:
             l.warning("setting LD_BIND_NOW=1. This will have an effect on the environment.")
             cmd_args += ['-E', 'LD_BIND_NOW=1']
 

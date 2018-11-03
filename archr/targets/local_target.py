@@ -15,16 +15,19 @@ class LocalTarget(Target):
     """
 
     def __init__(self, target_args, target_path=None, target_env=None, target_cwd=None, tcp_ports=(), udp_ports=(), **kwargs):
-        super().__init__(target_args=target_args, target_path=target_path or target_args[0], target_env=target_env, target_cwd=target_cwd or "/", **kwargs)
+        super().__init__(
+            target_args=target_args,
+            target_path=target_path or target_args[0],
+            target_env=target_env or [ k+"="+v for k,v in os.environ.items() ],
+            target_cwd=target_cwd or "/",
+            **kwargs
+        )
         self._tcp_ports = tcp_ports
         self._udp_ports = udp_ports
 
     #
     # Lifecycle
     #
-
-    def build(self, *args, **kwargs):
-        return self
 
     def start(self):
         return self
@@ -93,6 +96,6 @@ class LocalTarget(Target):
         return subprocess.Popen(
             command_args,
             stdin=stdin, stdout=stdout, stderr=stderr,
-            env=collections.OrderedDict(e.split("=", 2) for e in self.target_env) if self.target_env else None,
+            env=collections.OrderedDict(e.split("=", 1) for e in self.target_env) if self.target_env else None,
             bufsize=0
         )

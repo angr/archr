@@ -48,14 +48,17 @@ class Target(ABC):
         """
         pass
 
-    @abstractmethod
-    def build(self, *args, **kwargs):
+    def build(self):
         """
         Some automs require a "build" step.  For example, Vagrant/Docker/Ansible will need to run for some targets
         This step should begin with the metadata passed to the constructor, and produce a state ready for run()
         :return:
         """
-        pass
+        if not any(e.startswith("PWD=") for e in self.target_env):
+            self.target_env.append("PWD=%s"%self.target_cwd)
+        if "LD_BIND_NOW=1" not in self.target_env:
+            self.target_env.append("LD_BIND_NOW=1")
+        return self
 
     @abstractmethod
     def remove(self):

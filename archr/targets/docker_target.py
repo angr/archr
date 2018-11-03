@@ -46,9 +46,7 @@ class DockerImageTarget(Target):
         self.target_path = self.target_path or self.target_args[0]
         self.target_cwd = self.target_cwd or self.image.attrs['Config']['WorkingDir'] or "/"
 
-        if not any(e.startswith("PWD=") for e in self.target_env):
-            self.target_env.append("PWD=%s"%self.target_cwd)
-
+        super().build()
         return self
 
     def start(self):
