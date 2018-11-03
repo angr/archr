@@ -1,4 +1,6 @@
+import tempfile
 import claripy
+import shutil
 import archr
 import os
 
@@ -6,8 +8,8 @@ def setup_module():
     os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
 
 def angr_checks(t):
-    mb = archr.arsenal.MemoryMapBow(t)
-    apb = archr.arsenal.angrProjectBow(t, mb)
+    dsb = archr.arsenal.DataScoutBow(t)
+    apb = archr.arsenal.angrProjectBow(t, dsb)
     asb = archr.arsenal.angrStateBow(t, apb)
     project = apb.fire()
     assert all(obj.binary.startswith(t.local_path) for obj in project.loader.all_elf_objects[1:])
@@ -29,8 +31,11 @@ def test_env_angr():
         angr_checks(t)
 
 def test_env_angr_local():
-    with archr.targets.LocalTarget(["/usr/bin/env"], target_env=["ARCHR=YES"]).build() as t:
+    tf = tempfile.mktemp()
+    shutil.copy("/usr/bin/env", tf)
+    with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build() as t:
         angr_checks(t)
+    os.unlink(tf)
 
 if __name__ == '__main__':
     test_env_angr_local()

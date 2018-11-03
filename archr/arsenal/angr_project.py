@@ -11,9 +11,9 @@ class angrProjectBow(Bow):
     Describes a target in the form of a Docker image.
     """
 
-    def __init__(self, target, mapping_bow):
+    def __init__(self, target, scout_bow):
         super(angrProjectBow, self).__init__(target)
-        self.mapping_bow = mapping_bow
+        self.scout_bow = scout_bow
         self.target.mount_local()
 
         self.project = None
@@ -21,7 +21,7 @@ class angrProjectBow(Bow):
 
     def fire(self, **kwargs): #pylint:disable=arguments-differ
         if self.project is None:
-            self._mem_mapping = self.mapping_bow.fire()
+            _,_,self._mem_mapping = self.scout_bow.fire()
             the_libs = [ self.target.resolve_local_path(lib) for lib in self._mem_mapping if lib.startswith("/") ]
             lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in self._mem_mapping.items() }
             bin_opts = { "base_addr": 0x555555554000 }

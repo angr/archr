@@ -18,8 +18,7 @@ We have the following Targets:
 
 The following Bows exist:
 
-- DataScoutBow (will get a memory map, but we probably need more than ldd, because we also need stack and heap)
-- MemoryMapBow (will grabs the environment and auxv of the process, exactly as it is at launch)
+- DataScoutBow (will grabs the memory map, environment, and auxv of the process, exactly as it is at launch)
 - AngrProjectBow (can create an angr project with the right libs at the right offsets)
 - AngrStateBow (can create a angr states with the right env, args, and fs)
 - QEMUTraceBow (does qemu tracing of the target)

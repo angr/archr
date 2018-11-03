@@ -27,7 +27,6 @@ class Bow:
 
 from .angr_project import angrProjectBow
 from .angr_state import angrStateBow
-from .memory_map import MemoryMapBow
 from .nc import NetCatBow
 from .qemu_tracer import QEMUTracerBow
 from .datascout import DataScoutBow
