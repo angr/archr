@@ -5,7 +5,7 @@ l = logging.getLogger("archr.arsenal.datascout")
 from . import Bow
 
 def _encode_bytes(s):
-    encoded_name = [ "0" ] + [ s[i:i+8].ljust(8, b"\0")[::-1].hex() for i in range(0, len(s), 8) ][::-1]
+    encoded_name = [ "0" ] + [ s[i:i+8].ljust(8, "\0")[::-1].encode('utf-8').hex() for i in range(0, len(s), 8) ][::-1]
     return "".join("mov rax, 0x%s; push rax; " % word for word in encoded_name)
 
 def sendfile_shellcode(filename):
@@ -24,6 +24,9 @@ def echo_shellcode(what):
         "mov rdi, 42; mov rax, 60; syscall;" # exit(42)
     )
 
+def brk_shellcode():
+    return "mov rax, 12; xor rdi, rdi; syscall; mov rdi, rax; add rdi, 0x1000; mov rax, 12; syscall;"
+
 class DataScoutBow(Bow):
     """
     Grabs the environment and auxiliary vector from the target.
@@ -33,16 +36,24 @@ class DataScoutBow(Bow):
         super().__init__(target)
         self.env = None
         self.auxv = None
+        self.map = None
 
     def fire(self, aslr=False): #pylint:disable=arguments-differ
         if not self.env:
-            with self.target.shellcode_context(asm_code=sendfile_shellcode(b"/proc/self/environ"), aslr=aslr) as p:
+            with self.target.shellcode_context(asm_code=sendfile_shellcode("/proc/self/environ"), aslr=aslr) as p:
                 env_str,_ = p.communicate()
                 self.env = env_str.split(b'\0')
 
         if not self.auxv:
-            with self.target.shellcode_context(asm_code=sendfile_shellcode(b"/proc/self/auxv"), aslr=aslr) as p:
+            with self.target.shellcode_context(asm_code=sendfile_shellcode("/proc/self/auxv"), aslr=aslr) as p:
                 aux_str,_ = p.communicate()
                 self.auxv = aux_str
 
-        return self.env, self.auxv
+        if not self.map:
+            with self.target.shellcode_context(asm_code=brk_shellcode() + sendfile_shellcode("/proc/self/maps"), aslr=aslr) as p:
+                map_str,_ = p.communicate()
+                self.map = parse_proc_maps(map_str)
+
+        return self.env, self.auxv, self.map
+
+from ..utils import parse_proc_maps

@@ -9,7 +9,7 @@ def test_echo_shellcode():
     with open("/bin/false", 'rb') as off:
         ofb = off.read()
     nfn = tempfile.mktemp()
-    nfb = archr.utils.hook_entry(ofb, archr.arsenal.datascout.echo_shellcode(b"TESTING THIS THING!"))
+    nfb = archr.utils.hook_entry(ofb, archr.arsenal.datascout.echo_shellcode("TESTING THIS THING!"))
     with open(nfn, 'wb') as nff:
         nff.write(nfb)
     os.chmod(nfn, 0o755)
@@ -23,7 +23,7 @@ def test_sendfile_shellcode():
     with open("/bin/false", 'rb') as off:
         ofb = off.read()
     nfn = tempfile.mktemp()
-    nfb = archr.utils.hook_entry(ofb, archr.arsenal.datascout.sendfile_shellcode(b"/proc/self/cmdline"))
+    nfb = archr.utils.hook_entry(ofb, archr.arsenal.datascout.sendfile_shellcode("/proc/self/cmdline"))
     with open(nfn, 'wb') as nff:
         nff.write(nfb)
     os.chmod(nfn, 0o755)
@@ -38,23 +38,43 @@ def setup_module():
 
 def datascout_checks(t):
     b = archr.arsenal.DataScoutBow(t)
-    env, aux = b.fire()
+    env, aux, maps = b.fire()
 
     assert b"ARCHR=YES" in env
-    m = archr.arsenal.MemoryMapBow(t)
-    mm = m.fire()
-    assert mm['/lib64/ld-linux-x86-64.so.2'] in struct.unpack("<%dQ"%(len(aux)/8), aux)
+    assert maps['/lib/x86_64-linux-gnu/ld-2.27.so'] in struct.unpack("<%dQ"%(len(aux)/8), aux)
+    return env, aux, maps
 
 def test_datascout():
     with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
-        datascout_checks(t)
+        _,_,maps = datascout_checks(t)
+        docker_ref = {
+            '/lib/x86_64-linux-gnu/libc-2.27.so': 0x7ffff79e4000,
+            '/lib/x86_64-linux-gnu/ld-2.27.so': 0x7ffff7dd5000,
+            '[stack-end]': 0x7ffffffff000,
+            '[heap]': 0x55555575d000,
+            '[vvar]': 0x7ffff7ff7000,
+            '[vdso]': 0x7ffff7ffa000,
+            '[vsyscall]': 0xffffffffff600000
+        }
+        assert all(maps[x] == docker_ref[x] for x in docker_ref)
 
 def test_datascout_local():
     # copy to a writable location
     tf = tempfile.mktemp()
     shutil.copy("/usr/bin/env", tf)
     with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build() as t:
-        datascout_checks(t)
+        _,_,maps = datascout_checks(t)
+        local_ref = {
+            '/lib/x86_64-linux-gnu/libc-2.27.so': 0x7ffff79e4000,
+            '/lib/x86_64-linux-gnu/ld-2.27.so': 0x7ffff7dd5000,
+            '[stack-end]': 0x7ffffffff000,
+            '[heap]': 0x55555575d000,
+            '[vvar]': 0x7ffff7ff7000,
+            '[vdso]': 0x7ffff7ffa000,
+            '[vsyscall]': 0xffffffffff600000
+        }
+        assert all(maps[x] == local_ref[x] for x in local_ref)
+
     os.unlink(tf)
 
 if __name__ == '__main__':

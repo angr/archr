@@ -14,6 +14,22 @@ def parse_ldd(mem_map_str):
         parsed[libname] = libaddr
     return parsed
 
+def parse_proc_maps(proc_str):
+    entries = [ l.strip() for l in proc_str.splitlines() ]
+    parsed = { }
+    for entry in entries:
+        what = entry.split()[-1].decode('utf-8')
+        addr_range = entry.split()[0]
+        start,end = addr_range.split(b"-")
+        if what in parsed:
+            continue
+        elif what.startswith("/"):
+            parsed[what] = int(start, 16)
+        elif what.startswith("["):
+            parsed[what] = int(start, 16)
+            parsed[what.rstrip("]")+"-end]"] = int(end, 16)
+    return parsed
+
 def lib_dependencies(filepath):
     mem_map_str,_ = subprocess.Popen([ "ldd", filepath ], stdout=subprocess.PIPE).communicate()
     return [ lib for lib in parse_ldd(mem_map_str) if lib != "linux-vdso.so.1" ]
