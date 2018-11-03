@@ -22,6 +22,14 @@ def test_cat_docker():
     with archr.targets.DockerImageTarget('archr-test:entrypoint-false').build() as t:
         check_gdb_cat(t)
 
+def test_env_order():
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+        a = gdb_do(t).stdout.read()
+        b = gdb_do(t).stdout.read()
+        c = gdb_do(t).stdout.read()
+        assert a == b
+        assert b == c
+
 def test_cat_local():
     with archr.targets.LocalTarget(["/bin/false"]).build() as t:
         check_gdb_cat(t)
@@ -29,3 +37,4 @@ def test_cat_local():
 if __name__ == '__main__':
     test_cat_docker()
     test_cat_local()
+    test_env_order()

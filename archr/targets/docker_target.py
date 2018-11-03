@@ -44,6 +44,11 @@ class DockerImageTarget(Target):
         )
         self.target_env = self.target_env or self.image.attrs['Config']['Env']
         self.target_path = self.target_path or self.target_args[0]
+        self.target_cwd = self.target_cwd or self.image.attrs['Config']['WorkingDir'] or "/"
+
+        if not any(e.startswith("PWD=") for e in self.target_env):
+            self.target_env.append("PWD=%s"%self.target_cwd)
+
         return self
 
     def start(self):
@@ -132,7 +137,7 @@ class DockerImageTarget(Target):
     #
 
     def run_command(
-        self, args=None, args_prefix=None, args_suffix=None, aslr=True,
+        self, args=None, args_prefix=None, args_suffix=None, aslr=True, env=None,
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ): #pylint:disable=arguments-differ
         assert self.container is not None
@@ -152,5 +157,5 @@ class DockerImageTarget(Target):
 
         return subprocess.Popen(
             docker_args + command_args,
-            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
+            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0,
         )

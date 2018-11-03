@@ -21,7 +21,7 @@ class Target(ABC):
     # Abstract methods
     #
 
-    def __init__(self, target_args=None, target_path=None, target_env=None):
+    def __init__(self, target_args=None, target_path=None, target_env=None, target_cwd=None):
         """
         Create an autom
 
@@ -36,6 +36,7 @@ class Target(ABC):
         self.target_args = target_args
         self.target_path = target_path
         self.target_env = target_env
+        self.target_cwd = target_cwd
         self._local_path = None
 
     @abstractmethod

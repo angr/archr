@@ -14,8 +14,8 @@ class LocalTarget(Target):
     Describes a target running on the local host.
     """
 
-    def __init__(self, target_args, target_path=None, target_env=None, tcp_ports=(), udp_ports=(), **kwargs):
-        super().__init__(target_args=target_args, target_path=target_path or target_args[0], target_env=target_env, **kwargs)
+    def __init__(self, target_args, target_path=None, target_env=None, target_cwd=None, tcp_ports=(), udp_ports=(), **kwargs):
+        super().__init__(target_args=target_args, target_path=target_path or target_args[0], target_env=target_env, target_cwd=target_cwd or "/", **kwargs)
         self._tcp_ports = tcp_ports
         self._udp_ports = udp_ports
 

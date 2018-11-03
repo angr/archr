@@ -17,6 +17,6 @@ class GDBServerBow(Bow):
             pass
 
     @contextlib.contextmanager
-    def fire_context(self, port=31337, **kwargs):
-        with self.target.run_context(args_prefix=["/tmp/gdbserver/fire", "0.0.0.0:%d"%port], **kwargs) as p:
+    def fire_context(self, port=31337, aslr=False, **kwargs):
+        with self.target.run_context(args_prefix=["/tmp/gdbserver/fire", "0.0.0.0:%d"%port], aslr=aslr, **kwargs) as p:
             yield p
