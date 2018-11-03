@@ -19,8 +19,9 @@ setup(
         'archr': ['arrows/*.sh', 'arrows/*/*']
     },
     install_requires=[
-        'angr',
         'shellphish_qemu',
+        'pygdbmi',
+        'angr',
     ],
     description='Target-centric program analysis.',
     url='https://github.com/angr/archr',
