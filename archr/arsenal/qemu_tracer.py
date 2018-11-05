@@ -5,6 +5,7 @@ import logging
 import signal
 import time
 import re
+import os
 
 l = logging.getLogger("archr.arsenal.qemu_tracer")
 
@@ -32,6 +33,15 @@ _trace_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
 class QEMUTracerBow(Bow):
     REQUIRED_ARROW = "shellphish_qemu"
 
+    @contextlib.contextmanager
+    def _mk_tmpdir(self):
+        tmpdir = tempfile.mktemp(prefix="/tmp/tracer_")
+        self.target.run_command(["mkdir", tmpdir]).wait()
+        try:
+            yield tmpdir
+        finally:
+            self.target.run_command(["rmdir", tmpdir])
+
     def fire(self, *args, testcase=(), **kwargs): #pylint:disable=arguments-differ
         if type(testcase) in [ str, bytes ]:
             testcase = [ testcase ]
@@ -48,62 +58,64 @@ class QEMUTracerBow(Bow):
     def fire_context(self, timeout=10, record_trace=True, record_magic=False, save_core=False, **kwargs):
         assert self.target.target_path.startswith("/"), "The qemu tracer currently chdirs into a temporary directory, and cannot handle relative argv[0] paths."
 
-        tmp_prefix = tempfile.mktemp(dir="/tmp/", prefix="tracer-")
-        target_trace_filename = tmp_prefix + ".trace" if record_trace else None
-        target_magic_filename = tmp_prefix + ".magic" if record_magic else None
-        local_core_filename = tmp_prefix + ".core" if save_core else None
+        with self._mk_tmpdir() as tmpdir:
+            tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
+            target_trace_filename = tmp_prefix + ".trace" if record_trace else None
+            target_magic_filename = tmp_prefix + ".magic" if record_magic else None
+            local_core_filename = tmp_prefix + ".core" if save_core else None
 
-        target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename, **kwargs)
-        with self.target.run_context(target_cmd, timeout=timeout) as p:
-            r = TraceResults()
-            r.process = p
+            target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename, coredump_dir=tmpdir, **kwargs)
 
-            try:
-                yield r
-                r.timed_out = False
-            except subprocess.TimeoutExpired:
-                r.timed_out = True
+            with self.target.run_context(target_cmd, timeout=timeout) as p:
+                r = TraceResults()
+                r.process = p
 
-        if not r.timed_out:
-            r.returncode = r.process.returncode
+                try:
+                    yield r
+                    r.timed_out = False
+                except subprocess.TimeoutExpired:
+                    r.timed_out = True
 
-            # did a crash occur?
-            if r.returncode in [ 139, -11 ]:
-                r.crashed = True
-                r.signal = signal.SIGSEGV
-            elif r.returncode == [ 132, -9 ]:
-                r.crashed = True
-                r.signal = signal.SIGILL
+            if not r.timed_out:
+                r.returncode = r.process.returncode
 
-        if local_core_filename:
-            target_cores = self.target.resolve_glob("/tmp/qemu_*.core")
-            if len(target_cores) != 1:
-                raise ArchrError("expected 1 core file but found %d" % len(target_cores))
-            self.target.retrieve_into(target_cores[0], local_core_filename)
-            r.core_path = local_core_filename
-            self.target.run_command(["rm", target_cores[0]]).wait()
+                # did a crash occur?
+                if r.returncode in [ 139, -11 ]:
+                    r.crashed = True
+                    r.signal = signal.SIGSEGV
+                elif r.returncode == [ 132, -9 ]:
+                    r.crashed = True
+                    r.signal = signal.SIGILL
 
-        if target_trace_filename:
-            trace = self.target.retrieve_contents(target_trace_filename)
-            trace_iter = iter(trace.splitlines())
+            if local_core_filename:
+                target_cores = self.target.resolve_glob(os.path.join(tmpdir, "qemu_*.core"))
+                if len(target_cores) != 1:
+                    raise ArchrError("expected 1 core file but found %d" % len(target_cores))
+                self.target.retrieve_into(target_cores[0], local_core_filename)
+                r.core_path = local_core_filename
+                self.target.run_command(["rm", target_cores[0]]).wait()
 
-            # Find where qemu loaded the binary. Primarily for PIE
-            r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
+            if target_trace_filename:
+                trace = self.target.retrieve_contents(target_trace_filename)
+                trace_iter = iter(trace.splitlines())
 
-            # record the trace
-            r.trace = [
-                int(_trace_re.match(t).group('addr'), 16) for t in trace_iter if t.startswith(b"Trace ")
-            ]
+                # Find where qemu loaded the binary. Primarily for PIE
+                r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
 
-            # grab the faulting address
-            if r.crashed:
-                r.crash_address = r.trace[-1]
+                # record the trace
+                r.trace = [
+                    int(_trace_re.match(t).group('addr'), 16) for t in trace_iter if t.startswith(b"Trace ")
+                ]
 
-            l.debug("Trace consists of %d basic blocks", len(r.trace))
+                # grab the faulting address
+                if r.crashed:
+                    r.crash_address = r.trace[-1]
 
-        if target_magic_filename:
-            r.magic_contents = self.target.retrieve_contents(target_magic_filename)
-            assert len(r.magic_contents) == 0x1000, "Magic content read from QEMU improper size, should be a page in length"
+                l.debug("Trace consists of %d basic blocks", len(r.trace))
+
+            if target_magic_filename:
+                r.magic_contents = self.target.retrieve_contents(target_magic_filename)
+                assert len(r.magic_contents) == 0x1000, "Magic content read from QEMU improper size, should be a page in length"
 
 
             
@@ -121,7 +133,7 @@ class QEMUTracerBow(Bow):
         
         return qemu_variant
 
-    def _build_command(self, trace_filename=None, library_path=None, magic_filename=None, report_bad_args=False, seed=None):
+    def _build_command(self, trace_filename=None, library_path=None, magic_filename=None, coredump_dir=".", report_bad_args=False, seed=None):
         """
         Here, we build the tracing command.
         """
@@ -132,6 +144,7 @@ class QEMUTracerBow(Bow):
 
         qemu_variant = self.qemu_variant(trace_filename != None)
         cmd_args = [ "/tmp/shellphish_qemu/fire", qemu_variant]
+        cmd_args += [ "-C", coredump_dir]
 
         #
         # Next, we build QEMU options.
