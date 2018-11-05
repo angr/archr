@@ -3,7 +3,9 @@ import subprocess
 import tempfile
 import logging
 import signal
+import shutil
 import time
+import glob
 import re
 import os
 
@@ -34,13 +36,23 @@ class QEMUTracerBow(Bow):
     REQUIRED_ARROW = "shellphish_qemu"
 
     @contextlib.contextmanager
-    def _mk_tmpdir(self):
+    def _target_mk_tmpdir(self):
         tmpdir = tempfile.mktemp(prefix="/tmp/tracer_")
         self.target.run_command(["mkdir", tmpdir]).wait()
         try:
             yield tmpdir
         finally:
             self.target.run_command(["rmdir", tmpdir])
+
+    @staticmethod
+    @contextlib.contextmanager
+    def _local_mk_tmpdir():
+        tmpdir = tempfile.mkdtemp(prefix="/tmp/tracer_")
+        try:
+            yield tmpdir
+        finally:
+            with contextlib.suppress(FileNotFoundError):
+                shutil.rmtree(tmpdir)
 
     def fire(self, *args, testcase=(), **kwargs): #pylint:disable=arguments-differ
         if type(testcase) in [ str, bytes ]:
@@ -58,7 +70,7 @@ class QEMUTracerBow(Bow):
     def fire_context(self, timeout=10, record_trace=True, record_magic=False, save_core=False, **kwargs):
         assert self.target.target_path.startswith("/"), "The qemu tracer currently chdirs into a temporary directory, and cannot handle relative argv[0] paths."
 
-        with self._mk_tmpdir() as tmpdir:
+        with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
             target_trace_filename = tmp_prefix + ".trace" if record_trace else None
             target_magic_filename = tmp_prefix + ".magic" if record_magic else None
@@ -91,9 +103,11 @@ class QEMUTracerBow(Bow):
                 target_cores = self.target.resolve_glob(os.path.join(tmpdir, "qemu_*.core"))
                 if len(target_cores) != 1:
                     raise ArchrError("expected 1 core file but found %d" % len(target_cores))
-                self.target.retrieve_into(target_cores[0], local_core_filename)
-                r.core_path = local_core_filename
-                self.target.run_command(["rm", target_cores[0]]).wait()
+                with self._local_mk_tmpdir() as local_tmpdir:
+                    self.target.retrieve_into(target_cores[0], local_tmpdir)
+                    cores = glob.glob(os.path.join(local_tmpdir, "qemu_*.core"))
+                    shutil.move(cores[0], local_core_filename)
+                    r.core_path = local_core_filename
 
             if target_trace_filename:
                 trace = self.target.retrieve_contents(target_trace_filename)
