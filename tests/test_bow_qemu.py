@@ -30,9 +30,34 @@ def crasher_checks(t):
     assert os.path.exists(r.core_path)
     assert os.path.getsize(r.core_path) > 0
 
+def crash_on_input_checks(t):
+    crashing = "A"*120
+    b = archr.arsenal.QEMUTracerBow(t)
+    r = b.fire(save_core=True, testcase=crashing)
+
+    assert r.crashed
+
+def shellcode_checks(t):
+    crash = b"A" * 272
+    b = archr.arsenal.QEMUTracerBow(t)
+    r = b.fire(save_core=True, testcase=crash)
+
+    assert r.crashed
+    
+
 def test_crasher_trace():
     with archr.targets.DockerImageTarget('archr-test:crasher').build() as t:
         crasher_checks(t)
+
+def test_crash_on_input_trace():
+    with archr.targets.DockerImageTarget('archr-test:crash-on-input').build() as t:
+        crash_on_input_checks(t)
+
+def test_shellcode_tester():
+    with archr.targets.DockerImageTarget('archr-test:shellcode_tester').build() as t:
+        shellcode_checks(t)
+        
+
 
 def test_crasher_trace_local():
     with archr.targets.LocalTarget([os.path.realpath(os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher"))]).build() as t:
@@ -43,3 +68,4 @@ if __name__ == '__main__':
     test_arrow_injection_local()
     test_crasher_trace()
     test_crasher_trace_local()
+    test_crash_on_input_trace()
