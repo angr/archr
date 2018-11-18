@@ -54,7 +54,6 @@ class QEMUTracerBow(Bow):
         local_core_filename = tmp_prefix + ".core" if save_core else None
 
         target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename, **kwargs)
-
         with self.target.run_context(target_cmd, timeout=timeout) as p:
             r = TraceResults()
             r.process = p
@@ -106,9 +105,21 @@ class QEMUTracerBow(Bow):
             r.magic_contents = self.target.retrieve_contents(target_magic_filename)
             assert len(r.magic_contents) == 0x1000, "Magic content read from QEMU improper size, should be a page in length"
 
-    @property
-    def qemu_variant(self):
-        return "shellphish-qemu-linux-x86_64"
+
+            
+    def qemu_variant(self, record_trace):
+        """
+        Need to know if we're tracking or not, specifically for what cgc qemu to use.
+        """
+
+        qemu_variant = None
+        if self.target.target_os == 'cgc':
+            suffix = "tracer" if record_trace else "base"
+            qemu_variant = "shellphish-qemu-cgc-%s" % suffix
+        else:
+            qemu_variant = "shellphish-qemu-linux-%s" % self.target.target_arch
+        
+        return qemu_variant
 
     def _build_command(self, trace_filename=None, library_path=None, magic_filename=None, report_bad_args=False, seed=None):
         """
@@ -119,7 +130,8 @@ class QEMUTracerBow(Bow):
         # First, the arrow invocation
         #
 
-        cmd_args = [ "/tmp/shellphish_qemu/fire", self.qemu_variant ]
+        qemu_variant = self.qemu_variant(trace_filename != None)
+        cmd_args = [ "/tmp/shellphish_qemu/fire", qemu_variant]
 
         #
         # Next, we build QEMU options.
@@ -148,10 +160,10 @@ class QEMUTracerBow(Bow):
             cmd_args += ["-report_bad_args"]
 
         # Memory limit option is only available in shellphish-qemu-cgc-*
-        if 'cgc' in self.qemu_variant:
+        if 'cgc' in qemu_variant:
             cmd_args += ["-m", "8G"]
 
-        if 'cgc' not in self.qemu_variant and "LD_BIND_NOW=1" not in self.target.target_env:
+        if 'cgc' not in qemu_variant and "LD_BIND_NOW=1" not in self.target.target_env:
             l.warning("setting LD_BIND_NOW=1. This will have an effect on the environment.")
             cmd_args += ['-E', 'LD_BIND_NOW=1']
 

@@ -21,7 +21,7 @@ class Target(ABC):
     # Abstract methods
     #
 
-    def __init__(self, target_args=None, target_path=None, target_env=None, target_cwd=None):
+    def __init__(self, target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux', target_arch='x86_64'):
         """
         Create an autom
 
@@ -37,6 +37,8 @@ class Target(ABC):
         self.target_path = target_path
         self.target_env = target_env
         self.target_cwd = target_cwd
+        self.target_os = target_os
+        self.target_arch = target_arch
         self._local_path = None
 
     @abstractmethod
@@ -83,7 +85,12 @@ class Target(ABC):
         """
         if self._local_path:
             os.system("sudo umount %s" % self.local_path)
-            os.rmdir(self.local_path)
+            # HACK: Added by adam to run tests, @zardus should fix
+            try:
+                os.rmdir(self.local_path)
+            except:
+                l.error("unable to rmdir {}, continuing".format(self.local_path))
+                
 
     @abstractmethod
     def restart(self):

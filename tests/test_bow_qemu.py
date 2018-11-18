@@ -43,7 +43,15 @@ def shellcode_checks(t):
     r = b.fire(save_core=True, testcase=crash)
 
     assert r.crashed
-    
+
+def vuln_stacksmash_checks(t):
+    crash = b"A" * 227
+
+    b = archr.arsenal.QEMUTracerBow(t)
+    r = b.fire(save_core=True, testcase=crash)
+
+    assert r.crashed
+
 
 def test_crasher_trace():
     with archr.targets.DockerImageTarget('archr-test:crasher').build() as t:
@@ -53,8 +61,12 @@ def test_crash_on_input_trace():
     with archr.targets.DockerImageTarget('archr-test:crash-on-input').build() as t:
         crash_on_input_checks(t)
 
+def test_vuln_stacksmash():
+    with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build() as t:
+        vuln_stacksmash_checks(t)
+        
 def test_shellcode_tester():
-    with archr.targets.DockerImageTarget('archr-test:shellcode_tester').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:shellcode_tester', target_os='cgc').build() as t:
         shellcode_checks(t)
         
 
