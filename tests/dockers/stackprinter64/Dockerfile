@@ -1,3 +1,3 @@
 from ubuntu:latest
 copy stackprinter /
-entrypoint [ "/stackprinter" ]
+entrypoint [ "/stackprinter", "AAAAAAAA", "BBBBBBBBB" ]
