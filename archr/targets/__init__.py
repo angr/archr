@@ -85,12 +85,10 @@ class Target(ABC):
         """
         if self._local_path:
             os.system("sudo umount %s" % self.local_path)
-            # HACK: Added by adam to run tests, @zardus should fix
             try:
                 os.rmdir(self.local_path)
-            except:
-                l.error("unable to rmdir {}, continuing".format(self.local_path))
-                
+            except OSError:
+                l.error("unable to rmdir %s, continuing", self.local_path)
 
     @abstractmethod
     def restart(self):
