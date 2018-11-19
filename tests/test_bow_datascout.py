@@ -1,40 +1,37 @@
-import subprocess
 import tempfile
 import struct
 import shutil
 import archr
 import os
 
-def test_echo_shellcode():
-    with open("/bin/false", 'rb') as off:
-        ofb = off.read()
-    nfn = tempfile.mktemp()
-    nfb = archr.utils.hook_entry(ofb, archr.arsenal.datascout.echo_shellcode("TESTING THIS THING!"))
-    with open(nfn, 'wb') as nff:
-        nff.write(nfb)
-    os.chmod(nfn, 0o755)
-    assert subprocess.Popen(["/bin/false"]).wait() == 1
-    p = subprocess.Popen([nfn], stdout=subprocess.PIPE)
-    assert p.communicate()[0] == b"TESTING THIS THING!"
-    assert p.wait() == 42
-    os.unlink(nfn)
-
-def test_sendfile_shellcode():
-    with open("/bin/false", 'rb') as off:
-        ofb = off.read()
-    nfn = tempfile.mktemp()
-    nfb = archr.utils.hook_entry(ofb, archr.arsenal.datascout.sendfile_shellcode("/proc/self/cmdline"))
-    with open(nfn, 'wb') as nff:
-        nff.write(nfb)
-    os.chmod(nfn, 0o755)
-    assert subprocess.Popen(["/bin/false"]).wait() == 1
-    p = subprocess.Popen([nfn], stdout=subprocess.PIPE)
-    assert p.communicate()[0].startswith(nfn.encode('utf-8'))
-    assert p.wait() == 42
-    os.unlink(nfn)
-
 def setup_module():
     os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
+
+def shellcode_checks(t):
+    b = archr.arsenal.DataScoutBow(t)
+    with t.shellcode_context(asm_code=b.exit_shellcode(exit_code=123)) as p:
+        stdout,_ = p.communicate()
+        assert p.wait() == 123
+
+    with t.shellcode_context(asm_code=b.echo_shellcode("TESTING THIS THING!")) as p:
+        stdout,_ = p.communicate()
+        assert stdout == b"TESTING THIS THING!"
+
+    with t.shellcode_context(asm_code=b.echo_shellcode("TESTING THIS THING!") + b.exit_shellcode()) as p:
+        stdout,_ = p.communicate()
+        assert stdout == b"TESTING THIS THING!"
+        assert p.wait() == 42
+
+    with t.shellcode_context(asm_code=b.sendfile_shellcode("/proc/self/cmdline")) as p:
+        stdout,_ = p.communicate()
+        assert stdout == t.target_path.encode('utf-8') + b'\0'
+
+def test_shellcode_amd64():
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+        shellcode_checks(t)
+def test_shellcode_i386():
+    with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build() as t:
+        shellcode_checks(t)
 
 def datascout_checks(t):
     b = archr.arsenal.DataScoutBow(t)
@@ -77,8 +74,22 @@ def test_datascout_local():
 
     os.unlink(tf)
 
+# 32-bit vuln_stacksmash
+def test_stacksmash():
+    with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build() as t:
+        b = archr.arsenal.DataScoutBow(t)
+        env, aux, maps = b.fire()
+
+        assert b"PWD=/" in env
+        assert maps['/lib/i386-linux-gnu/ld-2.27.so'] in struct.unpack("<%dI"%(len(aux)/4), aux)
+        assert '[stack-end]' in maps
+        assert '[heap]' in maps
+        assert '[vvar]' in maps
+        assert '[vdso]' in maps
+
 if __name__ == '__main__':
-    test_echo_shellcode()
-    test_sendfile_shellcode()
+    test_shellcode_amd64()
+    test_shellcode_i386()
+    test_stacksmash()
     test_datascout_local()
     test_datascout()
