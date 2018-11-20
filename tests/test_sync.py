@@ -21,7 +21,7 @@ def do_qemu(t):
     with archr.arsenal.QEMUTracerBow(t).fire_context() as qbf:
         return qbf.process
 
-def test_offsetprinter():
+def test_env():
     with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
         reference_env = t.run_command(aslr=False).stdout.read()
         gdb_env = do_gdb(t).stdout.read()
@@ -29,8 +29,7 @@ def test_offsetprinter():
         qemu_env = do_qemu(t).stdout.read()
         assert set(reference_env.splitlines()) == set(qemu_env.splitlines())
 
-    #with archr.targets.DockerImageTarget('archr-test:offsetprinter').build() as t:
-    t = archr.targets.DockerImageTarget('archr-test:offsetprinter').build().start()
+def check_offsetprinter(t):
     reference_str = t.run_command(aslr=False).stdout.read()
     reference_dct = parse_output(reference_str)
     assert parse_output(t.run_command(aslr=False).stdout.read()) == reference_dct
@@ -51,13 +50,43 @@ def test_offsetprinter():
     project = apb.fire(use_sim_procedures=False)
     state = asb.fire(add_options={angr.sim_options.STRICT_PAGE_ACCESS}) # for now
     simgr = project.factory.simulation_manager(state)
-    assert not simgr.active[0].memory.load(0x7ffff7dd48f8, 8).symbolic # __libc_multiple_threads sanity check
+    #assert not simgr.active[0].memory.load(0x7ffff7dd48f8, project.arch.bytes).symbolic # __libc_multiple_threads sanity check
     simgr.run()
     assert len(simgr.errored) == 0
     assert len(simgr.deadended) == 1
     assert len(sum(simgr.stashes.values(), [])) == 1
-    assert simgr.deadended[0].posix.dumps() == reference_str
+    assert simgr.deadended[0].posix.dumps(1) == reference_str
+
+def test_offsetprinter64():
+    #with archr.targets.DockerImageTarget('archr-test:offsetprinter').build() as t:
+    t = archr.targets.DockerImageTarget('archr-test:offsetprinter64').build().start()
+    check_offsetprinter(t)
     t.stop()
 
+def test_offsetprinter32():
+    #with archr.targets.DockerImageTarget('archr-test:offsetprinter').build() as t:
+    t = archr.targets.DockerImageTarget('archr-test:offsetprinter32', target_arch='i386').build().start()
+    check_offsetprinter(t)
+    t.stop()
+
+def test_stack():
+    t = archr.targets.DockerImageTarget('archr-test:stackprinter64').build().start()
+    reference_str = t.run_command(aslr=False).stdout.read()
+
+    dsb = archr.arsenal.DataScoutBow(t)
+    apb = archr.arsenal.angrProjectBow(t, dsb)
+    asb = archr.arsenal.angrStateBow(t, apb)
+    project = apb.fire(use_sim_procedures=False)
+    state = asb.fire(add_options={angr.sim_options.STRICT_PAGE_ACCESS}) # for now
+    simgr = project.factory.simulation_manager(state)
+    simgr.run()
+    assert len(simgr.errored) == 0
+    assert len(simgr.deadended) == 1
+    assert len(sum(simgr.stashes.values(), [])) == 1
+    assert simgr.deadended[0].posix.dumps(1) == reference_str
+
 if __name__ == '__main__':
-    test_offsetprinter()
+    test_offsetprinter32()
+    test_offsetprinter64()
+    test_stack()
+    test_env()
