@@ -84,6 +84,7 @@ class Target(ABC):
         :return:
         """
         if self._local_path:
+            print("archr requires root privilege to unmount the guest file system.")
             os.system("sudo umount %s" % self.local_path)
             try:
                 os.rmdir(self.local_path)
