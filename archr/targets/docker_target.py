@@ -90,6 +90,7 @@ class DockerImageTarget(Target):
         self._local_path = where or "/tmp/archr_mounts/%s" % self.container.id
         with contextlib.suppress(OSError):
             os.makedirs(self.local_path)
+        print("archr requires root privilege to mount the guest file system onto the host system.")
         os.system("sudo mount -o bind %s %s" % (self._merged_path, self.local_path))
         return self
 
