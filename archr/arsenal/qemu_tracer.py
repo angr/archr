@@ -30,7 +30,8 @@ class TraceResults:
     magic_contents = None
     core_path = None
 
-_trace_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
+_trace_old_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
+_trace_new_re = re.compile(br'Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P<flags>.*)\].*')
 
 class QEMUTracerBow(Bow):
     REQUIRED_ARROW = "shellphish_qemu"
@@ -117,6 +118,7 @@ class QEMUTracerBow(Bow):
                 r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
 
                 # record the trace
+                _trace_re = _trace_old_re if self.target.target_os == 'cgc' else _trace_new_re
                 r.trace = [
                     int(_trace_re.match(t).group('addr'), 16) for t in trace_iter if t.startswith(b"Trace ")
                 ]
@@ -169,7 +171,7 @@ class QEMUTracerBow(Bow):
 
         # record trace
         if trace_filename:
-            cmd_args += ["-d", "exec", "-D", trace_filename]
+            cmd_args += ["-d", "nochain,exec,page", "-D", trace_filename] if 'cgc' not in qemu_variant else ["-d", "exec", "-D", trace_filename]
         else:
             cmd_args += ["-enable_double_empty_exiting"]
 
