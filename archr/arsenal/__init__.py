@@ -56,4 +56,5 @@ from .nc import NetCatBow
 from .qemu_tracer import QEMUTracerBow
 from .datascout import DataScoutBow
 from .gdbserver import GDBServerBow
+from .core import CoreBow
 from .. import arrows
