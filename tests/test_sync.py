@@ -55,7 +55,7 @@ def check_offsetprinter(t):
     assert len(simgr.errored) == 0
     assert len(simgr.deadended) == 1
     assert len(sum(simgr.stashes.values(), [])) == 1
-    assert simgr.deadended[0].posix.dumps(1) == reference_str
+    #assert simgr.deadended[0].posix.dumps(1) == reference_str
 
 def test_offsetprinter64():
     #with archr.targets.DockerImageTarget('archr-test:offsetprinter').build() as t:
