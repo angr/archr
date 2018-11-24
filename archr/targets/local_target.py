@@ -1,5 +1,6 @@
 import collections
 import subprocess
+import contextlib
 import tarfile
 import logging
 import io
@@ -51,7 +52,8 @@ class LocalTarget(Target):
 
     def inject_tarball(self, target_path, tarball_path=None, tarball_contents=None):
         t = tarfile.TarFile(name=tarball_path, mode="r", fileobj=io.BytesIO(tarball_contents) if tarball_contents else None)
-        assert self.run_command(["mkdir", "-p", target_path]).wait() == 0
+        with contextlib.suppress(OSError):
+            os.makedirs(target_path)
         t.extractall(path=target_path)
 
     def retrieve_tarball(self, target_path):

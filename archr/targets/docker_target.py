@@ -100,7 +100,9 @@ class DockerImageTarget(Target):
         if tarball_contents is None:
             with open(tarball_path, "rb") as t:
                 tarball_contents = t.read()
-        assert self.run_command(["mkdir", "-p", target_path]).wait() == 0
+        p = self.run_command(["mkdir", "-p", target_path])
+        if p.wait() != 0:
+            raise ArchrError("Unexpected error when making target_path in container: " + p.stdout.read() + " " + p.stderr.read())
         self.container.put_archive(target_path, tarball_contents)
 
     def retrieve_tarball(self, target_path):

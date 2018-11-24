@@ -69,7 +69,8 @@ class QEMUTracerBow(Bow):
 
     @contextlib.contextmanager
     def fire_context(self, timeout=10, record_trace=True, record_magic=False, save_core=False, **kwargs):
-        assert self.target.target_path.startswith("/"), "The qemu tracer currently chdirs into a temporary directory, and cannot handle relative argv[0] paths."
+        if not self.target.target_path.startswith("/"):
+            raise ArchrError("The qemu tracer currently chdirs into a temporary directory, and cannot handle relative argv[0] paths.")
 
         with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
@@ -131,7 +132,8 @@ class QEMUTracerBow(Bow):
 
             if target_magic_filename:
                 r.magic_contents = self.target.retrieve_contents(target_magic_filename)
-                assert len(r.magic_contents) == 0x1000, "Magic content read from QEMU improper size, should be a page in length"
+                if len(r.magic_contents) != 0x1000:
+                    raise ArchrError("Magic content read from QEMU improper size, should be a page in length")
 
 
 
