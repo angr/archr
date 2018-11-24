@@ -1,3 +1,4 @@
+import time
 import sys
 
 class Bow:
@@ -22,6 +23,30 @@ class Bow:
     def fire(self, *args, **kwargs):
         """
         Fire the bow at the target.
+        """
+        raise NotImplementedError()
+
+class ContextBow(Bow):
+    """
+    A Bow base class for bows that implement a fire_context instead of a fire.
+    Provides a default .fire() that replays a testcase consisting of a series of strings/bytes.
+    """
+
+    def fire(self, *args, testcase=(), **kwargs): #pylint:disable=arguments-differ
+        if type(testcase) in [ str, bytes ]:
+            testcase = [ testcase ]
+
+        with self.fire_context(*args, **kwargs) as r:
+            for t in testcase:
+                r.process.stdin.write(t.encode('utf-8') if type(t) is str else t)
+                time.sleep(0.01)
+            r.process.stdin.close()
+
+        return r
+
+    def fire_context(self, *args, **kwargs):
+        """
+        A context manager for the bow. Should yield an object that has a "process" attribute.
         """
         raise NotImplementedError()
 

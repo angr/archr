@@ -11,7 +11,7 @@ import os
 
 l = logging.getLogger("archr.arsenal.qemu_tracer")
 
-from . import Bow
+from . import ContextBow
 
 class TraceResults:
     process = None
@@ -33,7 +33,7 @@ class TraceResults:
 _trace_old_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
 _trace_new_re = re.compile(br'Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P<flags>.*)\].*')
 
-class QEMUTracerBow(Bow):
+class QEMUTracerBow(ContextBow):
     REQUIRED_ARROW = "shellphish_qemu"
 
     @contextlib.contextmanager
@@ -54,18 +54,6 @@ class QEMUTracerBow(Bow):
         finally:
             with contextlib.suppress(FileNotFoundError):
                 shutil.rmtree(tmpdir)
-
-    def fire(self, *args, testcase=(), **kwargs): #pylint:disable=arguments-differ
-        if type(testcase) in [ str, bytes ]:
-            testcase = [ testcase ]
-
-        with self.fire_context(*args, **kwargs) as r:
-            for t in testcase:
-                r.process.stdin.write(t.encode('utf-8') if type(t) is str else t)
-                time.sleep(0.01)
-            r.process.stdin.close()
-
-        return r
 
     @contextlib.contextmanager
     def fire_context(self, timeout=10, record_trace=True, record_magic=False, save_core=False, **kwargs):
