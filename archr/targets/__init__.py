@@ -94,7 +94,7 @@ class Target(ABC):
         pass
 
     @abstractmethod
-    def run_command(self, *args, **kwargs):
+    def _run_command(self, args, env, **kwargs):
         """
         Run a command inside the target.
         :return:
@@ -366,6 +366,21 @@ class Target(ABC):
             with self.run_context(*args, **kwargs) as p:
                 yield p
 
+    def run_command(
+        self, args=None, args_prefix=None, args_suffix=None, env=None, # for us
+        **kwargs # for subclasses
+    ):
+        """
+        Run a command inside the target.
+        :return:
+        """
+        command_args = args or self.target_args
+        if args_prefix:
+            command_args = args_prefix + command_args
+        if args_suffix:
+            command_args = command_args + args_suffix
+
+        return self._run_command(command_args, self.target_env if env is None else env, **kwargs)
 
 
 from .docker_target import DockerImageTarget

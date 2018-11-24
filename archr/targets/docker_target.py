@@ -140,26 +140,24 @@ class DockerImageTarget(Target):
     # Execution
     #
 
-    def run_command(
-        self, args=None, args_prefix=None, args_suffix=None, aslr=True, env=None,
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    def _run_command(
+        self, args, env,
+        aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ): #pylint:disable=arguments-differ
-        assert self.container is not None
+        if self.container is None:
+            raise ArchrError("target.start() must be called before target.run_command()")
 
-        command_args = args or self.target_args
-        if args_prefix:
-            command_args = args_prefix + command_args
-        if args_suffix:
-            command_args = command_args + args_suffix
         if not aslr:
-            command_args = ['setarch', 'x86_64', '-R'] + command_args
+            args = ['setarch', 'x86_64', '-R'] + args
 
         docker_args = [ "docker", "exec", "-i" ]
-        for e in env or self.target_env:
+        for e in env:
             docker_args += [ "-e", e ]
         docker_args.append(self.container.id)
 
         return subprocess.Popen(
-            docker_args + command_args,
-            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0,
+            docker_args + args,
+            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
         )
+
+from ..errors import ArchrError

@@ -81,21 +81,15 @@ class LocalTarget(Target):
     # Execution
     #
 
-    def run_command(
-        self, args=None, args_prefix=None, args_suffix=None, aslr=True,
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    ): #pylint:disable=arguments-differ
-        command_args = args or self.target_args
-        if args_prefix:
-            command_args = args_prefix + command_args
-        if args_suffix:
-            command_args = command_args + args_suffix
+    def _run_command(
+        self, args, env,
+        aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    ): #pylint:disable=arguments-differ,no-self-use
         if not aslr:
-            command_args = ['setarch', 'x86_64', '-R'] + command_args
+            args = ['setarch', 'x86_64', '-R'] + args
 
         return subprocess.Popen(
-            command_args,
-            stdin=stdin, stdout=stdout, stderr=stderr,
-            env=collections.OrderedDict(e.split("=", 1) for e in self.target_env) if self.target_env else None,
-            bufsize=0
+            args,
+            env=collections.OrderedDict(e.split("=", 1) for e in env),
+            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
         )
