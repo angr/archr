@@ -15,7 +15,7 @@ def test_env_mount():
     assert not os.path.exists(os.path.join(t.local_path, "./"+t.target_path))
 
 def test_env_injection():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         t.mount_local()
         t.inject_path("/etc/passwd", "/poo")
         with open("/etc/passwd") as lf, open(t.resolve_local_path("/poo")) as rf:
@@ -26,7 +26,7 @@ def test_env_injection():
         assert len(os.listdir("/lib64")) == len(os.listdir(t.resolve_local_path("/poolib")))
 
 def test_env_retrieval():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         assert t.retrieve_contents("/etc/passwd").startswith(b"root:")
         t.inject_path("/etc/passwd", "/poo")
         with open("/etc/passwd", 'rb') as lf:
@@ -46,7 +46,7 @@ def test_env_retrieval():
             shutil.rmtree(tmpdir)
 
 def test_retrieval_context():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
 
         # first, try temporary file
         with t.retrieval_context("/tmp/foo0") as o:
@@ -89,24 +89,24 @@ def test_retrieval_context():
         assert g.read().startswith(b"root:")
 
 def test_content_injection():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         t.inject_contents({"/foo": b"asdf", "/bar": b"fdsa"})
         assert t.retrieve_contents("/foo") == b"asdf"
         assert t.retrieve_contents("/bar") == b"fdsa"
 
 def test_glob_retrieval():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         assert t.retrieve_glob("/etc/hostna*").startswith(t.container.id[:5].encode('utf-8'))
 
     # and now, with mounts
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         t.mount_local()
         assert t.retrieve_glob("/etc/hostna*").startswith(t.container.id[:5].encode('utf-8'))
 
 def test_temporary_replacement():
     with open("/etc/passwd", 'rb') as pw:
         opw = pw.read()
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         with t.replacement_context("/etc/passwd", opw) as tpw:
             assert opw != tpw
             assert t.retrieve_contents("/etc/passwd") == opw

@@ -22,7 +22,7 @@ def do_qemu(t):
         return qbf.process
 
 def test_env():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         reference_env = t.run_command(aslr=False).stdout.read()
         gdb_env = do_gdb(t).stdout.read()
         assert set(reference_env.splitlines()) == set(gdb_env.splitlines())
@@ -58,13 +58,13 @@ def check_offsetprinter(t):
     #assert simgr.deadended[0].posix.dumps(1) == reference_str
 
 def test_offsetprinter64():
-    #with archr.targets.DockerImageTarget('archr-test:offsetprinter').build() as t:
+    #with archr.targets.DockerImageTarget('archr-test:offsetprinter').build().start() as t:
     t = archr.targets.DockerImageTarget('archr-test:offsetprinter64').build().start()
     check_offsetprinter(t)
     t.stop()
 
 def test_offsetprinter32():
-    #with archr.targets.DockerImageTarget('archr-test:offsetprinter').build() as t:
+    #with archr.targets.DockerImageTarget('archr-test:offsetprinter').build().start() as t:
     t = archr.targets.DockerImageTarget('archr-test:offsetprinter32', target_arch='i386').build().start()
     check_offsetprinter(t)
     t.stop()

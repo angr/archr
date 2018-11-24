@@ -19,11 +19,11 @@ def check_gdb_cat(t):
     assert b"Child exited with status 1" in p.stderr.read()
 
 def test_cat_docker():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-false').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-false').build().start() as t:
         check_gdb_cat(t)
 
 def test_env_order():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         a = gdb_do(t).stdout.read()
         b = gdb_do(t).stdout.read()
         c = gdb_do(t).stdout.read()
@@ -31,7 +31,7 @@ def test_env_order():
         assert b == c
 
 def test_cat_local():
-    with archr.targets.LocalTarget(["/bin/false"]).build() as t:
+    with archr.targets.LocalTarget(["/bin/false"]).build().start() as t:
         check_gdb_cat(t)
 
 if __name__ == '__main__':

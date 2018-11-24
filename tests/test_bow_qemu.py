@@ -7,14 +7,14 @@ def setup_module():
     os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
 
 def test_arrow_injection_docker():
-    with archr.targets.DockerImageTarget('archr-test:crasher').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:crasher').build().start() as t:
         archr.arsenal.QEMUTracerBow(t)
         assert t.retrieve_contents("/tmp/shellphish_qemu/fire").startswith(b"#!/bin/sh")
 
 def test_arrow_injection_local():
     with contextlib.suppress(FileNotFoundError):
         os.unlink("/tmp/shellphish_qemu/fire")
-    with archr.targets.LocalTarget([os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher")]).build() as t:
+    with archr.targets.LocalTarget([os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher")]).build().start() as t:
         archr.arsenal.QEMUTracerBow(t)
         assert t.retrieve_contents("/tmp/shellphish_qemu/fire").startswith(b"#!/bin/sh")
 
@@ -54,25 +54,25 @@ def vuln_stacksmash_checks(t):
 
 
 def test_crasher_trace():
-    with archr.targets.DockerImageTarget('archr-test:crasher').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:crasher').build().start() as t:
         crasher_checks(t)
 
 def test_crash_on_input_trace():
-    with archr.targets.DockerImageTarget('archr-test:crash-on-input').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:crash-on-input').build().start() as t:
         crash_on_input_checks(t)
 
 def test_vuln_stacksmash():
-    with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build().start() as t:
         vuln_stacksmash_checks(t)
         
 def test_shellcode_tester():
-    with archr.targets.DockerImageTarget('archr-test:shellcode_tester', target_os='cgc').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:shellcode_tester', target_os='cgc').build().start() as t:
         shellcode_checks(t)
         
 
 
 def test_crasher_trace_local():
-    with archr.targets.LocalTarget([os.path.realpath(os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher"))]).build() as t:
+    with archr.targets.LocalTarget([os.path.realpath(os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher"))]).build().start() as t:
         crasher_checks(t)
 
 if __name__ == '__main__':

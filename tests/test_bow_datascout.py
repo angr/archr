@@ -27,10 +27,10 @@ def shellcode_checks(t):
         assert stdout == t.target_path.encode('utf-8') + b'\0'
 
 def test_shellcode_amd64():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         shellcode_checks(t)
 def test_shellcode_i386():
-    with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build().start() as t:
         shellcode_checks(t)
 
 def datascout_checks(t):
@@ -42,7 +42,7 @@ def datascout_checks(t):
     return env, aux, maps
 
 def test_datascout():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         _,_,maps = datascout_checks(t)
         docker_ref = {
             '/lib/x86_64-linux-gnu/libc-2.27.so': 0x7ffff79e4000,
@@ -59,7 +59,7 @@ def test_datascout_local():
     # copy to a writable location
     tf = tempfile.mktemp()
     shutil.copy("/usr/bin/env", tf)
-    with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build() as t:
+    with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build().start() as t:
         _,_,maps = datascout_checks(t)
         local_ref = {
             '/lib/x86_64-linux-gnu/libc-2.27.so': 0x7ffff79e4000,
@@ -76,7 +76,7 @@ def test_datascout_local():
 
 # 32-bit vuln_stacksmash
 def test_stacksmash():
-    with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build().start() as t:
         b = archr.arsenal.DataScoutBow(t)
         env, aux, maps = b.fire()
 

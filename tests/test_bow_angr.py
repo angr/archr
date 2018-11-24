@@ -27,13 +27,13 @@ def angr_checks(t):
     project.loader.close()
 
 def test_env_angr():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         angr_checks(t)
 
 def test_env_angr_local():
     tf = tempfile.mktemp()
     shutil.copy("/usr/bin/env", tf)
-    with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build() as t:
+    with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build().start() as t:
         angr_checks(t)
     os.unlink(tf)
 

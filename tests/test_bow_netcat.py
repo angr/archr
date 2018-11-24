@@ -17,15 +17,15 @@ def netcat_checks(t):
     assert r.readuntil(b"hello!", timeout=5) == b"hello!"
 
 def test_netcat_network():
-    with archr.targets.DockerImageTarget('archr-test:nccat').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:nccat').build().start() as t:
         netcat_checks(t)
 
 def test_netcat_network_local():
-    with archr.targets.LocalTarget("socat tcp-l:1337,reuseaddr exec:cat".split(), tcp_ports=[1337]).build() as t:
+    with archr.targets.LocalTarget("socat tcp-l:1337,reuseaddr exec:cat".split(), tcp_ports=[1337]).build().start() as t:
         netcat_checks(t)
 
 def test_netcat_stdio():
-    with archr.targets.DockerImageTarget('archr-test:cat').build() as t:
+    with archr.targets.DockerImageTarget('archr-test:cat').build().start() as t:
         b = archr.arsenal.NetCatBow(t)
         r = b.fire()
         r.send(b"hello!")

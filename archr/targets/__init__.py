@@ -149,7 +149,7 @@ class Target(ABC):
     # Convenience methods
     #
 
-    def __enter__(self): return self.start()
+    def __enter__(self): return self
     def __exit__(self, *args): self.stop()
 
     @property
