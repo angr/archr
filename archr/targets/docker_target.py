@@ -141,7 +141,7 @@ class DockerImageTarget(Target):
 
     def _run_command(
         self, args, env,
-        aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        user=None, aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ): #pylint:disable=arguments-differ
         if self.container is None:
             raise ArchrError("target.start() must be called before target.run_command()")
@@ -152,6 +152,8 @@ class DockerImageTarget(Target):
         docker_args = [ "docker", "exec", "-i" ]
         for e in env:
             docker_args += [ "-e", e ]
+        if user:
+            docker_args += [ "-u", user ]
         docker_args.append(self.container.id)
 
         return subprocess.Popen(
