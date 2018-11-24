@@ -73,19 +73,19 @@ class DataScoutBow(Bow):
         self.auxv = None
         self.map = None
 
-    def fire(self, aslr=False): #pylint:disable=arguments-differ
+    def fire(self, aslr=False, **kwargs): #pylint:disable=arguments-differ
         if not self.env:
-            with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/environ") + self.exit_shellcode(), aslr=aslr) as p:
+            with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/environ") + self.exit_shellcode(), aslr=aslr, **kwargs) as p:
                 env_str,_ = p.communicate()
                 self.env = env_str.split(b'\0')
 
         if not self.auxv:
-            with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/auxv") + self.exit_shellcode(), aslr=aslr) as p:
+            with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/auxv") + self.exit_shellcode(), aslr=aslr, **kwargs) as p:
                 aux_str,_ = p.communicate()
                 self.auxv = aux_str
 
         if not self.map:
-            with self.target.shellcode_context(asm_code=self.brk_shellcode() + self.sendfile_shellcode("/proc/self/maps") + self.exit_shellcode(), aslr=aslr) as p:
+            with self.target.shellcode_context(asm_code=self.brk_shellcode() + self.sendfile_shellcode("/proc/self/maps") + self.exit_shellcode(), aslr=aslr, **kwargs) as p:
                 map_str,_ = p.communicate()
                 self.map = parse_proc_maps(map_str)
 
