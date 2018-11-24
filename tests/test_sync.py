@@ -85,6 +85,8 @@ def test_stack():
     assert len(sum(simgr.stashes.values(), [])) == 1
     #assert simgr.deadended[0].posix.dumps(1) == reference_str
 
+    t.stop()
+
 if __name__ == '__main__':
     test_offsetprinter32()
     test_offsetprinter64()
