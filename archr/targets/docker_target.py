@@ -9,6 +9,7 @@ l = logging.getLogger("archr.target.docker_target")
 
 from . import Target
 
+_super_mount_cmd = "docker run --rm --privileged --mount type=bind,src=/tmp/archr_mounts/,target=/tmp/archr_mounts,bind-propagation=rshared --mount type=bind,src=/var/lib/docker,target=/var/lib/docker,bind-propagation=rshared ubuntu "
 class DockerImageTarget(Target):
     """
     Describes a target in the form of a Docker image.
@@ -68,8 +69,7 @@ class DockerImageTarget(Target):
         if self.container:
             self.container.kill()
         if self._local_path:
-            print("archr requires root privilege to unmount the guest file system.")
-            os.system("sudo umount %s" % self.local_path)
+            os.system(_super_mount_cmd + "umount -l %s" % self.local_path)
             try:
                 os.rmdir(self.local_path)
             except OSError:
@@ -96,8 +96,7 @@ class DockerImageTarget(Target):
         self._local_path = where or "/tmp/archr_mounts/%s" % self.container.id
         with contextlib.suppress(OSError):
             os.makedirs(self.local_path)
-        print("archr requires root privilege to mount the guest file system onto the host system.")
-        os.system("sudo mount -o bind %s %s" % (self._merged_path, self.local_path))
+        os.system(_super_mount_cmd + "mount -o bind %s %s" % (self._merged_path, self.local_path))
         return self
 
     def inject_tarball(self, target_path, tarball_path=None, tarball_contents=None):
