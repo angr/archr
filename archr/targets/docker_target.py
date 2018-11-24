@@ -36,7 +36,7 @@ class DockerImageTarget(Target):
     # Lifecycle
     #
 
-    def build(self, *args, **kwargs):
+    def build(self):
         self.image = self._client.images.get(self.image_id)
         self.target_args = (
             self.target_args or
@@ -67,7 +67,13 @@ class DockerImageTarget(Target):
     def stop(self):
         if self.container:
             self.container.kill()
-        super().stop()
+        if self._local_path:
+            print("archr requires root privilege to unmount the guest file system.")
+            os.system("sudo umount %s" % self.local_path)
+            try:
+                os.rmdir(self.local_path)
+            except OSError:
+                l.error("unable to rmdir %s, continuing", self.local_path)
         return self
 
     def remove(self):
@@ -150,7 +156,7 @@ class DockerImageTarget(Target):
             command_args = ['setarch', 'x86_64', '-R'] + command_args
 
         docker_args = [ "docker", "exec", "-i" ]
-        for e in self.target_env:
+        for e in env or self.target_env:
             docker_args += [ "-e", e ]
         docker_args.append(self.container.id)
 
