@@ -70,14 +70,20 @@ class DataScoutBow(Bow):
     def __init__(self, target):
         super().__init__(target)
         self.env = None
+        self.argv = None
         self.auxv = None
         self.map = None
 
     def fire(self, aslr=False, **kwargs): #pylint:disable=arguments-differ
+        if not self.argv:
+            with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/cmdline") + self.exit_shellcode(), aslr=aslr, **kwargs) as p:
+                arg_str,_ = p.communicate()
+                self.argv = arg_str.split(b'\0')[:-1]
+
         if not self.env:
             with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/environ") + self.exit_shellcode(), aslr=aslr, **kwargs) as p:
                 env_str,_ = p.communicate()
-                self.env = env_str.split(b'\0')
+                self.env = env_str.split(b'\0')[:-1]
 
         if not self.auxv:
             with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/auxv") + self.exit_shellcode(), aslr=aslr, **kwargs) as p:
@@ -89,6 +95,6 @@ class DataScoutBow(Bow):
                 map_str,_ = p.communicate()
                 self.map = parse_proc_maps(map_str)
 
-        return self.env, self.auxv, self.map
+        return self.argv, self.env, self.auxv, self.map
 
 from ..utils import parse_proc_maps
