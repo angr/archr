@@ -2,6 +2,7 @@ import subprocess
 import contextlib
 import logging
 import docker
+import shlex
 import json
 import os
 
@@ -43,6 +44,13 @@ class DockerImageTarget(Target):
             self.target_args or
             (self.image.attrs['Config']['Entrypoint'] or [ ]) + (self.image.attrs['Config']['Cmd'] or [ ])
         )
+
+        # let's assume that we're not analyzing either setarch nor /bin/sh
+        if self.target_args[:2] == [ "/bin/sh", "-c" ]:
+            self.target_args = shlex.split(self.target_args[-1])
+        if self.target_args[:3] == [ "setarch", "x86_64", "-R" ]:
+            self.target_args = self.target_args[3:]
+
         self.target_env = self.target_env or self.image.attrs['Config']['Env']
         self.target_path = self.target_path or self.target_args[0]
         self.target_cwd = self.target_cwd or self.image.attrs['Config']['WorkingDir'] or "/"

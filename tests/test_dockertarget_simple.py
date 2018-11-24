@@ -65,7 +65,14 @@ def test_user():
         assert t.run_command(["touch", "/"]).wait() != 0
         assert t.run_command(["touch", "/"], user="root").wait() == 0
 
+def test_entrypoint_tricky():
+    t = archr.targets.DockerImageTarget('archr-test:entrypoint-sh-env').build()
+    assert t.target_args == [ "/usr/bin/env", "YEAH" ]
+    t = archr.targets.DockerImageTarget('archr-test:entrypoint-setarch-env').build()
+    assert t.target_args == [ "/usr/bin/env", "HAHAHA" ]
+
 if __name__ == '__main__':
+    test_entrypoint_tricky()
     test_user()
     test_entrypoint_crasher()
     test_context_env()
