@@ -70,10 +70,7 @@ class DockerImageTarget(Target):
             self.container.kill()
         if self._local_path:
             os.system(_super_mount_cmd + "umount -l %s" % self.local_path)
-            try:
-                os.rmdir(self.local_path)
-            except OSError:
-                l.error("unable to rmdir %s, continuing", self.local_path)
+            os.rmdir(self.local_path)
         return self
 
     def remove(self):
