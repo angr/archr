@@ -27,7 +27,7 @@ class CoreBow(ContextBow):
 
     @contextlib.contextmanager
     def fire_context(self, **kwargs): #pylint:disable=arguments-differ
-        if self.target.run_command(["chmod","777",os.path.dirname(self.target.target_path)]).wait() != 0:
+        if self.target.run_command(["chmod","777",os.path.dirname(self.target.target_path)], user="root").wait() != 0:
             raise ArchrError("failed to chmod CWD. core will *not* drop")
 
         r = CoreResults()
