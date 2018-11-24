@@ -7,6 +7,6 @@ mkdir -p $BUNDLE_DIR
 FIRE_SCRIPT=${0//bundle/fire}
 GDBSERVER_PATH=$(which gdbserver)
 GDBSERVER_LIBS=$(ldd $GDBSERVER_PATH | grep "=>" | awk '{print $3}' | sort -u)
-GDBSERVER_LD=$(ldd $GDBSERVER_PATH | tail -n1 | awk '{print $1}')
+GDBSERVER_LD=$(ldd $GDBSERVER_PATH | grep ld-linux | awk '{print $1}')
 cp -L $GDBSERVER_PATH $GDBSERVER_LIBS $GDBSERVER_LD $BUNDLE_DIR
 cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire
