@@ -69,9 +69,6 @@ class QEMUTracerBow(Bow):
 
     @contextlib.contextmanager
     def fire_context(self, timeout=10, record_trace=True, record_magic=False, save_core=False, **kwargs):
-        if not self.target.target_path.startswith("/"):
-            raise ArchrError("The qemu tracer currently chdirs into a temporary directory, and cannot handle relative argv[0] paths.")
-
         with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
             target_trace_filename = tmp_prefix + ".trace" if record_trace else None
