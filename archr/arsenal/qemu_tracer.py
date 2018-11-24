@@ -134,7 +134,7 @@ class QEMUTracerBow(Bow):
                 assert len(r.magic_contents) == 0x1000, "Magic content read from QEMU improper size, should be a page in length"
 
 
-            
+
     def qemu_variant(self, record_trace):
         """
         Need to know if we're tracking or not, specifically for what cgc qemu to use.
@@ -146,7 +146,7 @@ class QEMUTracerBow(Bow):
             qemu_variant = "shellphish-qemu-cgc-%s" % suffix
         else:
             qemu_variant = "shellphish-qemu-linux-%s" % self.target.target_arch
-        
+
         return qemu_variant
 
     def _build_command(self, trace_filename=None, library_path=None, magic_filename=None, coredump_dir=".", report_bad_args=False, seed=None):
@@ -158,7 +158,7 @@ class QEMUTracerBow(Bow):
         # First, the arrow invocation
         #
 
-        qemu_variant = self.qemu_variant(trace_filename != None)
+        qemu_variant = self.qemu_variant(trace_filename is not None)
         cmd_args = [ "/tmp/shellphish_qemu/fire", qemu_variant]
         cmd_args += [ "-C", coredump_dir]
 
