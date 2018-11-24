@@ -50,10 +50,11 @@ class DockerImageTarget(Target):
         super().build()
         return self
 
-    def start(self):
+    def start(self, user=None): #pylint:disable=arguments-differ
         self.container = self._client.containers.run(
             self.image,
             entrypoint=['/bin/sh'], command=[], environment=self.target_env,
+            user=user,
             detach=True, auto_remove=True,
             stdin_open=True, stdout=True, stderr=True,
             privileged=True, security_opt=["seccomp=unconfined"], #for now, hopefully...

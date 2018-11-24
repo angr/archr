@@ -11,5 +11,12 @@ def test_crasher():
         r = cb.fire()
         assert b"LSB core file" in subprocess.check_output(["file", r.local_core_path])
 
+def test_crasher_noperms():
+    with archr.targets.DockerImageTarget('archr-test:crasher').build().start(user="nobody") as t:
+        cb = archr.arsenal.CoreBow(t)
+        r = cb.fire()
+        assert b"LSB core file" in subprocess.check_output(["file", r.local_core_path])
+
 if __name__ == '__main__':
+    test_crasher_noperms()
     test_crasher()
