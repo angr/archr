@@ -52,7 +52,7 @@ class LocalTarget(Target):
 
     def inject_tarball(self, target_path, tarball_path=None, tarball_contents=None):
         t = tarfile.TarFile(name=tarball_path, mode="r", fileobj=io.BytesIO(tarball_contents) if tarball_contents else None)
-        with contextlib.suppress(OSError):
+        with contextlib.suppress(FileExistsError):
             os.makedirs(target_path)
         t.extractall(path=target_path)
 
