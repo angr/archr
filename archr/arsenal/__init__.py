@@ -1,3 +1,4 @@
+import subprocess
 import time
 import sys
 
@@ -37,10 +38,13 @@ class ContextBow(Bow):
             testcase = [ testcase ]
 
         with self.fire_context(*args, **kwargs) as r:
+            if not isinstance(r, subprocess.Popen):
+                r = r.process
+
             for t in testcase:
-                r.process.stdin.write(t.encode('utf-8') if type(t) is str else t)
+                r.stdin.write(t.encode('utf-8') if type(t) is str else t)
                 time.sleep(0.01)
-            r.process.stdin.close()
+            r.stdin.close()
 
         return r
 
