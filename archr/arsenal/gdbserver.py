@@ -10,7 +10,7 @@ class GDBServerBow(Bow):
     Launches a gdb server.
     """
 
-    REQUIRED_ARROW = "gdbserver"
+    REQUIRED_ARROWS = ["gdbserver"]
 
     def fire(self, port=31337, **kwargs): #pylint:disable=arguments-differ
         with self.fire_context(port=port, **kwargs):

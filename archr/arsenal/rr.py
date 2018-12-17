@@ -35,7 +35,7 @@ class TraceResults:
 
 
 class RRTracerBow(Bow):
-    REQUIRED_ARROW = "rr"
+    REQUIRED_ARROWS = ["rr", "gdb"]
 
     @contextlib.contextmanager
     def _target_mk_tmpdir(self):
@@ -86,6 +86,7 @@ class RRTracerBow(Bow):
                 except subprocess.TimeoutExpired:
                     r.timed_out = True
 
+            #with self.target.run_context(["/tmp/rr/fire", 'replay', '-d', ''])
             import ipdb; ipdb.set_trace()
             if not r.timed_out:
                 r.returncode = r.process.returncode

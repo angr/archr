@@ -33,7 +33,7 @@ class TraceResults:
 _trace_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
 
 class QEMUTracerBow(Bow):
-    REQUIRED_ARROW = "shellphish_qemu"
+    REQUIRED_ARROWS = ["shellphish_qemu"]
 
     @contextlib.contextmanager
     def _target_mk_tmpdir(self):

@@ -1,7 +1,7 @@
 import sys
 
 class Bow:
-    REQUIRED_ARROW = None
+    REQUIRED_ARROWS = []
 
     def __init__(self, target):
         """
@@ -15,9 +15,12 @@ class Bow:
         """
         Prepare the arrow (inject it into the target).
         """
-        if self.REQUIRED_ARROW:
-            with arrows.bundle(self.REQUIRED_ARROW) as b:
-                self.target.inject_path(b, "/tmp/%s" % self.REQUIRED_ARROW)
+        if type(self.REQUIRED_ARROWS) in {str, bytes}:
+            self.REQUIRED_ARROWS = [self.REQUIRED_ARROWS]
+
+        for arrow in self.REQUIRED_ARROWS:
+            with arrows.bundle(arrow) as b:
+                self.target.inject_path(b, "/tmp/%s" % arrow)
 
     def fire(self, *args, **kwargs):
         """
