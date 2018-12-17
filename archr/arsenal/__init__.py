@@ -31,4 +31,5 @@ from .nc import NetCatBow
 from .qemu_tracer import QEMUTracerBow
 from .datascout import DataScoutBow
 from .gdbserver import GDBServerBow
+from .rr import RRTracerBow
 from .. import arrows
