@@ -1,0 +1,12 @@
+#!/bin/bash
+
+[ $# -ge 1 ] || { echo "Usage: $0 /path/to/bundle_dir"; exit 1; }
+BUNDLE_DIR=$1
+mkdir -p $BUNDLE_DIR
+
+FIRE_SCRIPT=${0//bundle/fire}
+GDB_PATH=$(which gdb)
+GDB_LIBS=$(ldd $GDB_PATH | grep "=>" | awk '{print $3}' | sort -u)
+GDB_LD=$(ldd $GDB_PATH | grep ld-linux | awk '{print $1}')
+cp -L $GDB_PATH $GDB_LIBS $GDB_LD $BUNDLE_DIR
+cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire
