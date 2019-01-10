@@ -13,29 +13,33 @@ l = logging.getLogger("archr.arsenal.rr_tracer")
 
 from . import Bow
 
+class FakeTempdir(object):
+    def __init__(self, path):
+        self.name = path
 
-class TraceResults:
+    def cleanup(self):
+        return
+
+class RRTraceResults:
     process = None
-    socket = None
 
-    # results
-    rr_trace_dir = None
     returncode = None
     signal = None
-    crashed = None
-    timed_out = None
+    crashed = False
+    timed_out = False
 
-    # introspection
-    trace = None
-    crash_address = None
-    base_address = None
-    magic_contents = None
-    core_path = None
+    trace_dir = None
+
+    def __init__(self, trace_dir=None):
+        if trace_dir is None:
+            self.trace_dir = tempfile.TemporaryDirectory(prefix='rr_trace_dir_')
+        else:
+            self.trace_dir = FakeTempdir(trace_dir)
 
 
 
 class RRTracerBow(Bow):
-    REQUIRED_ARROWS = ["rr", "gdb"]
+    REQUIRED_ARROWS = ["rr"]
 
     @contextlib.contextmanager
     def _target_mk_tmpdir(self):
@@ -68,28 +72,33 @@ class RRTracerBow(Bow):
 
         return r
 
+    def find_target_home_dir(self):
+        with self.target.run_context(['env']) as p:
+            stdout, stderr = p.communicate()
+            assert not stderr.split()
+            home_dir = stdout.split(b'HOME=')[1].split(b'\n')[0]
+            return home_dir.decode("utf-8")
+
     @contextlib.contextmanager
-    def fire_context(self, timeout=10, **kwargs):
-        assert self.target.target_path.startswith(
-            "/"), "The qemu tracer currently chdirs into a temporary directory, and cannot handle relative argv[0] paths."
+    def fire_context(self, timeout=10, local_trace_dir='/tmp/rr_trace/', **kwargs):
+        if local_trace_dir and os.path.exists(local_trace_dir):
+            shutil.rmtree(local_trace_dir)
+            os.mkdir(local_trace_dir)
 
-        with self._target_mk_tmpdir() as tmpdir:
-            tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="rr_tracer-")
+        #record_command = ['/tmp/rr/fire', 'record', '-n'] + self.target.target_args
+        record_command = ['/tmp/rr/fire', 'record', '-n'] + self.target.target_args
+        record_env = {'RR_COPY_ALL_FILES': '1'}
 
-            with self.target.run_context(self._build_command(['record', '-n']), timeout=timeout) as p:
-                r = TraceResults()
-                r.process = p
+        with self.target.run_context(record_command, env=record_env, timeout=timeout) as p:
+            r = RRTraceResults(trace_dir=local_trace_dir)
+            r.process = p
 
-                try:
-                    yield r
-                    r.timed_out = False
-                except subprocess.TimeoutExpired:
-                    r.timed_out = True
-
-            #with self.target.run_context(["/tmp/rr/fire", 'replay', '-d', ''])
-            import ipdb; ipdb.set_trace()
-            if not r.timed_out:
-                r.returncode = r.process.returncode
+            try:
+                yield r
+                import ipdb; ipdb.set_trace()
+                r.timed_out = False
+                r.returncode = r.process.poll()
+                assert r.returncode is not None
 
                 # did a crash occur?
                 if r.returncode in [139, -11]:
@@ -99,39 +108,15 @@ class RRTracerBow(Bow):
                     r.crashed = True
                     r.signal = signal.SIGILL
 
-            # if local_core_filename:
-            #     target_cores = self.target.resolve_glob(os.path.join(tmpdir, "qemu_*.core"))
-            #     if len(target_cores) != 1:
-            #         raise ArchrError("expected 1 core file but found %d" % len(target_cores))
-            #     with self._local_mk_tmpdir() as local_tmpdir:
-            #         self.target.retrieve_into(target_cores[0], local_tmpdir)
-            #         cores = glob.glob(os.path.join(local_tmpdir, "qemu_*.core"))
-            #         shutil.move(cores[0], local_core_filename)
-            #         r.core_path = local_core_filename
-            #
-            # if target_trace_filename:
-            #     trace = self.target.retrieve_contents(target_trace_filename)
-            #     trace_iter = iter(trace.splitlines())
-            #
-            #     # Find where qemu loaded the binary. Primarily for PIE
-            #     r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")),
-            #                          16)  # pylint:disable=stop-iteration-return
-            #
-            #     # record the trace
-            #     r.trace = [
-            #         int(_trace_re.match(t).group('addr'), 16) for t in trace_iter if t.startswith(b"Trace ")
-            #     ]
-            #
-            #     # grab the faulting address
-            #     if r.crashed:
-            #         r.crash_address = r.trace[-1]
-            #
-            #     l.debug("Trace consists of %d basic blocks", len(r.trace))
-            #
-            # if target_magic_filename:
-            #     r.magic_contents = self.target.retrieve_contents(target_magic_filename)
-            #     assert len(
-            #         r.magic_contents) == 0x1000, "Magic content read from QEMU improper size, should be a page in length"
+            except subprocess.TimeoutExpired:
+                r.timed_out = True
+
+        import ipdb; ipdb.set_trace()
+        path = self.find_target_home_dir() + '/.local/share/rr/latest-trace/'
+
+        with self._local_mk_tmpdir() as tmpdir:
+            self.target.retrieve_into(path, tmpdir)
+            shutil.move(tmpdir+'/latest-trace/', r.trace_dir.name)
 
     def _build_command(self, options=None):
         """
