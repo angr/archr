@@ -1,0 +1,8 @@
+#!/bin/sh
+
+ulimit -c unlimited
+ulimit -f unlimited
+
+OUR_DIR=$(dirname $0)
+echo "$OUR_DIR/ltrace $@"
+exec $OUR_DIR/ld-linux-* --library-path $OUR_DIR $OUR_DIR/ltrace "$@"
