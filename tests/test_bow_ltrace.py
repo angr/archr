@@ -4,8 +4,9 @@ import nclib
 import archr
 import os
 
-CAT_ARGS = "-e malloc+free+open+read+write+socket+bind+accept-@libc.so* -n 2 -- /bin/cat /etc/passwd".split()
-NC_ARGS = "-f -e malloc+free+open+read+write+socket+bind+accept-@libc.so* -n 2".split()
+BIN_CAT = "/bin/cat"
+CAT_ARGS = ["/etc/passwd"]
+LTRACE_ARGS = "-f -e malloc+free+open+read+write+socket+bind+accept-@libc.so* -n 2".split()
 
 
 def setup_module():
@@ -14,7 +15,7 @@ def setup_module():
 
 def ltrace_proc(t, **kwargs):
     b = archr.arsenal.LTraceBow(t)
-    r = b.fire(**kwargs)
+    r = b.fire_context(proc_name=BIN_CAT, proc_args=CAT_ARGS, ltrace_args=LTRACE_ARGS, **kwargs)
     return r
 
 
@@ -22,7 +23,7 @@ def ltrace_attach(t, **kwargs):
     b = archr.arsenal.LTraceBow(t)
     pid = t.get_proc_pid('socat')
     assert pid != None
-    r = b.fire(pid=pid, **kwargs)
+    r = b.fire(pid=pid, ltrace_args=LTRACE_ARGS, **kwargs)
     sleep(1)
     nc = nclib.Netcat((t.ipv4_address, t.tcp_ports[0]))
     nc.send(b'ahoi!')
@@ -53,22 +54,22 @@ def check_ltrace_attach(t, **kwargs):
 
 def test_ltrace_proc_local():
     with archr.targets.LocalTarget(["/bin/cat"]).build().start() as t:
-        check_ltrace_proc(t, args=CAT_ARGS)
+        check_ltrace_proc(t)
 
 
 def test_ltrace_proc_docker():
     with archr.targets.DockerImageTarget('archr-test:cat').build().start() as t:
-        check_ltrace_proc(t, args=CAT_ARGS)
+        check_ltrace_proc(t)
 
 
 def test_ltrace_attach_local():
     with archr.targets.LocalTarget("socat tcp-l:1337,reuseaddr exec:cat".split(), tcp_ports=[1337]).build().start() as t:
-        check_ltrace_attach(t, args=NC_ARGS)
+        check_ltrace_attach(t)
 
 
 def test_ltrace_attach_docker():
     with archr.targets.DockerImageTarget('archr-test:socat').build().start() as t:
-        check_ltrace_attach(t, args=NC_ARGS)
+        check_ltrace_attach(t)
 
 
 if __name__ == '__main__':

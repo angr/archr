@@ -1,27 +1,36 @@
-from . import Bow
+from . import ContextBow
 import logging
 
 l = logging.getLogger("archr.arsenal.ltrace")
 
-class LTraceBow(Bow):
+
+class LTraceBow(ContextBow):
     """
     Returns an ltrace instance connected to a running instance of the target.
     """
 
     REQUIRED_ARROW = "ltrace"
 
-    def fire(self, pid=None, args=None, **kwargs):
+    def fire(self, pid=None, ltrace_args=None, **kwargs):
         """
-        :param pid: PID of target process, leave 'None' to start up a fresh instance of the target process
+        Attaches ltrace to an already existing process.
+        :param pid: PID of target process
         :param kwargs: Additional arguments
         :return:
         """
-        l.warning("LtraceBow only works with sufficient ptrace permissions in /proc/sys/kernel/yama/ptrace_scope or "
-                  "when executed as root")
-        if pid:
-            pid_option = ["-p", "%d" % pid]
-            cmd_args = args + pid_option
-        else:
-            cmd_args = args
+        l.warning("LtraceBow.fire only works with sufficient ptrace permissions in /proc/sys/kernel/yama/ptrace_scope "
+                  "or when executed as root")
+
+        cmd_args = ltrace_args + ["-p", "%d" % pid]
 
         return self.target.run_command(args_prefix=["/tmp/ltrace/fire"], args=cmd_args, **kwargs)
+
+    def fire_context(self, proc_name, proc_args=None, ltrace_args=None, **kwargs):
+        """
+        Starts ltrace with a fresh process.
+        :param args: Args passed to target.run_command
+        :return: Target instance returned by run_command
+        """
+
+        args_suffix = ["--", "%s" % proc_name] + proc_args
+        return self.target.run_command(args_prefix=["/tmp/ltrace/fire"], args=ltrace_args, args_suffix=args_suffix, **kwargs)
