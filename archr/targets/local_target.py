@@ -1,4 +1,5 @@
 import collections
+import re
 import subprocess
 import contextlib
 import tarfile
@@ -78,6 +79,17 @@ class LocalTarget(Target):
     @property
     def udp_ports(self):
         return self._udp_ports
+
+    def get_proc_pid(self, proc):
+        p = self._run_command(args="ps -A -o comm,pid".split(), env=[])
+        output = p.stdout.read().decode('utf-8')
+        regex = r"{}\s+(\d+)".format(proc)
+        matches = re.findall(regex, output)
+        if not matches:
+            return None
+        else:
+            return int(matches[0])
+
 
     #
     # Execution

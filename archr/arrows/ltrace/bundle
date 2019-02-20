@@ -1,0 +1,12 @@
+#!/bin/bash
+
+[ $# -ge 1 ] || { echo "Usage: $0 /path/to/bundle_dir"; exit 1; }
+BUNDLE_DIR=$1
+mkdir -p $BUNDLE_DIR
+
+FIRE_SCRIPT=${0//bundle/fire}
+LTRACE_PATH=$(which ltrace)
+LTRACE_LIBS=$(ldd $LTRACE_PATH | grep "=>" | awk '{print $3}' | sort -u)
+LTRACE_LD=$(ldd $LTRACE_PATH | grep ld-linux | awk '{print $1}')
+cp -L $LTRACE_PATH $LTRACE_LIBS $LTRACE_LD $BUNDLE_DIR
+cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire

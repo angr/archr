@@ -192,6 +192,14 @@ class Target(ABC):
             paths = [ p.decode('utf-8') for p in stdout.split() ]
             return paths
 
+    @abstractmethod
+    def get_proc_pid(self, proc):
+        """
+        :param proc: Process name
+        :return: Process pid
+        """
+        pass
+
     def inject_path(self, src, dst=None):
         """
         Injects a file or directory into the target.

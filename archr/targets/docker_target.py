@@ -1,3 +1,4 @@
+import re
 import subprocess
 import contextlib
 import logging
@@ -142,6 +143,35 @@ class DockerImageTarget(Target):
             return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k ]
         except KeyError:
             return [ ]
+
+    def get_proc_pid(self, proc):
+        if not self.container:
+            return None
+
+        # get host_pid
+        ps_info = self.container.top()
+        titles = ps_info['Titles']
+        procs = ps_info['Processes']
+        pid_idx = titles.index('PID')
+        cmd_idx = titles.index('CMD')
+        for p in procs:
+            if p[cmd_idx].split()[0] == proc:
+                host_pid = int(p[pid_idx])
+        if not host_pid:
+            return None
+
+        # For now lets just return the guest pid
+        # get guest_pid
+        p = self._run_command(args="ps -A -o comm,pid".split(), env=[])
+        output = p.stdout.read().decode('utf-8')
+        print(re.findall(proc, output))
+        regex = r"{}\s+(\d+)".format(proc)
+        matches = re.findall(regex, output)
+        if not matches:
+            return None
+
+        guest_pid = int(matches[0])
+        return guest_pid
 
     #
     # Execution
