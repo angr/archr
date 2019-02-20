@@ -45,6 +45,7 @@ def check_ltrace_attach(t, **kwargs):
     p = ltrace_attach(t, **kwargs)
     target.terminate()
     p.terminate()
+    p.kill()
     output = p.stderr.read()
     assert b'exe->accept' in output
     assert b'exe->malloc' in output
