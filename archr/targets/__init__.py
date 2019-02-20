@@ -33,6 +33,8 @@ class Target(ABC):
         :param args:
         :param kwargs:
         """
+        if target_os == 'cgc':
+            target_arch = 'i386'
         self.target_args = target_args
         self.target_path = target_path
         self.target_env = target_env
