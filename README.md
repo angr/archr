@@ -25,8 +25,6 @@ The following Bows exist:
 - GDBServerBow (launches the target in a gdbserver)
 - STraceBow (straces a target)
 - CoreBow (launches the target and retrieves a core)
-- (TODO) RRBow (does rr tracing of the target)
-- (TODO) AFLBow (launches AFL of the target)
 
 ## Using archr
 
