@@ -15,3 +15,13 @@ def bundle(arrow_name):
     yield bundle_path
 
     shutil.rmtree(bundle_path)
+
+@contextlib.contextmanager
+def bundle_binary(path):
+    bundle_path = tempfile.mkdtemp()
+
+    bundle_base_dir = os.path.dirname(__file__)
+    os.system("%s/GENERIC/bundle %s %s" % (bundle_base_dir, bundle_path, path))
+    yield bundle_path
+
+    shutil.rmtree(bundle_path)

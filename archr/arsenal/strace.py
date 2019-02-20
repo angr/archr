@@ -13,7 +13,7 @@ class STraceBow(ContextBow):
     Returns an strace instance connected to a running instance of the target.
     """
 
-    REQUIRED_ARROW = "strace"
+    REQUIRED_BINARY = "/usr/bin/strace"
 
     @contextlib.contextmanager
     def fire_context(self, pid=None, trace_args=None, args_prefix=None, **kwargs): #pylint:disable=arguments-differ

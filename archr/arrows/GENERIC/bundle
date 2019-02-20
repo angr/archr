@@ -1,0 +1,14 @@
+#!/bin/bash
+
+[ $# -ge 2 ] || { echo "Usage: $0 /path/to/bundle_dir /path/to/arrow_binary"; exit 1; }
+BUNDLE_DIR=$1
+ARROW_PATH=$2
+mkdir -p $BUNDLE_DIR
+
+FIRE_SCRIPT=${0//bundle/fire}
+ARROW_LIBS=$(ldd $ARROW_PATH | grep "=>" | awk '{print $3}' | sort -u)
+ARROW_LD=$(ldd $ARROW_PATH | grep ld-linux | awk '{print $1}')
+cp -L $ARROW_PATH $BUNDLE_DIR
+cp -L $ARROW_LIBS $ARROW_LD $BUNDLE_DIR
+cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire
+sed -i -e "s/ARROW_NAME/$(basename $ARROW_PATH)/g" $BUNDLE_DIR/fire
