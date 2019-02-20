@@ -71,4 +71,5 @@ from .core import CoreBow
 from .ltrace import LTraceBow
 from .strace import STraceBow
 from .input_fd import InputFDBow
+from .rr import RRTracerBow
 from .. import arrows
