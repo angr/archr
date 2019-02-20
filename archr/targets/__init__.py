@@ -186,7 +186,7 @@ class Target(ABC):
         """
         try:
             local_glob = glob.glob(self.resolve_local_path(target_glob))
-            return [ g[len(self.local_path):] for g in local_glob ]
+            return [ g[len(self.local_path.rstrip('/')):] for g in local_glob ]
         except ArchrError:
             stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
             paths = [ p.decode('utf-8') for p in stdout.split() ]

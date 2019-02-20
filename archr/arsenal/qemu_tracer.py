@@ -12,6 +12,7 @@ import os
 l = logging.getLogger("archr.arsenal.qemu_tracer")
 
 from . import ContextBow
+from ..errors import ArchrError
 
 class TraceResults:
     process = None
@@ -111,7 +112,13 @@ class QEMUTracerBow(ContextBow):
 
                 # grab the faulting address
                 if r.crashed:
-                    r.crash_address = r.trace[-1]
+                    lastline = trace.split(b'\n')[-2]
+                    if lastline.startswith(b"Trace") or lastline.find(b"Segmentation") == -1:
+                        l.warning("Trace return code was less than zero, but the last line of the trace does not"
+                                  "contain the uncaught exception error from qemu."
+                                  "If using an older version of shellphish_qemu try using 'ulimit -Sc 0' or "
+                                  "updating to a newer version of shellphish_qemu.")
+                    r.crash_address = int(lastline.split(b'[')[1].split(b']')[0], 16)
 
                 l.debug("Trace consists of %d basic blocks", len(r.trace))
 
@@ -164,9 +171,9 @@ class QEMUTracerBow(ContextBow):
 
         # save CGC magic page
         if magic_filename:
+            if 'cgc' not in qemu_variant:
+                raise ArchrError("Specified magic page dump on non-cgc architecture")
             cmd_args += ["-magicdump", magic_filename]
-        else:
-            magic_filename = None
 
         if seed is not None:
             cmd_args.append("-seed")
