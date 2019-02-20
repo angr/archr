@@ -1,9 +1,11 @@
 import subprocess
 import time
 import sys
+import os
 
 class Bow:
     REQUIRED_ARROW = None
+    REQUIRED_BINARY = None
 
     def __init__(self, target):
         """
@@ -20,6 +22,9 @@ class Bow:
         if self.REQUIRED_ARROW:
             with arrows.bundle(self.REQUIRED_ARROW) as b:
                 self.target.inject_path(b, "/tmp/%s" % self.REQUIRED_ARROW)
+        if self.REQUIRED_BINARY:
+            with arrows.bundle_binary(self.REQUIRED_BINARY) as b:
+                self.target.inject_path(b, "/tmp/%s" % os.path.basename(self.REQUIRED_BINARY))
 
     def fire(self, *args, **kwargs):
         """
@@ -65,4 +70,5 @@ from .gdbserver import GDBServerBow
 from .core import CoreBow
 from .ltrace import LTraceBow
 from .strace import STraceBow
+from .input_fd import InputFDBow
 from .. import arrows

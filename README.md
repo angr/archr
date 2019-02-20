@@ -25,6 +25,7 @@ The following Bows exist:
 - GDBServerBow (launches the target in a gdbserver)
 - STraceBow (straces a target)
 - CoreBow (launches the target and retrieves a core)
+- InputFDBow (determines the FD number for user input (in some cases))
 
 ## Using archr
 
