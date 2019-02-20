@@ -64,4 +64,5 @@ from .datascout import DataScoutBow
 from .gdbserver import GDBServerBow
 from .core import CoreBow
 from .ltrace import LTraceBow
+from .strace import STraceBow
 from .. import arrows

@@ -23,6 +23,7 @@ The following Bows exist:
 - AngrStateBow (can create a angr states with the right env, args, and fs)
 - QEMUTraceBow (does qemu tracing of the target)
 - GDBServerBow (launches the target in a gdbserver)
+- STraceBow (straces a target)
 - CoreBow (launches the target and retrieves a core)
 - (TODO) RRBow (does rr tracing of the target)
 - (TODO) AFLBow (launches AFL of the target)
