@@ -25,10 +25,9 @@ def check_strace_proc(t, **kwargs):
 def check_strace_attach(t, **kwargs):
     target = t.run_command() # start target
     b = archr.arsenal.STraceBow(t)
-    pid = t.get_proc_pid('socat')
-    assert pid is not None
+    pid = target.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')
     with b.fire_context(pid=pid, trace_args=STRACE_ARGS, **kwargs) as p:
-        sleep(1)
+        sleep(2)
         nc = nclib.Netcat((t.ipv4_address, t.tcp_ports[0]))
         nc.send(b'ahoi!')
         assert nc.readuntil(b'ahoi!', timeout=5) == b'ahoi!'
@@ -51,7 +50,7 @@ def test_strace_proc_docker():
 
 
 def test_strace_attach_local():
-    with archr.targets.LocalTarget("socat tcp-l:1337,reuseaddr exec:cat".split(), tcp_ports=[1337]).build().start() as t:
+    with archr.targets.LocalTarget("socat tcp-l:9137,reuseaddr exec:cat".split(), tcp_ports=[9137]).build().start() as t:
         check_strace_attach(t)
 
 

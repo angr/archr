@@ -19,10 +19,9 @@ def ltrace_proc(t, **kwargs):
     return r
 
 
-def ltrace_attach(t, **kwargs):
+def ltrace_attach(t, p, **kwargs):
     b = archr.arsenal.LTraceBow(t)
-    pid = t.get_proc_pid('socat')
-    assert pid != None
+    pid = p.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')
     r = b.fire(pid=pid, ltrace_args=LTRACE_ARGS, **kwargs)
     sleep(1)
     nc = nclib.Netcat((t.ipv4_address, t.tcp_ports[0]))
@@ -42,7 +41,7 @@ def check_ltrace_proc(t, **kwargs):
 
 def check_ltrace_attach(t, **kwargs):
     target = t.run_command() # start target
-    p = ltrace_attach(t, **kwargs)
+    p = ltrace_attach(t, target, **kwargs)
     target.terminate()
     p.terminate()
     p.kill()
@@ -65,7 +64,7 @@ def test_ltrace_proc_docker():
 
 
 def test_ltrace_attach_local():
-    with archr.targets.LocalTarget("socat tcp-l:1337,reuseaddr exec:cat".split(), tcp_ports=[1337]).build().start() as t:
+    with archr.targets.LocalTarget("socat tcp-l:7573,reuseaddr exec:cat".split(), tcp_ports=[7573]).build().start() as t:
         check_ltrace_attach(t)
 
 
