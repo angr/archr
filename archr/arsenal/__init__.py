@@ -38,13 +38,15 @@ class ContextBow(Bow):
             testcase = [ testcase ]
 
         with self.fire_context(*args, **kwargs) as r:
-            if not isinstance(r, subprocess.Popen):
-                r = r.process
+            if isinstance(r, subprocess.Popen):
+                proc = r
+            else:
+                proc = r.process
 
             for t in testcase:
-                r.stdin.write(t.encode('utf-8') if type(t) is str else t)
+                proc.stdin.write(t.encode('utf-8') if type(t) is str else t)
                 time.sleep(0.01)
-            r.stdin.close()
+            proc.stdin.close()
 
         return r
 
