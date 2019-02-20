@@ -22,6 +22,8 @@ setup(
         'shellphish_qemu',
         'pygdbmi',
         'angr',
+        'docker',
+        'nclib',
     ],
     description='Target-centric program analysis.',
     url='https://github.com/angr/archr',
