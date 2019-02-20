@@ -388,6 +388,7 @@ class Target(ABC):
         if args_suffix:
             command_args = command_args + args_suffix
 
+        l.debug("Running command: '%s'", "' '".join(command_args))
         return self._run_command(command_args, self.target_env if env is None else env, **kwargs)
 
 

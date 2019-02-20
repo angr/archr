@@ -136,7 +136,7 @@ class QEMUTracerBow(ContextBow):
 
         return qemu_variant
 
-    def _build_command(self, trace_filename=None, library_path=None, magic_filename=None, coredump_dir=".", report_bad_args=False, seed=None):
+    def _build_command(self, trace_filename=None, ld_linux=None, library_path=None, magic_filename=None, coredump_dir=".", report_bad_args=False, seed=None):
         """
         Here, we build the tracing command.
         """
@@ -183,14 +183,17 @@ class QEMUTracerBow(ContextBow):
             l.warning("setting LD_BIND_NOW=1. This will have an effect on the environment.")
             cmd_args += ['-E', 'LD_BIND_NOW=1']
 
-        if library_path:
+        if library_path and not ld_linux:
             l.warning("setting LD_LIBRARY_PATH. This will have an effect on the environment. Consider using --library-path instead")
             cmd_args += ['-E', 'LD_LIBRARY_PATH=' + library_path]
 
-        #
-        # Now, we add the program arguments.
-        #
+        # now set up the loader
+        if ld_linux:
+            cmd_args += [ld_linux]
+            if library_path:
+                cmd_args += ['--library-path', library_path]
 
+        # Now, we add the program arguments.
         cmd_args += self.target.target_args
 
         return cmd_args
