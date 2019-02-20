@@ -27,5 +27,5 @@ class angrProjectBow(Bow):
             bin_opts = { "base_addr": 0x555555554000 }
             the_binary = self.target.resolve_local_path(self.target.target_path)
 
-            self.project =angr.Project(the_binary, force_load_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **kwargs)
+            self.project = angr.Project(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **kwargs)
         return self.project
