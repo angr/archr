@@ -100,6 +100,7 @@ class DockerImageTarget(Target):
             return self
 
         self._local_path = where or "/tmp/archr_mounts/%s" % self.container.id
+        os.system("mkdir -p /tmp/archr_mounts")
         os.system(_super_mount_cmd + "mkdir -p %s" % (self.local_path))
         os.system(_super_mount_cmd + "mount -o bind %s %s" % (self._merged_path, self.local_path))
         return self
