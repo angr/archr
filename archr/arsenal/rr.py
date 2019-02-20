@@ -13,6 +13,11 @@ l = logging.getLogger("archr.arsenal.rr_tracer")
 
 from . import Bow
 
+try:
+    import trraces
+except ImportError:
+    trraces = None
+
 
 class FakeTempdir(object):
     def __init__(self, path):
@@ -38,9 +43,19 @@ class RRTraceResults:
         else:
             self.trace_dir = FakeTempdir(trace_dir)
 
+    def tracer_technique(self, **kwargs):
+        if trraces is None:
+            raise Exception("need to install trraces")
+        return trraces.replay_interfaces.angr.technique.Trracer(self.trace_dir, **kwargs)
+
 
 class RRTracerBow(Bow):
     REQUIRED_ARROW = "rr"
+
+    def __init__(self, target, timeout=10, local_trace_dir='/tmp/rr_trace/'):
+        super().__init__(target)
+        self.timeout = timeout
+        self.local_trace_dir = local_trace_dir
 
     @contextlib.contextmanager
     def _target_mk_tmpdir(self):
@@ -81,7 +96,10 @@ class RRTracerBow(Bow):
             return home_dir.decode("utf-8")
 
     @contextlib.contextmanager
-    def fire_context(self, timeout=10, local_trace_dir='/tmp/rr_trace/', **kwargs):
+    def fire_context(self, save_core=False, record_magic=False, report_bad_args=False):
+        if save_core or record_magic or report_bad_args:
+            raise ArchrError("I can't do any of these things!")
+
         if local_trace_dir and os.path.exists(local_trace_dir):
             shutil.rmtree(local_trace_dir)
             os.mkdir(local_trace_dir)
