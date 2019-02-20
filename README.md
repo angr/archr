@@ -4,7 +4,7 @@ Traditionally, binary analysis has been implicitly _program-centric_, meaning th
 This assumption is usually implicit: `angr.Project` is instantiated with the binary in question, `afl` launches the binary itself, generally hyper-modified to make it easier to fuzz, and so on.
 
 However, outside of the CGC, programs do not exist in a vacuum.
-Specific library versions, values in configuration files, environment variables, and a myriad other factors combine with the program binary itself to make a unique whilistic _target_, and in many cases, it is that target that needs to be analyzed, not just the program itself.
+Specific library versions, values in configuration files, environment variables, and a myriad other factors combine with the program binary itself to make a unique holistic _target_, and in many cases, it is that target that needs to be analyzed, not just the program itself.
 This is specifically true for analysis that need extreme accuracy, such as automatic exploit generation.
 
 `archr` is an implementation of such a _target-centric_ analysis paradigm.
