@@ -4,7 +4,7 @@ import tempfile
 import logging
 import signal
 import shutil
-import time
+import angr
 import glob
 import re
 import os
@@ -12,7 +12,6 @@ import os
 l = logging.getLogger("archr.arsenal.qemu_tracer")
 
 from . import ContextBow
-from ..errors import ArchrError
 
 class TraceResults:
     process = None
@@ -31,11 +30,21 @@ class TraceResults:
     magic_contents = None
     core_path = None
 
+    def tracer_technique(self, **kwargs):
+        return angr.exploration_techniques.Tracer(self.trace, crash_addr=self.crash_address, **kwargs)
+
 _trace_old_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
 _trace_new_re = re.compile(br'Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P<flags>.*)\].*')
 
 class QEMUTracerBow(ContextBow):
     REQUIRED_ARROW = "shellphish_qemu"
+
+    def __init__(self, target, timeout=10, ld_linux=None, library_path=None, seed=None):
+        super().__init__(target)
+        self.timeout = timeout
+        self.ld_linux = ld_linux
+        self.library_path = library_path
+        self.seed = seed
 
     @contextlib.contextmanager
     def _target_mk_tmpdir(self):
@@ -57,16 +66,16 @@ class QEMUTracerBow(ContextBow):
                 shutil.rmtree(tmpdir)
 
     @contextlib.contextmanager
-    def fire_context(self, timeout=10, record_trace=True, record_magic=False, save_core=False, **kwargs):
+    def fire_context(self, record_trace=True, record_magic=False, save_core=False):
         with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
             target_trace_filename = tmp_prefix + ".trace" if record_trace else None
             target_magic_filename = tmp_prefix + ".magic" if record_magic else None
             local_core_filename = tmp_prefix + ".core" if save_core else None
 
-            target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename, coredump_dir=tmpdir, **kwargs)
+            target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename, coredump_dir=tmpdir)
 
-            with self.target.run_context(target_cmd, timeout=timeout) as p:
+            with self.target.run_context(target_cmd, timeout=self.timeout) as p:
                 r = TraceResults()
                 r.process = p
 
@@ -134,7 +143,6 @@ class QEMUTracerBow(ContextBow):
         Need to know if we're tracking or not, specifically for what cgc qemu to use.
         """
 
-        qemu_variant = None
         if self.target.target_os == 'cgc':
             suffix = "tracer" if record_trace else "base"
             qemu_variant = "shellphish-qemu-cgc-%s" % suffix
@@ -143,7 +151,7 @@ class QEMUTracerBow(ContextBow):
 
         return qemu_variant
 
-    def _build_command(self, trace_filename=None, ld_linux=None, library_path=None, magic_filename=None, coredump_dir=".", report_bad_args=False, seed=None):
+    def _build_command(self, trace_filename=None, magic_filename=None, coredump_dir=None, report_bad_args=None):
         """
         Here, we build the tracing command.
         """
@@ -175,9 +183,9 @@ class QEMUTracerBow(ContextBow):
                 raise ArchrError("Specified magic page dump on non-cgc architecture")
             cmd_args += ["-magicdump", magic_filename]
 
-        if seed is not None:
+        if self.seed is not None:
             cmd_args.append("-seed")
-            cmd_args.append(str(seed))
+            cmd_args.append(str(self.seed))
 
         if report_bad_args:
             cmd_args += ["-report_bad_args"]
@@ -190,15 +198,15 @@ class QEMUTracerBow(ContextBow):
             l.warning("setting LD_BIND_NOW=1. This will have an effect on the environment.")
             cmd_args += ['-E', 'LD_BIND_NOW=1']
 
-        if library_path and not ld_linux:
+        if self.library_path and not self.ld_linux:
             l.warning("setting LD_LIBRARY_PATH. This will have an effect on the environment. Consider using --library-path instead")
-            cmd_args += ['-E', 'LD_LIBRARY_PATH=' + library_path]
+            cmd_args += ['-E', 'LD_LIBRARY_PATH=' + self.library_path]
 
         # now set up the loader
-        if ld_linux:
-            cmd_args += [ld_linux]
-            if library_path:
-                cmd_args += ['--library-path', library_path]
+        if self.ld_linux:
+            cmd_args += [self.ld_linux]
+            if self.library_path:
+                cmd_args += ['--library-path', self.library_path]
 
         # Now, we add the program arguments.
         cmd_args += self.target.target_args
