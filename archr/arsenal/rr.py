@@ -13,12 +13,14 @@ l = logging.getLogger("archr.arsenal.rr_tracer")
 
 from . import Bow
 
+
 class FakeTempdir(object):
     def __init__(self, path):
         self.name = path
 
     def cleanup(self):
         return
+
 
 class RRTraceResults:
     process = None
@@ -35,7 +37,6 @@ class RRTraceResults:
             self.trace_dir = tempfile.TemporaryDirectory(prefix='rr_trace_dir_')
         else:
             self.trace_dir = FakeTempdir(trace_dir)
-
 
 
 class RRTracerBow(Bow):
@@ -85,7 +86,7 @@ class RRTracerBow(Bow):
             shutil.rmtree(local_trace_dir)
             os.mkdir(local_trace_dir)
 
-        #record_command = ['/tmp/rr/fire', 'record', '-n'] + self.target.target_args
+        # record_command = ['/tmp/rr/fire', 'record', '-n'] + self.target.target_args
         record_command = ['/tmp/rr/fire', 'record', '-n'] + self.target.target_args
         record_env = {'RR_COPY_ALL_FILES': '1'}
 
@@ -95,9 +96,9 @@ class RRTracerBow(Bow):
 
             try:
                 yield r
-                import ipdb; ipdb.set_trace()
                 r.timed_out = False
-                r.returncode = r.process.poll()
+
+                r.returncode = r.process.wait()
                 assert r.returncode is not None
 
                 # did a crash occur?
@@ -111,12 +112,12 @@ class RRTracerBow(Bow):
             except subprocess.TimeoutExpired:
                 r.timed_out = True
 
+        _, _ = self.target.run_command(['/tmp/rr/fire', 'pack']).communicate()
         import ipdb; ipdb.set_trace()
         path = self.find_target_home_dir() + '/.local/share/rr/latest-trace/'
-
         with self._local_mk_tmpdir() as tmpdir:
             self.target.retrieve_into(path, tmpdir)
-            shutil.move(tmpdir+'/latest-trace/', r.trace_dir.name)
+            shutil.move(tmpdir + '/latest-trace/', r.trace_dir.name)
 
     def _build_command(self, options=None):
         """
