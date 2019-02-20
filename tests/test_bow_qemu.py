@@ -25,7 +25,7 @@ def crasher_checks(t):
     # arbitrary check
     assert len(r.trace) > 100
     assert r.crashed
-    assert r.crash_address == 0x40000005fa
+    assert r.crash_address == 0x400000060a
     assert r.signal == signal.SIGSEGV
     assert os.path.exists(r.core_path)
     assert os.path.getsize(r.core_path) > 0
