@@ -60,7 +60,7 @@ class LocalTarget(Target):
     def retrieve_tarball(self, target_path):
         f = io.BytesIO()
         t = tarfile.TarFile(fileobj=f, mode="w")
-        t.add(target_path, arcname=os.path.basename(target_path)) # stupid docker compatibility --- it just uses the basename
+        t.add(target_path, arcname=os.path.basename(target_path.rstrip('/'))) # stupid docker compatibility --- it just uses the basename
         f.seek(0)
         return f.read()
 

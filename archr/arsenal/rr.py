@@ -5,16 +5,19 @@ import logging
 import signal
 import shutil
 import time
-import glob
-import re
 import os
 
 l = logging.getLogger("archr.arsenal.rr_tracer")
 
 from . import Bow
 
+try:
+    import trraces
+except ImportError:
+    trraces = None
 
-class FakeTempdir(object):
+
+class FakeTempdir:
     def __init__(self, path):
         self.name = path
 
@@ -38,9 +41,19 @@ class RRTraceResults:
         else:
             self.trace_dir = FakeTempdir(trace_dir)
 
+    def tracer_technique(self, **kwargs):
+        if trraces is None:
+            raise Exception("need to install trraces")
+        return trraces.replay_interfaces.angr.technique.Trracer(os.path.join(self.trace_dir.name, 'latest-trace'), **kwargs)
+
 
 class RRTracerBow(Bow):
     REQUIRED_ARROW = "rr"
+
+    def __init__(self, target, timeout=10, local_trace_dir='/tmp/rr_trace/'):
+        super().__init__(target)
+        self.timeout = timeout
+        self.local_trace_dir = local_trace_dir
 
     @contextlib.contextmanager
     def _target_mk_tmpdir(self):
@@ -81,15 +94,18 @@ class RRTracerBow(Bow):
             return home_dir.decode("utf-8")
 
     @contextlib.contextmanager
-    def fire_context(self, timeout=10, local_trace_dir='/tmp/rr_trace/', sudo=False, **kwargs):
-        if local_trace_dir and os.path.exists(local_trace_dir):
-            shutil.rmtree(local_trace_dir)
-            os.mkdir(local_trace_dir)
+    def fire_context(self, save_core=False, record_magic=False, report_bad_args=False):
+        if save_core or record_magic or report_bad_args:
+            raise ArchrError("I can't do any of these things!")
 
-        record_command = ['/tmp/rr/fire', 'record', '-n', 'ls'] + self.target.target_args
-        record_env = {'RR_COPY_ALL_FILES': '1'}
-        with self.target.run_context(record_command, env=record_env, timeout=timeout) as p:
-            r = RRTraceResults(trace_dir=local_trace_dir)
+        if self.local_trace_dir and os.path.exists(self.local_trace_dir):
+            shutil.rmtree(self.local_trace_dir)
+            os.mkdir(self.local_trace_dir)
+
+        record_command = ['/tmp/rr/fire', 'record', '-n'] + self.target.target_args
+        record_env = ['RR_COPY_ALL_FILES=1']
+        with self.target.run_context(record_command, env=record_env, timeout=self.timeout) as p:
+            r = RRTraceResults(trace_dir=self.local_trace_dir)
             r.process = p
 
             try:
@@ -110,8 +126,8 @@ class RRTracerBow(Bow):
             except subprocess.TimeoutExpired:
                 r.timed_out = True
 
-        stdo, stde = self.target.run_command(['/tmp/rr/fire', 'pack']).communicate()
-        path = self.find_target_home_dir() + '/.local/share/rr/' + self.target.target_args[0]
+        self.target.run_command(['/tmp/rr/fire', 'pack']).communicate()
+        path = self.find_target_home_dir() + '/.local/share/rr/latest-trace/'
         with self._local_mk_tmpdir() as tmpdir:
             self.target.retrieve_into(path, tmpdir)
             shutil.move(tmpdir + '/latest-trace/', r.trace_dir.name)

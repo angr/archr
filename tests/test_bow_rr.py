@@ -45,7 +45,7 @@ def shellcode_checks(t):
 def get_miniupnpd_trace(t):
     crash = b"A" * 272
     b = archr.arsenal.RRTracerBow(t)
-    r = b.fire(save_core=True, testcase=crash)
+    r = b.fire(testcase=crash)
     print("asd as")
 
 
