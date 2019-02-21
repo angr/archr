@@ -42,6 +42,13 @@ def shellcode_checks(t):
 
     assert r.crashed
 
+def get_miniupnpd_trace(t):
+    crash = b"A" * 272
+    b = archr.arsenal.RRTracerBow(t)
+    r = b.fire(save_core=True, testcase=crash)
+    print("asd as")
+
+
 
 def vuln_stacksmash_checks(t):
     crash = b"A" * 227
@@ -71,10 +78,16 @@ def test_shellcode_tester():
     with archr.targets.DockerImageTarget('archr-test:shellcode_tester', target_os='cgc').build() as t:
         shellcode_checks(t)
 
+def test_miniupnpd():
+    with archr.targets.DockerImageTarget('ikanak/miniupnpd').build().start() as t:
+        get_miniupnpd_trace(t)
+
+
 
 if __name__ == '__main__':
     # test_arrow_injection_docker()
     #test_arrow_injection_local()
     # test_crasher_trace()
     #test_crasher_trace_local()
-    test_crash_on_input_trace()
+    # test_crash_on_input_trace()
+    test_miniupnpd()
