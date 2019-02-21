@@ -5,8 +5,6 @@ import logging
 import signal
 import shutil
 import time
-import glob
-import re
 import os
 
 l = logging.getLogger("archr.arsenal.rr_tracer")
@@ -19,7 +17,7 @@ except ImportError:
     trraces = None
 
 
-class FakeTempdir(object):
+class FakeTempdir:
     def __init__(self, path):
         self.name = path
 
@@ -46,7 +44,7 @@ class RRTraceResults:
     def tracer_technique(self, **kwargs):
         if trraces is None:
             raise Exception("need to install trraces")
-        return trraces.replay_interfaces.angr.technique.Trracer(self.trace_dir, **kwargs)
+        return trraces.replay_interfaces.angr.technique.Trracer(os.path.join(self.trace_dir.name, 'latest-trace'), **kwargs)
 
 
 class RRTracerBow(Bow):
@@ -100,14 +98,14 @@ class RRTracerBow(Bow):
         if save_core or record_magic or report_bad_args:
             raise ArchrError("I can't do any of these things!")
 
-        if local_trace_dir and os.path.exists(local_trace_dir):
-            shutil.rmtree(local_trace_dir)
-            os.mkdir(local_trace_dir)
+        if self.local_trace_dir and os.path.exists(self.local_trace_dir):
+            shutil.rmtree(self.local_trace_dir)
+            os.mkdir(self.local_trace_dir)
 
         record_command = ['/tmp/rr/fire', 'record', '-n'] + self.target.target_args
-        record_env = {'RR_COPY_ALL_FILES': '1'}
-        with self.target.run_context(record_command, env=record_env, timeout=timeout) as p:
-            r = RRTraceResults(trace_dir=local_trace_dir)
+        record_env = ['RR_COPY_ALL_FILES=1']
+        with self.target.run_context(record_command, env=record_env, timeout=self.timeout) as p:
+            r = RRTraceResults(trace_dir=self.local_trace_dir)
             r.process = p
 
             try:
@@ -128,7 +126,7 @@ class RRTracerBow(Bow):
             except subprocess.TimeoutExpired:
                 r.timed_out = True
 
-        stdo, stde = self.target.run_command(['/tmp/rr/fire', 'pack']).communicate()
+        self.target.run_command(['/tmp/rr/fire', 'pack']).communicate()
         path = self.find_target_home_dir() + '/.local/share/rr/latest-trace/'
         with self._local_mk_tmpdir() as tmpdir:
             self.target.retrieve_into(path, tmpdir)
