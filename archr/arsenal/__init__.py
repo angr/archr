@@ -3,6 +3,46 @@ import time
 import sys
 import os
 
+class Flight:
+    """
+    A flight is the result of firing a bow at a given target.
+    Yes, the metaphor is getting stretched a little thin.
+    """
+    def __init__(self, target):
+        self.target = target
+
+
+class ProcessFlight(Flight):
+    """
+    A process flight is a flight for a bow which has spawned a process in the target.
+    """
+    def __init__(self, target, process):
+        super().__init__(target)
+        self.process = process
+        self.connections = []
+
+    @property
+    def default_input(self):
+        if not self.target.tcp_ports and not self.target.udp_ports:
+            return self.process.stdin
+        elif not self.connections:
+            nc = NetCatBow(self.target).fire(run=False).nc
+            self.connections.append(nc)
+            return nc
+        else:
+            return self.connections[0]
+
+    @property
+    def default_output(self):
+        if not self.target.tcp_ports and not self.target.udp_ports:
+            return self.process.output
+        elif not self.connections:
+            nc = NetCatBow(self.target).fire(run=False).nc
+            self.connections.append(nc)
+            return nc
+        else:
+            return self.connections[0]
+
 class Bow:
     REQUIRED_ARROW = None
     REQUIRED_BINARY = None
@@ -38,19 +78,10 @@ class ContextBow(Bow):
     Provides a default .fire() that replays a testcase consisting of a series of strings/bytes.
     """
 
-    def fire(self, *args, testcase=(), **kwargs): #pylint:disable=arguments-differ
-        if type(testcase) in [ str, bytes ]:
-            testcase = [ testcase ]
-
+    def fire(self, *args, testcase=None, **kwargs): #pylint:disable=arguments-differ
         with self.fire_context(*args, **kwargs) as r:
-            if isinstance(r, subprocess.Popen):
-                proc = r
-            else:
-                proc = r.process
-
-            for t in testcase:
-                proc.stdin.write(t.encode('utf-8') if type(t) is str else t)
-                time.sleep(0.01)
+            proc = r.process
+            testcase.run(proc)
             proc.stdin.close()
 
         return r
@@ -60,6 +91,8 @@ class ContextBow(Bow):
         A context manager for the bow. Should yield an object that has a "process" attribute.
         """
         raise NotImplementedError()
+
+
 
 from .angr_project import angrProjectBow
 from .angr_state import angrStateBow
