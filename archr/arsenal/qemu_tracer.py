@@ -53,7 +53,7 @@ class QEMUTracerBow(ContextBow):
         try:
             yield tmpdir
         finally:
-            self.target.run_command(["rmdir", tmpdir])
+            self.target.run_command(["rm", "-rf", tmpdir])
 
     @staticmethod
     @contextlib.contextmanager

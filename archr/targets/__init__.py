@@ -215,16 +215,16 @@ class Target(ABC):
         """
         Inject different files or directories into the target.
 
-        :param list files: A dict of { dst_path: src_path }
+        :param dict files: A dict of { dst_path: src_path }
         :return:
         """
-        f = io.BytesIO()
-        t = tarfile.open(fileobj=f, mode='w')
-        for dst,src in files.items():
-            t.add(src, arcname=dst)
-        t.close()
-        f.seek(0)
-        self.inject_tarball("/", tarball_contents=f.read())
+        with io.BytesIO() as f:
+            t = tarfile.open(fileobj=f, mode='w')
+            for dst,src in files.items():
+                t.add(src, arcname=dst)
+            t.close()
+            f.seek(0)
+            self.inject_tarball("/", tarball_contents=f.read())
 
     def inject_contents(self, files, modes=None):
         """
@@ -233,18 +233,17 @@ class Target(ABC):
         :param list files: A dict of { dst_path: byte_contents }
         :param list modes: An optional dict of { dst_path: permissions }
         """
-        f = io.BytesIO()
-        t = tarfile.open(fileobj=f, mode='w')
-        for dst,content in files.items():
-            i = tarfile.TarInfo(name=dst)
-            i.size = len(content)
-            i.mode = 0o777
-            if modes and dst in modes:
-                i.mode = modes[dst]
-            t.addfile(i, fileobj=io.BytesIO(content))
-        t.close()
-        f.seek(0)
-        self.inject_tarball("/", tarball_contents=f.read())
+        with io.BytesIO() as f:
+            with tarfile.open(fileobj=f, mode='w') as t:
+                for dst,content in files.items():
+                    i = tarfile.TarInfo(name=dst)
+                    i.size = len(content)
+                    i.mode = 0o777
+                    if modes and dst in modes:
+                        i.mode = modes[dst]
+                    t.addfile(i, fileobj=io.BytesIO(content))
+            f.seek(0)
+            self.inject_tarball("/", tarball_contents=f.read())
 
     def retrieve_into(self, target_path, local_path):
         """
@@ -253,23 +252,22 @@ class Target(ABC):
         :param str target_path: The path to retrieve.
         :param str local_path: The path to put it locally.
         """
-        f = io.BytesIO()
-        f.write(self.retrieve_tarball(target_path))
-        f.seek(0)
-        t = tarfile.open(fileobj=f, mode='r')
+        with io.BytesIO() as f:
+            f.write(self.retrieve_tarball(target_path))
+            f.seek(0)
+            with tarfile.open(fileobj=f, mode='r') as t:
+                to_extract = [ m for m in t.getmembers() if m.path.startswith(os.path.basename(target_path).lstrip("/")) ]
+                if not to_extract:
+                    raise FileNotFoundError("%s not found on target" % target_path)
 
-        to_extract = [ m for m in t.getmembers() if m.path.startswith(os.path.basename(target_path).lstrip("/")) ]
-        if not to_extract:
-            raise FileNotFoundError("%s not found on target" % target_path)
+                #local_extract_dir = os.path.join(local_path, os.path.dirname(target_path).lstrip("/"))
+                #with contextlib.suppress(FileExistsError):
+                #   os.makedirs(local_extract_dir)
+                #assert os.path.exists(local_extract_dir)
 
-        #local_extract_dir = os.path.join(local_path, os.path.dirname(target_path).lstrip("/"))
-        #with contextlib.suppress(FileExistsError):
-        #   os.makedirs(local_extract_dir)
-        #assert os.path.exists(local_extract_dir)
-
-        with contextlib.suppress(FileExistsError):
-            os.makedirs(local_path)
-        t.extractall(local_path, members=to_extract)
+                with contextlib.suppress(FileExistsError):
+                    os.makedirs(local_path)
+                t.extractall(local_path, members=to_extract)
 
     def retrieve_contents(self, target_path):
         """
@@ -278,11 +276,12 @@ class Target(ABC):
         :param str target_path: The path to retrieve.
         :returns bytes: the contents of the file
         """
-        f = io.BytesIO()
-        f.write(self.retrieve_tarball(target_path))
-        f.seek(0)
-        t = tarfile.open(fileobj=f, mode='r')
-        return t.extractfile(os.path.basename(target_path)).read()
+        with io.BytesIO() as f:
+            f.write(self.retrieve_tarball(target_path))
+            f.seek(0)
+            with tarfile.open(fileobj=f, mode='r') as t:
+                with t.extractfile(os.path.basename(target_path)) as fp:
+                    return fp.read()
 
     def retrieve_glob(self, target_glob):
         """
