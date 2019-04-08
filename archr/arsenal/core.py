@@ -5,7 +5,7 @@ import os
 
 l = logging.getLogger("archr.arsenal.core_bow")
 
-from . import ContextBow
+from . import ContextBow, Flight
 
 class CoreResults:
     process = None
@@ -37,8 +37,7 @@ class CoreBow(ContextBow):
         r.local_core_path = tempfile.mktemp()
         try:
             with self.target.run_context(**kwargs) as p:
-                r.process = p
-                yield r
+                yield Flight(self.target, p, r)
         finally:
             with open(r.local_core_path, 'wb') as c:
                 c.write(self.target.retrieve_contents(r.target_core_path))

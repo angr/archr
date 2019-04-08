@@ -3,6 +3,7 @@ import logging
 import os
 
 from . import ContextBow
+from . import Flight
 
 l = logging.getLogger("archr.arsenal.strace")
 
@@ -30,5 +31,7 @@ class STraceBow(ContextBow):
                 os.system(_super_yama_cmd)
 
         args_prefix = (args_prefix or []) + ["/tmp/strace/fire"] + (trace_args or []) + (["-p", str(pid)] if pid is not None else []) + ["--"]
-        with self.target.run_context(args_prefix=args_prefix, **kwargs) as r:
-            yield r
+        with self.target.run_context(args_prefix=args_prefix, **kwargs) as p:
+            flight = Flight(self.target, p)
+            yield flight
+            flight.result = p.stderr.read()

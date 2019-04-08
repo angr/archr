@@ -4,19 +4,22 @@ class Arrowhead:
     """
     An arrowhead is a testcase. Many bows will use one to define the exact interaction that should be performed when
     running the target program in a specific way.
+
+    :param inputs:  A list of tuples: (float timestamp, str channel, bytes data)
     """
-    def __init__(self, input_data, encoding='utf-8'):
-        if type(input_data) is str:
-            input_data = input_data.encode(self.encoding)
-        if type(input_data) is bytes:
-            input_data = [input_data]
+    def __init__(self, inputs):
+        self.inputs = inputs
 
-        self.input_data = input_data
-        self.encoding = encoding
+    @classmethod
+    def oneshot(cls, data, channel=None):
+        return cls([(0.0, channel, data)])
 
-    def run(self, moving_target):
-        pipe = moving_target.default_input
+    def run(self, flight):
+        starttime = time.time()
 
-        for packet in self.input_data:
-            time.sleep(0.01)
-            pipe.write(packet)
+        for timestamp, channel_name, data in self.inputs:
+            channel = flight.get_channel(channel_name)
+            now = time.time() - starttime
+            if now < timestamp:
+                time.sleep(timestamp - now)
+            channel.write(data)
