@@ -3,7 +3,6 @@ import logging
 import os
 
 from . import ContextBow
-from . import Flight
 
 l = logging.getLogger("archr.arsenal.strace")
 
@@ -32,10 +31,9 @@ class STraceBow(ContextBow):
         """
 
         args_prefix = (args_prefix or []) + ["/tmp/strace/fire"] + (trace_args or []) + ["--"]
-        with self.target.run_context(args_prefix=args_prefix, **kwargs) as p:
-            flight = Flight(self.target, p)
+        with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
             yield flight
-        flight.result = p.stderr.read()
+        flight.result = flight.process.stderr.read() # illegal, technically
 
 
 class STraceAttachBow(ContextBow):
@@ -58,7 +56,6 @@ class STraceAttachBow(ContextBow):
         super_yama()
 
         args_prefix = (args_prefix or []) + ["/tmp/strace/fire"] + (trace_args or []) + ["-p", str(pid), "--"]
-        with self.target.run_context(args_prefix=args_prefix, **kwargs) as p:
-            flight = Flight(self.target, p)
+        with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
             yield flight
-            flight.result = p.stderr.read()
+        flight.result = flight.process.stderr.read()

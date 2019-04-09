@@ -1,4 +1,4 @@
-from . import ContextBow, Flight
+from . import ContextBow
 from .strace import super_yama
 import logging
 from contextlib import contextmanager
@@ -14,20 +14,17 @@ class LTraceBow(ContextBow):
     REQUIRED_ARROW = "ltrace"
 
     @contextmanager
-    def fire_context(self, proc_name, proc_args=None, ltrace_args=None, **kwargs):
+    def fire_context(self, args_prefix=None, trace_args=None, **kwargs):
         """
         Starts ltrace with a fresh process.
-        :param proc_name: The name of the process to start
-        :param proc_args: Arguments for the process
-        :param ltrace_args: Options for ltrace
+        :param trace_args: Options for ltrace
         :return: Target instance returned by run_command
         """
 
-        args_suffix = ["--", "%s" % proc_name] + proc_args
-        with self.target.run_command(args_prefix=["/tmp/ltrace/fire"], args=ltrace_args, args_suffix=args_suffix, **kwargs) as p:
-            flight = Flight(self.target, p)
+        args_prefix = (args_prefix or []) + ["/tmp/ltrace/fire"] + (trace_args or []) + ["--"]
+        with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
             yield flight
-            flight.result = p.stderr.read()
+        flight.result = flight.process.stderr.read() # illegal, technically
 
 
 class LTraceAttachBow(ContextBow):
@@ -49,10 +46,7 @@ class LTraceAttachBow(ContextBow):
 
         super_yama()
 
-        cmd_args = ltrace_args + ["-p", "%d" % pid]
-
-        with self.target.run_command(args_prefix=["/tmp/ltrace/fire"], args=cmd_args, **kwargs) as p:
-            flight = Flight(self.target, p)
+        cmd_args = ["/tmp/ltrace/fire"] + (ltrace_args or []) + ["-p", "%d" % pid]
+        with self.target.flight_context(args=cmd_args, **kwargs) as flight:
             yield flight
-            p.kill()
-            flight.result = p.stderr.read()
+        flight.result = flight.process.stderr.read() # illegal, technically

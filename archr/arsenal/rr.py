@@ -9,7 +9,6 @@ import os
 l = logging.getLogger("archr.arsenal.rr_tracer")
 
 from . import ContextBow
-from . import Flight
 
 try:
     import trraces
@@ -90,26 +89,26 @@ class RRTracerBow(ContextBow):
 
         record_command = ['/tmp/rr/fire', 'record', '-n'] + self.target.target_args
         record_env = ['RR_COPY_ALL_FILES=1']
-        with self.target.run_context(record_command, env=record_env, timeout=self.timeout) as p:
-            r = RRTraceResult(trace_dir=self.local_trace_dir)
+        r = RRTraceResult(trace_dir=self.local_trace_dir)
+        try:
+            with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r) as flight:
+                yield flight
+        except subprocess.TimeoutExpired:
+            r.timed_out = True
+        else:
+            r.timed_out = False
 
-            try:
-                yield Flight(self.target, p, r)
-                r.timed_out = False
+            r.returncode = flight.process.returncode
+            assert r.returncode is not None
 
-                r.returncode = p.wait()
-                assert r.returncode is not None
+            # did a crash occur?
+            if r.returncode in [139, -11]:
+                r.crashed = True
+                r.signal = signal.SIGSEGV
+            elif r.returncode == [132, -9]:
+                r.crashed = True
+                r.signal = signal.SIGILL
 
-                # did a crash occur?
-                if r.returncode in [139, -11]:
-                    r.crashed = True
-                    r.signal = signal.SIGSEGV
-                elif r.returncode == [132, -9]:
-                    r.crashed = True
-                    r.signal = signal.SIGILL
-
-            except subprocess.TimeoutExpired:
-                r.timed_out = True
 
         self.target.run_command(['/tmp/rr/fire', 'pack']).communicate()
         path = self.find_target_home_dir() + '/.local/share/rr/latest-trace/'

@@ -1,5 +1,9 @@
 #!/bin/bash -e
 
+if [ -n "$INHIBIT_BUILD" ]; then
+	exit
+fi
+
 for DOCKERFILE in */Dockerfile
 do
 	DOCKERDIR=${DOCKERFILE///*}

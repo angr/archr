@@ -357,6 +357,17 @@ class Target(ABC):
             # TODO: probably insufficient
             p.terminate()
 
+    def flight(self, *args, result=None, **kwargs):
+        return Flight(self, self.run_command(*args, **kwargs), result=result)
+
+    @contextlib.contextmanager
+    def flight_context(self, *args, timeout=1, **kwargs):
+        flight = self.flight(*args, **kwargs)
+        try:
+            yield flight
+        finally:
+            flight.stop(timeout=timeout)
+
     @contextlib.contextmanager
     def shellcode_context(self, *args, asm_code=None, bin_code=None, **kwargs):
         """
@@ -397,3 +408,4 @@ from .docker_target import DockerImageTarget
 from .local_target import LocalTarget
 from ..utils import hook_entry
 from ..errors import ArchrError
+from .flight import Flight

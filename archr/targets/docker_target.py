@@ -19,6 +19,7 @@ class DockerImageTarget(Target):
     def __init__(
         self, image_name,
         pull=False,
+        rm=True,
         **kwargs
                  #target_port=None,
                  #target_arch=None,
@@ -31,6 +32,7 @@ class DockerImageTarget(Target):
         if pull:
             self._client.images.pull(self.image_id)
 
+        self.rm = rm
         self.image = None
         self.container = None
 
@@ -63,7 +65,7 @@ class DockerImageTarget(Target):
             self.image,
             entrypoint=['/bin/sh'], command=[], environment=self.target_env,
             user=user,
-            detach=True, auto_remove=True,
+            detach=True, auto_remove=self.rm,
             stdin_open=True, stdout=True, stderr=True,
             privileged=True, security_opt=["seccomp=unconfined"], #for now, hopefully...
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
