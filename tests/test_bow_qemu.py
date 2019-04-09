@@ -76,10 +76,10 @@ def test_crasher_trace_local():
         crasher_checks(t)
 
 if __name__ == '__main__':
-    test_crash_on_input_trace()
     test_arrow_injection_docker()
     test_arrow_injection_local()
     test_crasher_trace()
     test_crasher_trace_local()
+    test_crash_on_input_trace()
     test_vuln_stacksmash()
     test_shellcode_tester()

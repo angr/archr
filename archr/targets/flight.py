@@ -78,6 +78,10 @@ class Flight:
             sock.close()
         if self.process is not None:
             self.process.stdin.close()
+            #time.sleep(2)
+            #if self.process.poll() is None:
+            #    print("Hung process")
+            #    import ipdb; ipdb.set_trace()
             try:
                 self.process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
