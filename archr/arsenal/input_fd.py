@@ -15,6 +15,7 @@ class InputFDBow(Bow):
             time.sleep(0.1)
             flight.default_channel.write(b'aRcHr'*0x1000)
             flight.default_channel.recv_until(b'aRcHr')
+            flight.default_channel.close()
         strace = flight.result
         archr_lines = [ line for line in strace.splitlines() if b"aRcHr" in line ]
         archr_read = [ line for line in archr_lines if line.startswith(b"read") or line.startswith(b"recv") ]
