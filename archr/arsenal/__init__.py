@@ -1,8 +1,10 @@
 import os
 import time
+from contextlib import contextmanager
 #from typing import ContextManager
 
-from ..arrowhead import Arrowhead
+from ..arrowheads import ArrowheadLog
+from ..targets import Flight
 
 
 class Bow:
@@ -50,12 +52,18 @@ class ContextBow(Bow):
                 time.sleep(0.2)
         return flight.result
 
+    @contextmanager
     def fire_context(self, *args, **kwargs):  # -> ContextManager[Flight]:
         """
         A context manager for the bow. Should yield a Flight object.
         """
-        raise NotImplementedError()
 
+        with self.target.run_context(*args, **kwargs) as p:
+            flight = Flight(self.target, p)
+            try:
+                yield flight
+            finally:
+                flight.stop(timeout=60)
 
 
 from .angr_project import angrProjectBow
