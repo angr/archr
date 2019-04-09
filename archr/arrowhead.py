@@ -15,11 +15,12 @@ class Arrowhead:
         return cls([(0.0, channel, data)])
 
     def run(self, flight):
+        time.sleep(0.1)
         starttime = time.time()
 
         for timestamp, channel_name, data in self.inputs:
             if channel_name is None:
-                channel = flight.default_input
+                channel = flight.default_channel
             else:
                 channel = flight.get_channel(channel_name)
             now = time.time() - starttime

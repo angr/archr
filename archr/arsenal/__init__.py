@@ -1,6 +1,9 @@
 import os
 import socket
+import nclib
 #from typing import ContextManager
+
+from ..arrowhead import Arrowhead
 
 
 class Flight:
@@ -32,12 +35,10 @@ class Flight:
         if ':' not in channel_name:
             if self.process is None:
                 raise ValueError("Can't get stdio for remote process")
-            if channel_name == 'stdin':
-                return self.process.stdin
-            elif channel_name == 'stdout':
-                return self.process.stdout
+            if channel_name == 'stdio':
+                return nclib.Netcat(sock=self.process.stdout, sock_send=self.process.stdin)
             elif channel_name == 'stderr':
-                return self.process.stderr
+                return nclib.Netcat(sock=self.process.stderr)
             else:
                 raise ValueError("Bad channel", channel_name)
         else:
@@ -61,30 +62,17 @@ class Flight:
             # TODO switch between ipv4 and ipv6 here
             sock = socket.socket(family=socket.AF_INET, type=sock_type)
             sock.connect((self.target.ipv4_address, port))
-            return sock
+            return nclib.Netcat(sock)
 
 
     @property
-    def default_input(self):
+    def default_channel(self):
         if self.target.tcp_ports:
             channel = 'tcp:0'
         elif self.target.udp_ports:
             channel = 'udp:0'
         elif self.process:
-            channel = 'stdin'
-        else:
-            raise ValueError("Target has no channels defined")
-
-        return self.get_channel(channel)
-
-    @property
-    def default_output(self):
-        if self.target.tcp_ports:
-            channel = 'tcp:0'
-        elif self.target.udp_ports:
-            channel = 'udp:0'
-        elif self.process:
-            channel = 'stdout'
+            channel = 'stdio'
         else:
             raise ValueError("Target has no channels defined")
 
@@ -129,7 +117,10 @@ class ContextBow(Bow):
     def fire(self, *args, testcase=None, **kwargs): #pylint:disable=arguments-differ
         with self.fire_context(*args, **kwargs) as flight:
             if testcase is not None:
+                if type(testcase) is bytes:
+                    testcase = Arrowhead.oneshot(testcase)
                 testcase.run(flight)
+            flight.process.terminate()
             flight.process.wait()
         return flight.result
 

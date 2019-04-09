@@ -35,7 +35,7 @@ class STraceBow(ContextBow):
         with self.target.run_context(args_prefix=args_prefix, **kwargs) as p:
             flight = Flight(self.target, p)
             yield flight
-            flight.result = p.stderr.read()
+        flight.result = p.stderr.read()
 
 
 class STraceAttachBow(ContextBow):

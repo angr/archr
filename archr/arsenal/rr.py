@@ -4,12 +4,11 @@ import tempfile
 import logging
 import signal
 import shutil
-import time
 import os
 
 l = logging.getLogger("archr.arsenal.rr_tracer")
 
-from . import Bow
+from . import ContextBow
 from . import Flight
 
 try:
@@ -46,7 +45,7 @@ class RRTraceResult:
         return trraces.replay_interfaces.angr.technique.Trracer(os.path.join(self.trace_dir.name, 'latest-trace'), **kwargs)
 
 
-class RRTracerBow(Bow):
+class RRTracerBow(ContextBow):
     REQUIRED_ARROW = "rr"
 
     def __init__(self, target, timeout=10, local_trace_dir='/tmp/rr_trace/'):

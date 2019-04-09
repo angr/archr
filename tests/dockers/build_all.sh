@@ -7,3 +7,4 @@ do
 	echo "Building $DOCKERDIR"
 	docker build -t $DOCKERTAG $DOCKERDIR
 done
+docker pull ikanak/miniupnpd
