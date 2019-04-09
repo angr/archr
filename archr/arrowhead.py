@@ -18,7 +18,10 @@ class Arrowhead:
         starttime = time.time()
 
         for timestamp, channel_name, data in self.inputs:
-            channel = flight.get_channel(channel_name)
+            if channel_name is None:
+                channel = flight.default_input
+            else:
+                channel = flight.get_channel(channel_name)
             now = time.time() - starttime
             if now < timestamp:
                 time.sleep(timestamp - now)

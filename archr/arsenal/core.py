@@ -8,7 +8,6 @@ l = logging.getLogger("archr.arsenal.core_bow")
 from . import ContextBow, Flight
 
 class CoreResults:
-    process = None
     local_core_path = None
     target_core_path = None
 

@@ -15,25 +15,26 @@ def setup_module():
 
 def ltrace_proc(t, **kwargs):
     b = archr.arsenal.LTraceBow(t)
-    r = b.fire_context(proc_name=BIN_CAT, proc_args=CAT_ARGS, ltrace_args=LTRACE_ARGS, **kwargs)
-    return r
+    with b.fire_context(proc_name=BIN_CAT, proc_args=CAT_ARGS, ltrace_args=LTRACE_ARGS, **kwargs) as flight:
+        sleep(1)
+        flight.process.terminate()
+    return flight.result
 
 
 def ltrace_attach(t, p, **kwargs):
-    b = archr.arsenal.LTraceBow(t)
+    b = archr.arsenal.LTraceAttachBow(t)
     pid = p.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')
-    r = b.fire(pid=pid, ltrace_args=LTRACE_ARGS, **kwargs)
-    sleep(1)
-    nc = nclib.Netcat((t.ipv4_address, t.tcp_ports[0]))
-    nc.send(b'ahoi!')
-    assert nc.readuntil(b'ahoi!', timeout=5) == b'ahoi!'
+    with b.fire_context(pid=pid, ltrace_args=LTRACE_ARGS, **kwargs) as flight:
+        sleep(1)
+        nc = nclib.Netcat(flight.get_channel('tcp:0')) # misuse of flight
+        nc.send(b'ahoi!')
+        assert nc.readuntil(b'ahoi!', timeout=5) == b'ahoi!'
 
-    return r
+    return flight.result
 
 
 def check_ltrace_proc(t, **kwargs):
-    p = ltrace_proc(t, **kwargs)
-    output = p.stderr.read()
+    output = ltrace_proc(t, **kwargs)
     assert b'cat->open' in output
     assert b'cat->malloc' in output
     assert b'cat->read' in output
@@ -41,11 +42,8 @@ def check_ltrace_proc(t, **kwargs):
 
 def check_ltrace_attach(t, **kwargs):
     target = t.run_command() # start target
-    p = ltrace_attach(t, target, **kwargs)
+    output = ltrace_attach(t, target, **kwargs)
     target.terminate()
-    p.terminate()
-    p.kill()
-    output = p.stderr.read()
     assert b'exe->accept' in output
     assert b'exe->malloc' in output
     assert b'exe->free' in output
@@ -74,7 +72,7 @@ def test_ltrace_attach_docker():
 
 
 if __name__ == '__main__':
+    test_ltrace_attach_local()
     test_ltrace_proc_local()
     test_ltrace_proc_docker()
-    test_ltrace_attach_local()
     test_ltrace_attach_docker()

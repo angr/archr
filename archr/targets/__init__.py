@@ -230,8 +230,8 @@ class Target(ABC):
         """
         Injects files or into the target.
 
-        :param list files: A dict of { dst_path: byte_contents }
-        :param list modes: An optional dict of { dst_path: permissions }
+        :param dict files: A dict of { dst_path: byte_contents }
+        :param dict modes: An optional dict of { dst_path: permissions }
         """
         with io.BytesIO() as f:
             with tarfile.open(fileobj=f, mode='w') as t:
@@ -381,7 +381,7 @@ class Target(ABC):
     ):
         """
         Run a command inside the target.
-        :return:
+        :return: A subprocess
         """
         command_args = args or self.target_args
         if args_prefix:

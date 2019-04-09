@@ -1,6 +1,5 @@
 import re
 import subprocess
-import contextlib
 import logging
 import docker
 import shlex

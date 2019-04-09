@@ -147,8 +147,8 @@ from .qemu_tracer import QEMUTracerBow
 from .datascout import DataScoutBow
 from .gdbserver import GDBServerBow
 from .core import CoreBow
-from .ltrace import LTraceBow
-from .strace import STraceBow
+from .ltrace import LTraceBow, LTraceAttachBow
+from .strace import STraceBow, STraceAttachBow
 from .input_fd import InputFDBow
 from .rr import RRTracerBow
 from .. import arrows
