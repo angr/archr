@@ -1,4 +1,5 @@
 import time
+import socket
 
 import nclib
 
@@ -37,9 +38,33 @@ class ArrowheadFletcher(Arrowhead):
     def run(self, flight):
         self.result = []
 
-        default_channel = flight.default_channel
-        default_name = [k for k, v in flight._channels.items() if v == default_channel][0]
+        channel = flight.default_channel
 
-        default_channel.log_send = Log(default_name, 'send', self.result)
-        default_channel.log_recv = Log(default_name, 'recv', self.result)
-        default_channel.interact()
+        def log(sock, direction):
+            name = {
+                flight.process.stdin: 'stdin',
+                flight.process.stdout: 'stdout',
+                flight.process.stderr: 'stderr',
+            }.get(sock)
+            if not name:
+                if type(sock) is socket.socket:
+                    # TODO: it is always TCP
+                    name = f'tcp/{sock.getpeername()[1]}'
+                else:
+                    name = 'unknown'
+
+            return Log(name, direction, self.result)
+
+        channel.log_send = log(channel.sock_send, 'send')
+
+        if type(channel.sock) is nclib.merge.MergePipes:
+            for sub_channel in channel.sock.readables:
+                sub_channel.log_recv = log(sub_channel.sock, 'recv')
+        else:
+            channel.log_recv = log(channel.sock, 'recv')
+
+        # default_channel.log_send = Log(default_name, 'send', self.result)
+        # default_channel.log_recv = Log(default_name, 'recv', self.result)
+
+        channel.verbose = True
+        channel.interact()

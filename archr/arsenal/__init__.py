@@ -1,5 +1,6 @@
 import os
 import time
+from contextlib import contextmanager
 #from typing import ContextManager
 
 from ..arrowheads import ArrowheadLog
@@ -50,11 +51,14 @@ class ContextBow(Bow):
                 time.sleep(0.2)
         return flight.result
 
+    @contextmanager
     def fire_context(self, *args, **kwargs):  # -> ContextManager[Flight]:
         """
         A context manager for the bow. Should yield a Flight object.
         """
-        return self.target.flight_context(*args, **kwargs)
+        with self.target.flight_context(*args, **kwargs) as flight:
+            yield flight
+
 
 from .angr_project import angrProjectBow
 from .angr_state import angrStateBow
