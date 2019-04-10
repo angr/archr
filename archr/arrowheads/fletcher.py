@@ -29,9 +29,11 @@ class ArrowheadFletcher(Arrowhead):
     :param channel_map:  A mapping from user channels to target channels: {str user_channel, str target_channel)
     """
 
-    def __init__(self, channel_map):
+    def __init__(self, insock=sys.stdin, outsock=sys.stdout, verbose=False):
         # TODO: use this channel_map, for now we are just going to map stdin/stdout
-        self.channel_map = channel_map
+        self.insock = insock
+        self.outsock = outsock
+        self.verbose = verbose
         self.result = []
 
 
