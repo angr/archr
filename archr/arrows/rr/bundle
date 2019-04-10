@@ -4,13 +4,17 @@
 BUNDLE_DIR=$1
 mkdir -p $BUNDLE_DIR/bin
 mkdir -p $BUNDLE_DIR/libs
+mkdir -p $BUNDLE_DIR/share
 
 FIRE_SCRIPT=${0//bundle/fire}
 RR_PATH=$(which rr)
 RR_LIBS=$(ldd $RR_PATH | grep "=>" | awk '{print $3}' | sort -u)
 RR_LD=$(ldd $RR_PATH | grep ld-linux | awk '{print $1}')
 RR_BIN_PATH=$(dirname $RR_PATH)
+RR_SHARE_PATH=$(realpath $RR_BIN_PATH/../share/rr)
+
 cp -L $RR_LIBS $BUNDLE_DIR/libs/
 cp -L $RR_LD $BUNDLE_DIR
 cp -L $RR_BIN_PATH/rr* $BUNDLE_DIR/bin/
+cp -L -r $RR_SHARE_PATH $BUNDLE_DIR/share
 cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire
