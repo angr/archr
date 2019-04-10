@@ -1,6 +1,5 @@
 from time import sleep
 
-import nclib
 import archr
 import os
 
@@ -27,7 +26,7 @@ def check_strace_attach(t, **kwargs):
     pid = target.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')
     with b.fire_context(pid=pid, trace_args=STRACE_ARGS, **kwargs) as flight:
         sleep(2)
-        nc = nclib.Netcat(flight.open_channel('tcp:0')) # misuse of flight
+        nc = flight.open_channel('tcp:0') # misuse of flight
         nc.send(b'ahoi!')
         assert nc.readuntil(b'ahoi!', timeout=5) == b'ahoi!'
         nc.close()
