@@ -4,12 +4,11 @@ import tempfile
 import logging
 import signal
 import shutil
-import time
 import os
 
 l = logging.getLogger("archr.arsenal.rr_tracer")
 
-from . import Bow
+from . import ContextBow
 
 try:
     import trraces
@@ -24,10 +23,14 @@ class FakeTempdir:
     def cleanup(self):
         return
 
+def fix_perf():
+    with open("/proc/sys/kernel/perf_event_paranoid", 'rb') as c:
+        if c.read().strip() != b"-1":
+            l.warning("/proc/sys/kernel/perf_event_paranoid needs to be '-1'. I am setting this system-wide.")
+            os.system(_super_perf_cmd)
+_super_perf_cmd = "echo 0 | docker run --rm --privileged -i ubuntu tee /proc/sys/kernel/perf_event_paranoid"
 
-class RRTraceResults:
-    process = None
-
+class RRTraceResult:
     returncode = None
     signal = None
     crashed = False
@@ -47,7 +50,7 @@ class RRTraceResults:
         return trraces.replay_interfaces.angr.technique.Trracer(os.path.join(self.trace_dir.name, 'latest-trace'), **kwargs)
 
 
-class RRTracerBow(Bow):
+class RRTracerBow(ContextBow):
     REQUIRED_ARROW = "rr"
 
     def __init__(self, target, timeout=10, local_trace_dir='/tmp/rr_trace/'):
@@ -74,18 +77,6 @@ class RRTracerBow(Bow):
             with contextlib.suppress(FileNotFoundError):
                 shutil.rmtree(tmpdir)
 
-    def fire(self, *args, testcase=(), **kwargs):  # pylint:disable=arguments-differ
-        if type(testcase) in [str, bytes]:
-            testcase = [testcase]
-
-        with self.fire_context(*args, **kwargs) as r:
-            for t in testcase:
-                r.process.stdin.write(t.encode('utf-8') if type(t) is str else t)
-                time.sleep(0.01)
-            r.process.stdin.close()
-
-        return r
-
     def find_target_home_dir(self):
         with self.target.run_context(['env']) as p:
             stdout, stderr = p.communicate()
@@ -98,33 +89,34 @@ class RRTracerBow(Bow):
         if save_core or record_magic or report_bad_args:
             raise ArchrError("I can't do any of these things!")
 
+        fix_perf()
+
         if self.local_trace_dir and os.path.exists(self.local_trace_dir):
             shutil.rmtree(self.local_trace_dir)
             os.mkdir(self.local_trace_dir)
 
         record_command = ['/tmp/rr/fire', 'record', '-n'] + self.target.target_args
         record_env = ['RR_COPY_ALL_FILES=1']
-        with self.target.run_context(record_command, env=record_env, timeout=self.timeout) as p:
-            r = RRTraceResults(trace_dir=self.local_trace_dir)
-            r.process = p
+        r = RRTraceResult(trace_dir=self.local_trace_dir)
+        try:
+            with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r) as flight:
+                yield flight
+        except subprocess.TimeoutExpired:
+            r.timed_out = True
+        else:
+            r.timed_out = False
 
-            try:
-                yield r
-                r.timed_out = False
+            r.returncode = flight.process.returncode
+            assert r.returncode is not None
 
-                r.returncode = r.process.wait()
-                assert r.returncode is not None
+            # did a crash occur?
+            if r.returncode in [139, -11]:
+                r.crashed = True
+                r.signal = signal.SIGSEGV
+            elif r.returncode == [132, -9]:
+                r.crashed = True
+                r.signal = signal.SIGILL
 
-                # did a crash occur?
-                if r.returncode in [139, -11]:
-                    r.crashed = True
-                    r.signal = signal.SIGSEGV
-                elif r.returncode == [132, -9]:
-                    r.crashed = True
-                    r.signal = signal.SIGILL
-
-            except subprocess.TimeoutExpired:
-                r.timed_out = True
 
         self.target.run_command(['/tmp/rr/fire', 'pack']).communicate()
         path = self.find_target_home_dir() + '/.local/share/rr/latest-trace/'

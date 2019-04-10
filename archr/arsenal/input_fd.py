@@ -1,7 +1,7 @@
 import logging
 import time
 
-l = logging.getLogger("archr.arsenal.angr_state")
+l = logging.getLogger("archr.arsenal.input_fd")
 
 from . import Bow
 
@@ -11,17 +11,15 @@ class InputFDBow(Bow):
     """
 
     def fire(self, **kwargs): #pylint:disable=arguments-differ
-        with STraceBow(self.target).fire_context(trace_args=["-f"]) as stb:
-            time.sleep(1)
-            ncb = NetCatBow(self.target).fire(run=False)
-            ncb.write(b"aRcHr"*0x1000)
-            ncb.close()
-
-        trace = stb.stderr.read()
-        archr_lines = [ line for line in trace.splitlines() if b"aRcHr" in line ]
+        with STraceBow(self.target).fire_context(trace_args=["-f"]) as flight:
+            time.sleep(0.1)
+            flight.default_channel.write(b'aRcHr'*0x1000)
+            flight.default_channel.recv_until(b'aRcHr')
+            flight.default_channel.close()
+        strace = flight.result
+        archr_lines = [ line for line in strace.splitlines() if b"aRcHr" in line ]
         archr_read = [ line for line in archr_lines if line.startswith(b"read") or line.startswith(b"recv") ]
         fd = archr_read[0].split()[0].split(b"(")[1].split(b",")[0]
         return int(fd)
 
-from .nc import NetCatBow
 from .strace import STraceBow

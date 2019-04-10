@@ -15,7 +15,7 @@ def do_gdb(t):
         gc.write("target remote %s:%d" % (t.ipv4_address, 31337))
         gc.write("continue")
         gc.exit()
-        return gbf
+        return gbf.process
 
 def do_qemu(t):
     with archr.arsenal.QEMUTracerBow(t).fire_context() as qbf:

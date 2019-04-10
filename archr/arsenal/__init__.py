@@ -1,7 +1,9 @@
-import subprocess
-import time
-import sys
 import os
+import time
+#from typing import ContextManager
+
+from ..arrowhead import Arrowhead
+
 
 class Bow:
     REQUIRED_ARROW = None
@@ -35,41 +37,35 @@ class Bow:
 class ContextBow(Bow):
     """
     A Bow base class for bows that implement a fire_context instead of a fire.
-    Provides a default .fire() that replays a testcase consisting of a series of strings/bytes.
+    Provides a default .fire() that replays a testcase (an Arrowhead).
     """
 
-    def fire(self, *args, testcase=(), **kwargs): #pylint:disable=arguments-differ
-        if type(testcase) in [ str, bytes ]:
-            testcase = [ testcase ]
-
-        with self.fire_context(*args, **kwargs) as r:
-            if isinstance(r, subprocess.Popen):
-                proc = r
+    def fire(self, *args, testcase=None, **kwargs): #pylint:disable=arguments-differ
+        with self.fire_context(*args, **kwargs) as flight:
+            if testcase is not None:
+                if type(testcase) is bytes:
+                    testcase = Arrowhead.oneshot(testcase)
+                testcase.run(flight)
             else:
-                proc = r.process
+                time.sleep(0.2)
+        return flight.result
 
-            for t in testcase:
-                proc.stdin.write(t.encode('utf-8') if type(t) is str else t)
-                time.sleep(0.01)
-            proc.stdin.close()
-
-        return r
-
-    def fire_context(self, *args, **kwargs):
+    def fire_context(self, *args, **kwargs):  # -> ContextManager[Flight]:
         """
-        A context manager for the bow. Should yield an object that has a "process" attribute.
+        A context manager for the bow. Should yield a Flight object.
         """
         raise NotImplementedError()
 
+
+
 from .angr_project import angrProjectBow
 from .angr_state import angrStateBow
-from .nc import NetCatBow
 from .qemu_tracer import QEMUTracerBow
 from .datascout import DataScoutBow
 from .gdbserver import GDBServerBow
 from .core import CoreBow
-from .ltrace import LTraceBow
-from .strace import STraceBow
+from .ltrace import LTraceBow, LTraceAttachBow
+from .strace import STraceBow, STraceAttachBow
 from .input_fd import InputFDBow
 from .rr import RRTracerBow
 from .. import arrows

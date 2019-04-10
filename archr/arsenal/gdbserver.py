@@ -1,4 +1,3 @@
-import contextlib
 import logging
 
 l = logging.getLogger("archr.arsenal.memory_map")
@@ -12,7 +11,5 @@ class GDBServerBow(ContextBow):
 
     REQUIRED_ARROW = "gdbserver"
 
-    @contextlib.contextmanager
     def fire_context(self, port=31337, aslr=False, **kwargs):
-        with self.target.run_context(args_prefix=["/tmp/gdbserver/fire", "0.0.0.0:%d"%port], aslr=aslr, **kwargs) as p:
-            yield p
+        return self.target.flight_context(args_prefix=["/tmp/gdbserver/fire", "0.0.0.0:%d"%port], aslr=aslr, **kwargs)

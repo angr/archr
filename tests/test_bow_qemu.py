@@ -24,6 +24,7 @@ def crasher_checks(t):
 
     # arbitrary check
     assert len(r.trace) > 100
+    assert not r.timed_out
     assert r.crashed
     assert r.crash_address == 0x400000060a
     assert r.signal == signal.SIGSEGV
@@ -31,26 +32,39 @@ def crasher_checks(t):
     assert os.path.getsize(r.core_path) > 0
 
 def crash_on_input_checks(t):
-    crashing = "A"*120
+    crashing = b"A"*120
     b = archr.arsenal.QEMUTracerBow(t)
-    r = b.fire(save_core=True, testcase=crashing)
+    with b.fire_context(save_core=True) as flight:
+        flight.default_channel.send(crashing)
+        flight.default_channel.shutdown_wr()
+        flight.default_channel.recvall()
 
-    assert r.crashed
+    assert flight.result.crashed
 
 def shellcode_checks(t):
     crash = b"A" * 272
     b = archr.arsenal.QEMUTracerBow(t)
-    r = b.fire(save_core=True, testcase=crash)
 
-    assert r.crashed
+    with b.fire_context(save_core=True) as flight:
+        flight.default_channel.send(crash)
+        flight.default_channel.shutdown_wr()
+        flight.default_channel.recvall()
+
+    assert not flight.result.timed_out
+    assert flight.result.crashed
 
 def vuln_stacksmash_checks(t):
     crash = b"A" * 227
 
     b = archr.arsenal.QEMUTracerBow(t)
-    r = b.fire(save_core=True, testcase=crash)
 
-    assert r.crashed
+    with b.fire_context(save_core=True) as flight:
+        flight.default_channel.send(crash)
+        flight.default_channel.shutdown_wr()
+        flight.default_channel.recvall()
+
+    assert not flight.result.timed_out
+    assert flight.result.crashed
 
 
 def test_crasher_trace():
@@ -81,3 +95,5 @@ if __name__ == '__main__':
     test_crasher_trace()
     test_crasher_trace_local()
     test_crash_on_input_trace()
+    test_vuln_stacksmash()
+    test_shellcode_tester()

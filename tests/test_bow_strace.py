@@ -1,6 +1,5 @@
 from time import sleep
 
-import nclib
 import archr
 import os
 
@@ -15,8 +14,7 @@ def setup_module():
 
 def check_strace_proc(t, **kwargs):
     b = archr.arsenal.STraceBow(t)
-    p = b.fire(args_suffix=["/etc/passwd"], trace_args=STRACE_ARGS, **kwargs)
-    trace = p.stderr.read().splitlines()
+    trace = b.fire(args_suffix=["/etc/passwd"], trace_args=STRACE_ARGS, **kwargs).splitlines()
     assert any(b'open' in t and b'passwd' in t for t in trace)
     assert any(b'read' in t and b'root' in t for t in trace)
     assert any(b'write' in t and b'root' in t for t in trace)
@@ -24,17 +22,17 @@ def check_strace_proc(t, **kwargs):
 
 def check_strace_attach(t, **kwargs):
     target = t.run_command() # start target
-    b = archr.arsenal.STraceBow(t)
+    b = archr.arsenal.STraceAttachBow(t)
     pid = target.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')
-    with b.fire_context(pid=pid, trace_args=STRACE_ARGS, **kwargs) as p:
+    with b.fire_context(pid=pid, trace_args=STRACE_ARGS, **kwargs) as flight:
         sleep(2)
-        nc = nclib.Netcat((t.ipv4_address, t.tcp_ports[0]))
+        nc = flight.open_channel('tcp:0') # misuse of flight
         nc.send(b'ahoi!')
         assert nc.readuntil(b'ahoi!', timeout=5) == b'ahoi!'
         nc.close()
         target.terminate()
 
-    trace = p.stderr.read().splitlines()
+    trace = flight.result.splitlines()
     assert any(b'read' in t and b'ahoi' in t for t in trace)
     assert any(b'write' in t and b'ahoi' in t for t in trace)
 
