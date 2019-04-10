@@ -75,7 +75,8 @@ class Flight:
 
     def stop(self, timeout=1):
         for sock in self._channels.values():
-            sock.shutdown_wr()
+            if not sock.closed:
+                sock.shutdown_wr()
         if self.process is not None:
             self.process.stdin.close()
             #time.sleep(2)
