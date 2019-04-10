@@ -1,10 +1,8 @@
 import os
 import time
-from contextlib import contextmanager
 #from typing import ContextManager
 
 from ..arrowheads import ArrowheadLog
-from ..targets import Flight
 
 
 class Bow:
@@ -46,25 +44,17 @@ class ContextBow(Bow):
         with self.fire_context(*args, **kwargs) as flight:
             if testcase is not None:
                 if type(testcase) is bytes:
-                    testcase = Arrowhead.oneshot(testcase)
+                    testcase = ArrowheadLog.oneshot(testcase)
                 testcase.run(flight)
             else:
                 time.sleep(0.2)
         return flight.result
 
-    @contextmanager
     def fire_context(self, *args, **kwargs):  # -> ContextManager[Flight]:
         """
         A context manager for the bow. Should yield a Flight object.
         """
-
-        with self.target.run_context(*args, **kwargs) as p:
-            flight = Flight(self.target, p)
-            try:
-                yield flight
-            finally:
-                flight.stop(timeout=60)
-
+        return self.target.flight_context(*args, **kwargs)
 
 from .angr_project import angrProjectBow
 from .angr_state import angrStateBow
