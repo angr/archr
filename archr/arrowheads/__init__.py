@@ -27,17 +27,21 @@ class ArrowheadLog(Arrowhead):
         return cls([(0.0, channel, data)])
 
     def run(self, flight):
+        time.sleep(0.1)
         starttime = time.time()
 
         for timestamp, channel_name, data in self.inputs:
-            channel = flight.get_channel(channel_name)
+            if channel_name is None:
+                channel = flight.default_channel
+            else:
+                channel = flight.get_channel(channel_name)
             now = time.time() - starttime
             if now < timestamp:
                 time.sleep(timestamp - now)
             if data:
                 channel.write(data)
             else:
-                channel.close()
+                channel.shutdown_wr()
 
 
 from .fletcher import ArrowheadFletcher
