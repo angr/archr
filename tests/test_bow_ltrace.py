@@ -14,7 +14,7 @@ def setup_module():
 
 def ltrace_proc(t, **kwargs):
     b = archr.arsenal.LTraceBow(t)
-    with b.fire_context(proc_name=BIN_CAT, proc_args=CAT_ARGS, ltrace_args=LTRACE_ARGS, **kwargs) as flight:
+    with b.fire_context(trace_args=LTRACE_ARGS, **kwargs) as flight:
         sleep(1)
         flight.process.terminate()
     return flight.result
@@ -23,7 +23,7 @@ def ltrace_proc(t, **kwargs):
 def ltrace_attach(t, p, **kwargs):
     b = archr.arsenal.LTraceAttachBow(t)
     pid = p.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')
-    with b.fire_context(pid=pid, ltrace_args=LTRACE_ARGS, **kwargs) as flight:
+    with b.fire_context(pid=pid, trace_args=LTRACE_ARGS, **kwargs) as flight:
         sleep(0.1)
         nc = flight.get_channel('tcp:0') # misuse of flight
         nc.send(b'ahoi!')
@@ -51,12 +51,12 @@ def check_ltrace_attach(t, **kwargs):
 
 
 def test_ltrace_proc_local():
-    with archr.targets.LocalTarget(["/bin/cat"]).build().start() as t:
+    with archr.targets.LocalTarget(["/bin/cat", "/etc/passwd"]).build().start() as t:
         check_ltrace_proc(t)
 
 
 def test_ltrace_proc_docker():
-    with archr.targets.DockerImageTarget('archr-test:cat').build().start() as t:
+    with archr.targets.DockerImageTarget('archr-test:cat', target_args=['/bin/cat', '/etc/passwd']).build().start() as t:
         check_ltrace_proc(t)
 
 

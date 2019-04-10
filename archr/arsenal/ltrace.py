@@ -35,18 +35,18 @@ class LTraceAttachBow(ContextBow):
     REQUIRED_ARROW = "ltrace"
 
     @contextmanager
-    def fire_context(self, pid=None, ltrace_args=None, **kwargs):
+    def fire_context(self, pid=None, trace_args=None, **kwargs):
         """
         Attaches ltrace to an already existing process.
         :param pid: PID of target process
-        :param ltrace_args: Options for ltrace
+        :param trace_args: Options for ltrace
         :param kwargs: Additional arguments
         :return:
         """
 
         super_yama()
 
-        cmd_args = ["/tmp/ltrace/fire"] + (ltrace_args or []) + ["-p", "%d" % pid]
+        cmd_args = ["/tmp/ltrace/fire"] + (trace_args or []) + ["-p", "%d" % pid]
         with self.target.flight_context(args=cmd_args, **kwargs) as flight:
             yield flight
         flight.result = flight.process.stderr.read() # illegal, technically
