@@ -23,6 +23,12 @@ class FakeTempdir:
     def cleanup(self):
         return
 
+def fix_perf():
+    with open("/proc/sys/kernel/perf_event_paranoid", 'rb') as c:
+        if c.read().strip() != b"-1":
+            l.warning("/proc/sys/kernel/perf_event_paranoid needs to be '-1'. I am setting this system-wide.")
+            os.system(_super_perf_cmd)
+_super_perf_cmd = "echo 0 | docker run --rm --privileged -i ubuntu tee /proc/sys/kernel/perf_event_paranoid"
 
 class RRTraceResult:
     returncode = None
@@ -82,6 +88,8 @@ class RRTracerBow(ContextBow):
     def fire_context(self, save_core=False, record_magic=False, report_bad_args=False):
         if save_core or record_magic or report_bad_args:
             raise ArchrError("I can't do any of these things!")
+
+        fix_perf()
 
         if self.local_trace_dir and os.path.exists(self.local_trace_dir):
             shutil.rmtree(self.local_trace_dir)
