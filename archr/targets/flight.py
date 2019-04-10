@@ -31,9 +31,16 @@ class Flight:
             if self.process is None:
                 raise ValueError("Can't get stdio for remote process")
             if channel_name == 'stdio':
-                return nclib.Netcat(sock=self.process.stdout, sock_send=self.process.stdin)
-            elif channel_name == 'stderr':
-                return nclib.Netcat(sock=self.process.stderr)
+                stdout = nclib.Netcat(sock=self.process.stdout)
+                stderr = nclib.Netcat(sock=self.process.stderr)
+                merged_output = nclib.merge.MergePipes([stdout, stderr])
+
+                def close(self):
+                    for nc in self.readables:
+                        nc.close()
+                merged_output.close = close.__get__(merged_output, nclib.merge.MergePipes)
+
+                return nclib.Netcat(sock=merged_output, sock_send=self.process.stdin)
             else:
                 raise ValueError("Bad channel", channel_name)
         else:
