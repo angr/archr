@@ -1,3 +1,4 @@
+import sys
 import time
 import socket
 
@@ -65,8 +66,6 @@ class ArrowheadFletcher(Arrowhead):
         else:
             channel.log_recv = log(channel.sock, 'recv')
 
-        # default_channel.log_send = Log(default_name, 'send', self.result)
-        # default_channel.log_recv = Log(default_name, 'recv', self.result)
+        channel.verbose = self.verbose
 
-        channel.verbose = True
-        channel.interact()
+        channel.interact(self.insock, self.outsock)
