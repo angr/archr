@@ -30,11 +30,10 @@ class ArrowheadFletcher(Arrowhead):
     :param channel_map:  A mapping from user channels to target channels: {str user_channel, str target_channel)
     """
 
-    def __init__(self, insock=sys.stdin, outsock=sys.stdout, verbose=False):
+    def __init__(self, insock=sys.stdin, outsock=sys.stdout):
         # TODO: use this channel_map, for now we are just going to map stdin/stdout
         self.insock = insock
         self.outsock = outsock
-        self.verbose = verbose
         self.result = []
 
 
@@ -63,10 +62,7 @@ class ArrowheadFletcher(Arrowhead):
         if type(channel.sock) is nclib.merge.MergePipes:
             for sub_channel in channel.sock.readables:
                 sub_channel.log_recv = log(sub_channel.sock, 'recv')
-                sub_channel.verbose = self.verbose
         else:
             channel.log_recv = log(channel.sock, 'recv')
-
-        channel.verbose = self.verbose
 
         channel.interact(self.insock, self.outsock)
