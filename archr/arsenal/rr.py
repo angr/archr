@@ -118,6 +118,7 @@ class RRTraceResult:
 
 class RRTracerBow(ContextBow):
     REQUIRED_ARROW = "rr"
+    REMOTE_TRACE_DIR_PREFIX = "/tmp/rr_trace_"
 
     def __init__(self, target, timeout=10, local_trace_dir='/tmp/rr_trace/'):
         super().__init__(target)
@@ -126,7 +127,8 @@ class RRTracerBow(ContextBow):
 
     @contextlib.contextmanager
     def _target_mk_tmpdir(self):
-        tmpdir = tempfile.mktemp(prefix="/tmp/rr_tracer_")
+        tmpdir = tempfile.mktemp(prefix=self.REMOTE_TRACE_DIR_PREFIX)
+        self.target.run_command(["rm", "-rf", tmpdir]).wait()
         self.target.run_command(["mkdir", tmpdir]).wait()
         try:
             yield tmpdir
@@ -161,34 +163,34 @@ class RRTracerBow(ContextBow):
             shutil.rmtree(self.local_trace_dir)
             os.mkdir(self.local_trace_dir)
 
-        record_command = ['/tmp/rr/fire', 'record', '-n']  + _cpuid_cmd_line_args() + self.target.target_args
-        record_env = ['RR_COPY_ALL_FILES=1']
-        r = RRTraceResult(trace_dir=self.local_trace_dir)
-        try:
-            with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r) as flight:
-                yield flight
-        except subprocess.TimeoutExpired:
-            r.timed_out = True
-        else:
-            r.timed_out = False
+        with self._target_mk_tmpdir() as remote_tmpdir:
+            record_command = ['/tmp/rr/fire', 'record', '-n']  + _cpuid_cmd_line_args() + self.target.target_args
+            record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
+            r = RRTraceResult(trace_dir=self.local_trace_dir)
+            try:
+                with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r) as flight:
+                    yield flight
+            except subprocess.TimeoutExpired:
+                r.timed_out = True
+            else:
+                r.timed_out = False
 
-            r.returncode = flight.process.returncode
-            assert r.returncode is not None
+                r.returncode = flight.process.returncode
+                assert r.returncode is not None
 
-            # did a crash occur?
-            if r.returncode in [139, -11]:
-                r.crashed = True
-                r.signal = signal.SIGSEGV
-            elif r.returncode == [132, -9]:
-                r.crashed = True
-                r.signal = signal.SIGILL
+                # did a crash occur?
+                if r.returncode in [139, -11]:
+                    r.crashed = True
+                    r.signal = signal.SIGSEGV
+                elif r.returncode == [132, -9]:
+                    r.crashed = True
+                    r.signal = signal.SIGILL
 
-
-        self.target.run_command(['/tmp/rr/fire', 'pack']).communicate()
-        path = self.find_target_home_dir() + '/.local/share/rr/latest-trace/'
-        with self._local_mk_tmpdir() as tmpdir:
-            self.target.retrieve_into(path, tmpdir)
-            shutil.move(tmpdir + '/latest-trace/', r.trace_dir.name)
+            path = remote_tmpdir + '/latest-trace/'
+            self.target.run_command(['/tmp/rr/fire', 'pack', path]).communicate()
+            with self._local_mk_tmpdir() as local_tmpdir:
+                self.target.retrieve_into(path, local_tmpdir)
+                os.rename(local_tmpdir + '/latest-trace/', r.trace_dir.name.rstrip('/'))
 
     def _build_command(self, options=None):
         """

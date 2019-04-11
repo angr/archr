@@ -60,9 +60,10 @@ class DockerImageTarget(Target):
         super().build()
         return self
 
-    def start(self, user=None): #pylint:disable=arguments-differ
+    def start(self, user=None, name=None): #pylint:disable=arguments-differ
         self.container = self._client.containers.run(
             self.image,
+            name=name,
             entrypoint=['/bin/sh'], command=[], environment=self.target_env,
             user=user,
             detach=True, auto_remove=self.rm,

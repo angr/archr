@@ -23,7 +23,7 @@ def test_miniupnpd():
         get_miniupnpd_trace(t)
 
 def test_ls():
-    with archr.targets.DockerImageTarget('phate/archr_rr', pull=True).build().start() as t:
+    with archr.targets.DockerImageTarget('phate/archr_rr', pull=True).build().start(name='test_rr_bow') as t:
         get_ls_trace(t)
 
 
