@@ -5,6 +5,7 @@ l = logging.getLogger("archr.arsenal.input_fd")
 
 from . import Bow
 
+
 class InputFDBow(Bow):
     """
     Figures out what file descriptor the target uses to read input.

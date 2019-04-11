@@ -1,6 +1,13 @@
-import nclib
 import socket
 import subprocess
+import time
+import logging
+
+import nclib
+
+
+l = logging.getLogger("archr.target.flight")
+
 
 class Flight:
     """
@@ -27,13 +34,31 @@ class Flight:
         return channel
 
     def open_channel(self, channel_name):
+        def patch_log(nc):
+            # TODO: ideally nclib just uses logging
+            def print_verbose(self, s):
+                assert isinstance(s, str), "s should be str"
+                l.debug(s)
+            nc.verbose = True
+            nc._print_verbose = print_verbose.__get__(nc, type(nc))
+
         if ':' not in channel_name:
             if self.process is None:
                 raise ValueError("Can't get stdio for remote process")
             if channel_name == 'stdio':
-                return nclib.Netcat(sock=self.process.stdout, sock_send=self.process.stdin)
-            elif channel_name == 'stderr':
-                return nclib.Netcat(sock=self.process.stderr)
+                stdout = nclib.Netcat(sock=self.process.stdout)
+                stderr = nclib.Netcat(sock=self.process.stderr)
+                merged_output = nclib.merge.MergePipes([stdout, stderr])
+
+                def close(self):
+                    # TODO: ideally nclib just does this
+                    for nc in self.readables:
+                        nc.close()
+                merged_output.close = close.__get__(merged_output, nclib.merge.MergePipes)
+
+                stdio = nclib.Netcat(sock=merged_output, sock_send=self.process.stdin)
+                patch_log(stdio)
+                return stdio
             else:
                 raise ValueError("Bad channel", channel_name)
         else:
@@ -56,8 +81,18 @@ class Flight:
 
             # TODO switch between ipv4 and ipv6 here
             sock = socket.socket(family=socket.AF_INET, type=sock_type)
-            sock.connect((self.target.ipv4_address, port))
-            return nclib.Netcat(sock)
+
+            for _ in range(30):
+                try:
+                    sock.connect((self.target.ipv4_address, port))
+                    break
+                except ConnectionRefusedError:
+                    l.debug("Connecting to target socket, retrying...")
+                    time.sleep(1)
+
+            nc_sock = nclib.Netcat(sock)
+            patch_log(nc_sock)
+            return nc_sock
 
 
     @property
@@ -75,7 +110,8 @@ class Flight:
 
     def stop(self, timeout=1):
         for sock in self._channels.values():
-            sock.close()
+            if not sock.closed:
+                sock.shutdown_wr()
         if self.process is not None:
             self.process.stdin.close()
             #time.sleep(2)

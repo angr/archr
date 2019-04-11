@@ -8,14 +8,25 @@ def setup_module():
 def get_miniupnpd_trace(t):
     crash = b"A" * 272
     b = archr.arsenal.RRTracerBow(t)
-    b.fire(testcase=crash)
-    print("asd as")
+    res = b.fire(testcase=crash)
+    print("Done! You can find your trace in {} (timed out?: {})".format(res.trace_dir.name, res.timed_out))
 
+def get_ls_trace(t):
+    crash = b"A" * 272
+    b = archr.arsenal.RRTracerBow(t)
+    res = b.fire(testcase=crash)
+    print("Done! You can find your trace in {} (timed out?: {})".format(res.trace_dir.name, res.timed_out))
+
+# This test case fails because the docker image is broken
 def test_miniupnpd():
     with archr.targets.DockerImageTarget('ikanak/miniupnpd').build().start() as t:
         get_miniupnpd_trace(t)
 
+def test_ls():
+    with archr.targets.DockerImageTarget('phate/archr_rr', pull=True).build().start() as t:
+        get_ls_trace(t)
 
 
 if __name__ == '__main__':
-    test_miniupnpd()
+#     test_miniupnpd()
+    test_ls()
