@@ -63,6 +63,7 @@ class ArrowheadFletcher(Arrowhead):
         if type(channel.sock) is nclib.merge.MergePipes:
             for sub_channel in channel.sock.readables:
                 sub_channel.log_recv = log(sub_channel.sock, 'recv')
+                sub_channel.verbose = self.verbose
         else:
             channel.log_recv = log(channel.sock, 'recv')
 

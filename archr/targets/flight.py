@@ -34,6 +34,13 @@ class Flight:
         return channel
 
     def open_channel(self, channel_name):
+        def patch_log(nc):
+            def print_verbose(self, s):
+                assert isinstance(s, str), "s should be str"
+                l.debug(s)
+            nc.verbose = True
+            nc._print_verbose = print_verbose.__get__(nc, type(nc))
+
         if ':' not in channel_name:
             if self.process is None:
                 raise ValueError("Can't get stdio for remote process")
@@ -42,12 +49,18 @@ class Flight:
                 stderr = nclib.Netcat(sock=self.process.stderr)
                 merged_output = nclib.merge.MergePipes([stdout, stderr])
 
+                patch_log(stdout)
+                patch_log(stderr)
+                patch_log(merged_output)
+
                 def close(self):
                     for nc in self.readables:
                         nc.close()
                 merged_output.close = close.__get__(merged_output, nclib.merge.MergePipes)
 
-                return nclib.Netcat(sock=merged_output, sock_send=self.process.stdin)
+                stdio = nclib.Netcat(sock=merged_output, sock_send=self.process.stdin)
+                patch_log(stdio)
+                return stdio
             else:
                 raise ValueError("Bad channel", channel_name)
         else:
@@ -79,7 +92,9 @@ class Flight:
                     l.debug("Connecting to target socket, retrying...")
                     time.sleep(1)
 
-            return nclib.Netcat(sock)
+            nc_sock = nclib.Netcat(sock)
+            patch_log(nc_sock)
+            return nc_sock
 
 
     @property
