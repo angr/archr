@@ -103,27 +103,30 @@ class RRTraceResult:
     timed_out = False
 
     trace_dir = None
+    symbolic_fd = None
 
-    def __init__(self, trace_dir=None):
+    def __init__(self, trace_dir=None, symbolic_fd=None):
         if trace_dir is None:
             self.trace_dir = tempfile.TemporaryDirectory(prefix='rr_trace_dir_')
         else:
             self.trace_dir = FakeTempdir(trace_dir)
+        self.symbolic_fd = symbolic_fd
 
     def tracer_technique(self, **kwargs):
         if trraces is None:
             raise Exception("need to install trraces")
-        return trraces.replay_interfaces.angr.technique.Trracer(os.path.join(self.trace_dir.name, 'latest-trace'), **kwargs)
+        return trraces.replay_interfaces.angr.technique.Trracer(self.trace_dir.name, symbolic_fd=self.symbolic_fd, **kwargs)
 
 
 class RRTracerBow(ContextBow):
     REQUIRED_ARROW = "rr"
     REMOTE_TRACE_DIR_PREFIX = "/tmp/rr_trace_"
 
-    def __init__(self, target, timeout=10, local_trace_dir='/tmp/rr_trace/'):
+    def __init__(self, target, timeout=10, local_trace_dir='/tmp/rr_trace/', symbolic_fd=None):
         super().__init__(target)
         self.timeout = timeout
         self.local_trace_dir = local_trace_dir
+        self.symbolic_fd = symbolic_fd
 
     @contextlib.contextmanager
     def _target_mk_tmpdir(self):
@@ -166,7 +169,7 @@ class RRTracerBow(ContextBow):
         with self._target_mk_tmpdir() as remote_tmpdir:
             record_command = ['/tmp/rr/fire', 'record', '-n']  + _cpuid_cmd_line_args() + self.target.target_args
             record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
-            r = RRTraceResult(trace_dir=self.local_trace_dir)
+            r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
             try:
                 with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r) as flight:
                     yield flight
