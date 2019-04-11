@@ -27,11 +27,11 @@ class ArrowheadFletcher(Arrowhead):
     An arrowhead fletcher will allow a user to create an arrowhead by logging interactions that are performed when
     running the target program.
 
-    :param channel_map:  A mapping from user channels to target channels: {str user_channel, str target_channel)
+    :param insock:  The user's input into the target
+    :param outsock:  The target's output from the target
     """
 
     def __init__(self, insock=sys.stdin, outsock=sys.stdout):
-        # TODO: use this channel_map, for now we are just going to map stdin/stdout
         self.insock = insock
         self.outsock = outsock
         self.result = []

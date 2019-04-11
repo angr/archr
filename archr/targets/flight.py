@@ -35,6 +35,7 @@ class Flight:
 
     def open_channel(self, channel_name):
         def patch_log(nc):
+            # TODO: ideally nclib just uses logging
             def print_verbose(self, s):
                 assert isinstance(s, str), "s should be str"
                 l.debug(s)
@@ -50,6 +51,7 @@ class Flight:
                 merged_output = nclib.merge.MergePipes([stdout, stderr])
 
                 def close(self):
+                    # TODO: ideally nclib just does this
                     for nc in self.readables:
                         nc.close()
                 merged_output.close = close.__get__(merged_output, nclib.merge.MergePipes)
