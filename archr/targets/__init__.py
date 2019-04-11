@@ -6,6 +6,7 @@ import logging
 import glob
 import os
 import io
+import re
 
 l = logging.getLogger("archr.targets")
 
@@ -162,6 +163,19 @@ class Target(ABC):
         if self._local_path is None:
             raise ArchrError("target.mount_local() must be run before target.local_path can be accessed.")
         return self._local_path
+
+    @property
+    def main_binary_args(self):
+        """
+        Return the args that will be passed to the main binary.
+        """
+        exe = self.target_args[0]
+        if re.match(r"ld[0-9A-Za-z\-]*\.so.*", os.path.basename(exe)) is not None:
+            args = self.target_args[1:]
+            if args[0] == "--library-path":
+                args = args[2:]
+            return args
+        return self.target_args
 
     def resolve_local_path(self, target_path):
         """
