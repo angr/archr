@@ -122,7 +122,7 @@ class RRTracerBow(ContextBow):
     REQUIRED_ARROW = "rr"
     REMOTE_TRACE_DIR_PREFIX = "/tmp/rr_trace_"
 
-    def __init__(self, target, timeout=10, local_trace_dir='/tmp/rr_trace/', symbolic_fd=None):
+    def __init__(self, target, timeout=10, local_trace_dir=None, symbolic_fd=None):
         super().__init__(target)
         self.timeout = timeout
         self.local_trace_dir = local_trace_dir
@@ -162,9 +162,14 @@ class RRTracerBow(ContextBow):
 
         fix_perf()
 
-        if self.local_trace_dir and os.path.exists(self.local_trace_dir):
-            shutil.rmtree(self.local_trace_dir)
+        import ipdb; ipdb.set_trace()
+        if self.local_trace_dir:
+            if os.path.exists(self.local_trace_dir):
+                shutil.rmtree(self.local_trace_dir)
             os.mkdir(self.local_trace_dir)
+        else:
+            self.local_trace_dir = tempfile.mkdtemp(prefix="/tmp/rr_tracer_")
+
 
         with self._target_mk_tmpdir() as remote_tmpdir:
             record_command = ['/tmp/rr/fire', 'record', '-n']  + _cpuid_cmd_line_args() + self.target.target_args
