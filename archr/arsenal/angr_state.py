@@ -22,6 +22,7 @@ class angrStateBow(Bow):
         if 'cwd' not in kwargs:
             cwd = os.path.dirname(self.project_bow.target.target_path)
             kwargs['cwd'] = bytes(cwd, 'utf-8')
+
         s = project.factory.full_init_state(
             concrete_fs=True, chroot=self.target.local_path,
             stack_end=self.project_bow._mem_mapping.get('[stack-end]', None), args=self.target.target_args,

@@ -74,6 +74,7 @@ class QEMUTracerBow(ContextBow):
             target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename, coredump_dir=tmpdir)
 
             r = QemuTraceResult()
+
             try:
                 with self.target.flight_context(target_cmd, timeout=self.timeout, result=r) as flight:
                     yield flight

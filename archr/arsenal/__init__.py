@@ -43,6 +43,9 @@ class ContextBow(Bow):
     def fire(self, *args, testcase=None, **kwargs): #pylint:disable=arguments-differ
         with self.fire_context(*args, **kwargs) as flight:
             if testcase is not None:
+
+                assert type(testcase) is not str
+
                 if type(testcase) is bytes:
                     testcase = Arrowhead.oneshot(testcase)
                 testcase.run(flight)
