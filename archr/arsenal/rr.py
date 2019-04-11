@@ -162,7 +162,6 @@ class RRTracerBow(ContextBow):
 
         fix_perf()
 
-        import ipdb; ipdb.set_trace()
         if self.local_trace_dir:
             if os.path.exists(self.local_trace_dir):
                 shutil.rmtree(self.local_trace_dir)
