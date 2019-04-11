@@ -36,7 +36,7 @@ def lib_dependencies(filepath):
 
 def hook_entry(binary, asm_code=None, bin_code=None):
     main_bin = io.BytesIO(binary)
-    b = cle.Loader(main_bin, auto_load_libs=False)
+    b = cle.Loader(main_bin, auto_load_libs=False, perform_relocations=False, main_opts={'base_addr': 0})
     start_addr = b.main_object.addr_to_offset(b.main_object.entry)
     main_bin.seek(start_addr)
     main_bin.write(b.main_object.arch.asm(asm_code) if asm_code else bin_code)

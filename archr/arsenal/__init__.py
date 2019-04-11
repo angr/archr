@@ -1,8 +1,9 @@
 import os
 import time
+from contextlib import contextmanager
 #from typing import ContextManager
 
-from ..arrowhead import Arrowhead
+from ..arrowheads import ArrowheadLog
 
 
 class Bow:
@@ -43,19 +44,23 @@ class ContextBow(Bow):
     def fire(self, *args, testcase=None, **kwargs): #pylint:disable=arguments-differ
         with self.fire_context(*args, **kwargs) as flight:
             if testcase is not None:
+
+                assert type(testcase) is not str
+
                 if type(testcase) is bytes:
-                    testcase = Arrowhead.oneshot(testcase)
+                    testcase = ArrowheadLog.oneshot(testcase)
                 testcase.run(flight)
             else:
                 time.sleep(0.2)
         return flight.result
 
+    @contextmanager
     def fire_context(self, *args, **kwargs):  # -> ContextManager[Flight]:
         """
         A context manager for the bow. Should yield a Flight object.
         """
-        raise NotImplementedError()
-
+        with self.target.flight_context(*args, **kwargs) as flight:
+            yield flight
 
 
 from .angr_project import angrProjectBow

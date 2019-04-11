@@ -149,7 +149,7 @@ class RRTracerBow(ContextBow):
         with self.target.run_context(['env']) as p:
             stdout, stderr = p.communicate()
             assert not stderr.split()
-            home_dir = stdout.split(b'HOME=')[1].split(b'\n')[0]
+            home_dir = stdout.split(b'\nHOME=')[1].split(b'\n')[0]
             return home_dir.decode("utf-8")
 
     @contextlib.contextmanager
