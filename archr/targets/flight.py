@@ -1,6 +1,13 @@
-import nclib
 import socket
 import subprocess
+import time
+import logging
+
+import nclib
+
+
+l = logging.getLogger("archr.target.flight")
+
 
 class Flight:
     """
@@ -63,7 +70,15 @@ class Flight:
 
             # TODO switch between ipv4 and ipv6 here
             sock = socket.socket(family=socket.AF_INET, type=sock_type)
-            sock.connect((self.target.ipv4_address, port))
+
+            for _ in range(30):
+                try:
+                    sock.connect((self.target.ipv4_address, port))
+                    break
+                except ConnectionRefusedError:
+                    l.debug("Connecting to target socket, retrying...")
+                    time.sleep(1)
+
             return nclib.Netcat(sock)
 
 
