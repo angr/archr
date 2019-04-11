@@ -51,7 +51,7 @@ class ArrowheadFletcher(Arrowhead):
             if not name:
                 if type(sock) is socket.socket:
                     # TODO: it is always TCP
-                    name = f'tcp/{sock.getpeername()[1]}'
+                    name = 'tcp/' + str(sock.getpeername()[1])
                 else:
                     name = 'unknown'
 

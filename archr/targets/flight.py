@@ -49,10 +49,6 @@ class Flight:
                 stderr = nclib.Netcat(sock=self.process.stderr)
                 merged_output = nclib.merge.MergePipes([stdout, stderr])
 
-                patch_log(stdout)
-                patch_log(stderr)
-                patch_log(merged_output)
-
                 def close(self):
                     for nc in self.readables:
                         nc.close()
