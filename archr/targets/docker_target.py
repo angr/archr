@@ -53,6 +53,11 @@ class DockerImageTarget(Target):
         if self.target_args[:3] == [ "setarch", "x86_64", "-R" ]:
             self.target_args = self.target_args[3:]
 
+        if re.match(r"ld[0-9A-Za-z\-]*\.so.*", os.path.basename(self.target_args[0])) is not None:
+            self.target_args = self.target_args[1:]
+            if self.target_args[0] == "--library-path":
+                self.target_args = self.target_args[2:]
+
         self.target_env = self.target_env or self.image.attrs['Config']['Env']
         self.target_path = self.target_path or self.target_args[0]
         self.target_cwd = self.target_cwd or self.image.attrs['Config']['WorkingDir'] or "/"
