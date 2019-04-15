@@ -46,7 +46,7 @@ class QEMUTracerBow(ContextBow):
 
     @contextlib.contextmanager
     def _target_mk_tmpdir(self):
-        tmpdir = tempfile.mktemp(prefix="/tmp/tracer_")
+        tmpdir = tempfile.mktemp(prefix="/tmp/tracer_target_")
         self.target.run_command(["mkdir", tmpdir]).wait()
         try:
             yield tmpdir
@@ -56,7 +56,7 @@ class QEMUTracerBow(ContextBow):
     @staticmethod
     @contextlib.contextmanager
     def _local_mk_tmpdir():
-        tmpdir = tempfile.mkdtemp(prefix="/tmp/tracer_")
+        tmpdir = tempfile.mkdtemp(prefix="/tmp/tracer_local_")
         try:
             yield tmpdir
         finally:
