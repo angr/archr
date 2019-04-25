@@ -9,7 +9,7 @@ from . import Bow
 
 class angrStateBow(Bow):
     """
-    Describes a target in the form of a Docker image.
+    Constructs an angr state (full init variety) to match the target precisely
     """
 
     def __init__(self, target, project_bow):

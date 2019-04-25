@@ -17,9 +17,15 @@ class LocalTarget(Target):
     """
 
     def __init__(self, target_args, target_path=None, target_env=None, target_cwd=None, tcp_ports=(), udp_ports=(), **kwargs):
+        if type(target_args) is str:
+            target_args = [target_args]
+        if target_path is None and target_args is not None:
+            target_path = target_args[0]
+        if type(target_path) is str:
+            target_path = os.path.abspath(target_path)
         super().__init__(
             target_args=target_args,
-            target_path=target_path or target_args[0],
+            target_path=target_path,
             target_env=target_env or [ k+"="+v for k,v in os.environ.items() ],
             target_cwd=target_cwd or "/",
             **kwargs
