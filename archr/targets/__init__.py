@@ -22,7 +22,8 @@ class Target(ABC):
     # Abstract methods
     #
 
-    def __init__(self, target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux', target_arch='x86_64'):
+    def __init__(self, target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux',
+                 target_arch='x86_64', use_qemu=False):
         """
         Create an autom
 
@@ -43,6 +44,7 @@ class Target(ABC):
         self.target_os = target_os
         self.target_arch = target_arch
         self._local_path = None
+        self.use_qemu = use_qemu
 
     @abstractmethod
     def mount_local(self, where=None):
@@ -409,6 +411,13 @@ class Target(ABC):
         :return: A subprocess
         """
         command_args = args or self.target_args
+
+        # if the target binary has to be executed with Qemu, we post-process the args here. This behavior is overridable
+        # by specifying args_prefix
+        if not args_prefix and self.use_qemu and command_args[0] == os.path.basename(self.target_path):
+            qemu = QEMUTracerBow.qemu_variant(self.target_os, self.target_arch, False)
+            command_args = ["/tmp/shellphish_qemu/%s" % qemu] + command_args
+
         if args_prefix:
             command_args = args_prefix + command_args
         if args_suffix:
@@ -422,4 +431,5 @@ from .docker_target import DockerImageTarget
 from .local_target import LocalTarget
 from ..utils import hook_entry
 from ..errors import ArchrError
+from ..arsenal import QEMUTracerBow
 from .flight import Flight

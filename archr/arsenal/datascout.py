@@ -11,6 +11,8 @@ class DataScoutBow(Bow):
     Grabs the environment and auxiliary vector from the target.
     """
 
+    REQUIRED_ARROW = "shellphish_qemu"
+
     def _encode_bytes(self, s):
 
         def _encode_name(bits):
