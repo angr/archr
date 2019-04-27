@@ -12,9 +12,19 @@ class angrProjectBow(Bow):
     Describes a target in the form of a Docker image.
     """
 
-    def __init__(self, target, scout_bow):
+    def __init__(self, target, scout_bow, static_simproc=False):
+        """
+
+        :param target:          The target to work on.
+        :param scout_bow:       The scout bow.
+        :param static_simproc:  When enabled, angr will hook functions in the main binary with SimProcedures if
+                                available. This is useful when dealing with statically linked binaries.
+        :type static_simproc:   bool
+        """
+
         super(angrProjectBow, self).__init__(target)
         self.scout_bow = scout_bow
+        self.static_simproc = static_simproc
         self.target.mount_local()
 
         self.project = None
@@ -31,6 +41,28 @@ class angrProjectBow(Bow):
             if return_loader:
                 return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **kwargs)
             self.project = angr.Project(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **kwargs)
+
+            if self.static_simproc:
+                self._apply_simprocedures()
+
         if return_loader:
             return self.project.loader
         return self.project
+
+    def _apply_simprocedures(self):
+        """
+        Apply SimProcedures to functions inside the main binary.
+
+        :return: None
+        """
+
+        # all SimProcedures indexed by name, assuming no name conflicts exist
+        simprocs = { }
+        for _, simproc_dict in angr.SIM_PROCEDURES.items():
+            for name, simproc in simproc_dict.items():
+                simprocs[name] = simproc
+
+        for sym in self.project.loader.main_object.symbols:
+            if sym.type == cle.Symbol.TYPE_FUNCTION and sym.name in simprocs:
+                l.debug("Hooking symbol %s in binary %s.", sym.name, self.project.filename)
+                self.project.hook_symbol(sym.name, simprocs[sym.name]())
