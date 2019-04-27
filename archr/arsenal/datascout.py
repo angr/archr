@@ -10,12 +10,21 @@ class DataScoutBow(Bow):
     """
 
     def _encode_bytes(self, s):
+
+        def _encode_name(bits):
+            w = bits // 8  # word size
+            n = ["0"] + [s[i:i + w].ljust(w, "\0")[::-1].encode('utf-8').hex() for i in range(0, len(s), w)][::-1]
+            return n
+
         if self.target.target_arch == 'x86_64':
-            encoded_name = [ "0" ] + [ s[i:i+8].ljust(8, "\0")[::-1].encode('utf-8').hex() for i in range(0, len(s), 8) ][::-1]
+            encoded_name = _encode_name(64)
             return "".join("mov rax, 0x%s; push rax; " % word for word in encoded_name)
         elif self.target.target_arch == 'i386':
-            encoded_name = [ "0" ] + [ s[i:i+4].ljust(4, "\0")[::-1].encode('utf-8').hex() for i in range(0, len(s), 4) ][::-1]
+            encoded_name = _encode_name(32)
             return "".join("mov eax, 0x%s; push eax; " % word for word in encoded_name)
+        elif self.target.target_arch in ('mips', 'mipsel'):
+            encoded_name = _encode_name(32)
+            return "".join("li $t0, 0x%s; sw $t0, 0($sp); addi $sp, $sp, 4;" % word for word in encoded_name)
         else:
             raise NotImplementedError()
 
@@ -23,16 +32,23 @@ class DataScoutBow(Bow):
         if self.target.target_arch == 'x86_64':
             return (
                 self._encode_bytes(filename) +
-                "mov rdi, rsp; xor rsi, rsi; mov rax, 2; syscall;" + # n = open(path, O_RDONLY)
+                "mov rdi, rsp; xor rsi, rsi; xor rdx, rdx; mov rax, 2; syscall;" + # n = open(path, O_RDONLY, 0)
                 "mov rdi, 1; mov rsi, rax; mov rdx, 0; mov r10, 0x1000000; mov rax, 40; syscall;" + # sendfile(1, n, 0, 0x1000000)
                 "mov rax, 40; syscall;" * 5 # sendfile(1, n, 0, 0x1000000)
             )
         elif self.target.target_arch == 'i386':
             return (
                 self._encode_bytes(filename) +
-                "mov ebx, esp; xor ecx, ecx; mov eax, 5; int 0x80;" + # n = open(path, O_RDONLY)
+                "mov ebx, esp; xor ecx, ecx; xor rdx, rdx; mov eax, 5; int 0x80;" + # n = open(path, O_RDONLY, 0)
                 "mov ebx, 1; mov ecx, eax; mov edx, 0; mov esi, 0x1000000; mov eax, 187; int 0x80;" + # sendfile(1, n, 0, 0x1000000)
                 "mov eax, 187; int 0x80;" * 5 # sendfile(1, n, 0, 0x1000000)
+            )
+        elif self.target.target_arch in ('mips', 'mipsel'):
+            return (
+                self._encode_bytes(filename) +
+                "move $a0, $sp; xor $a1, $a1, $a1; xor $a2, $a2, $a2; li $v0, 4005; syscall;" +  # n = open(path, O_RDONLY, 0)
+                "move $a1, $a0; li $a0, 1; xor $a2, $a2, $a2; li $a3, 0x1000000; li $v0, 4207; syscall;" +  # sendfile(1, n, 0, 0x1000000)
+                "li $a3, 0x1000000; li $v0, 4207; syscall;" * 5  # sendfile(1, n, 0, 0x1000000)
             )
         else:
             raise NotImplementedError()
@@ -48,6 +64,11 @@ class DataScoutBow(Bow):
                 self._encode_bytes(what) +
                 "mov ebx, 1; mov ecx, esp; mov edx, %d; mov eax, 4; int 0x80;" % len(what) # n = write(1, rsp, 0x1000)
             )
+        elif self.target.target_arch in ('mips', 'mipsel'):
+            return (
+                self._encode_bytes(what) +
+                "li $a0, 1; move $a1, $sp; li $a2, %d; li $v0, 4004; syscall;" % len(what)  # n = write(1, rsp, 0x1000)
+            )
         else:
             raise NotImplementedError()
 
@@ -55,15 +76,23 @@ class DataScoutBow(Bow):
         if self.target.target_arch == 'x86_64':
             return "mov rax, 12; xor rdi, rdi; syscall; mov rdi, rax; add rdi, 0x1000; mov rax, 12; syscall;"
         elif self.target.target_arch == 'i386':
+            # n = brk 0
+            # brk n + 0x1000
             return "mov eax, 45; xor ebx, ebx; int 0x80; mov ebx, eax; add ebx, 0x1000; mov eax, 45; int 0x80;"
+        elif self.target.target_arch in ('mips', 'mipsel'):
+            # n = brk 0
+            # brk n + 0x1000
+            return "xor $a0, $a0, $a0; li $v0, 4045; syscall; add $a0, $a0, 0x1000; li $v0, 4045; syscall;"
         else:
             raise NotImplementedError()
 
     def exit_shellcode(self, exit_code=42):
         if self.target.target_arch == 'x86_64':
-                return "mov rdi, %d; mov rax, 60; syscall;" % exit_code # exit(42)
+            return "mov rdi, %d; mov rax, 60; syscall;" % exit_code # exit(42)
         elif self.target.target_arch == 'i386':
-                return "mov ebx, %d; mov eax, 1; int 0x80;" % exit_code # exit(42)
+            return "mov ebx, %d; mov eax, 1; int 0x80;" % exit_code # exit(42)
+        elif self.target.target_arch in ('mips', 'mipsel'):
+            return "li $a0, %d; li $v0, 4001; syscall;" % exit_code  # exit(code)
         else:
             raise NotImplementedError()
 
