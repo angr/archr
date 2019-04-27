@@ -37,7 +37,7 @@ def crash_on_input_checks(t):
     with b.fire_context(save_core=True) as flight:
         flight.default_channel.send(crashing)
         flight.default_channel.shutdown_wr()
-        flight.default_channel.recvall()
+        #flight.default_channel.recvall()
 
     assert flight.result.crashed
 
@@ -48,7 +48,7 @@ def shellcode_checks(t):
     with b.fire_context(save_core=True) as flight:
         flight.default_channel.send(crash)
         flight.default_channel.shutdown_wr()
-        flight.default_channel.recvall()
+        #flight.default_channel.recvall()
 
     assert not flight.result.timed_out
     assert flight.result.crashed
@@ -61,7 +61,7 @@ def vuln_stacksmash_checks(t):
     with b.fire_context(save_core=True) as flight:
         flight.default_channel.send(crash)
         flight.default_channel.shutdown_wr()
-        flight.default_channel.recvall()
+        #flight.default_channel.recvall()
 
     assert not flight.result.timed_out
     assert flight.result.crashed
