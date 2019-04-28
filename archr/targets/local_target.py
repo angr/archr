@@ -11,12 +11,14 @@ l = logging.getLogger("archr.target.local_target")
 
 from . import Target
 
+
 class LocalTarget(Target):
     """
     Describes a target running on the local host.
     """
 
-    def __init__(self, target_args, target_path=None, target_env=None, target_cwd=None, tcp_ports=(), udp_ports=(), **kwargs):
+    def __init__(self, target_args, target_path=None, target_env=None, target_cwd=None, tcp_ports=(), udp_ports=(),
+                 use_qemu=False, **kwargs):
         if type(target_args) is str:
             target_args = [target_args]
         if target_path is None and target_args is not None:
@@ -32,6 +34,7 @@ class LocalTarget(Target):
         )
         self._tcp_ports = tcp_ports
         self._udp_ports = udp_ports
+        self.use_qemu = use_qemu
 
     #
     # Lifecycle
@@ -101,6 +104,20 @@ class LocalTarget(Target):
     # Execution
     #
 
+    def run_command(
+        self, args=None, args_prefix=None, args_suffix=None, env=None, # for us
+        **kwargs # for subclasses
+    ):
+        args = args if args else self.target_args
+
+        # if the target binary has to be executed with Qemu, we post-process the args here. This behavior is overridable
+        # by specifying args_prefix
+        if not args_prefix and self.use_qemu and args[0] == os.path.basename(self.target_path):
+            qemu = QEMUTracerBow.qemu_variant(self.target_os, self.target_arch, False)
+            args = ["/tmp/shellphish_qemu/%s" % qemu] + args
+
+        return super().run_command(args=args, args_prefix=args_prefix, args_suffix=args_suffix, env=env, **kwargs)
+
     def _run_command(
         self, args, env,
         aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -114,3 +131,6 @@ class LocalTarget(Target):
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0,
             cwd=self.target_cwd,
         )
+
+
+from ..arsenal import QEMUTracerBow
