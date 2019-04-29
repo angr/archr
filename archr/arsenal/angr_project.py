@@ -32,11 +32,23 @@ class angrProjectBow(Bow):
 
     def fire(self, return_loader=False, **kwargs): #pylint:disable=arguments-differ
         if self.project is None:
-            _,_,_,self._mem_mapping = self.scout_bow.fire()
-            the_libs = [ self.target.resolve_local_path(lib) for lib in self._mem_mapping if lib.startswith("/") ]
-            lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in self._mem_mapping.items() }
-            bin_opts = { "base_addr": 0x555555554000 }
+
             the_binary = self.target.resolve_local_path(self.target.target_path)
+
+            # preload the binary to decide if it supports setting library options or base addresses
+            preloader = cle.Loader(the_binary, **kwargs)
+            if preloader.main_object.os == "cgc":
+                # CGC binaries do not have libraries to load
+                the_libs = { }
+                lib_opts = { }
+                # CGC binaries cannot be rebased
+                bin_opts = { }
+                self._mem_mapping = { }
+            else:
+                _,_,_,self._mem_mapping = self.scout_bow.fire()
+                the_libs = [ self.target.resolve_local_path(lib) for lib in self._mem_mapping if lib.startswith("/") ]
+                lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in self._mem_mapping.items() }
+                bin_opts = { "base_addr": 0x555555554000 }
 
             if return_loader:
                 return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **kwargs)
