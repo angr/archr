@@ -112,7 +112,17 @@ def test_temporary_replacement():
             assert t.retrieve_contents("/etc/passwd") == opw
         assert t.retrieve_contents("/etc/passwd") == tpw
 
+def test_tmp_bind():
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env', bind_tmp=True).build().start() as t:
+        t.inject_contents({"/tmp/foo": b"asdf", "/tmp/bar": b"fdsa"})
+        assert t.retrieve_contents("/tmp/foo") == b"asdf"
+        assert t.retrieve_contents("/tmp/bar") == b"fdsa"
+        assert open(os.path.join(t.tmp_bind, "foo"), 'rb').read() == b"asdf"
+        assert open(os.path.join(t.tmp_bind, "bar"), 'rb').read() == b"fdsa"
+    assert not os.path.exists(t.tmp_bind)
+
 if __name__ == '__main__':
+    test_tmp_bind()
     test_glob_retrieval()
     test_retrieval_context()
     test_env_mount()

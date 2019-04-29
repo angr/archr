@@ -1,10 +1,11 @@
-import re
 import subprocess
+import tempfile
 import logging
 import docker
 import shlex
 import json
 import os
+import re
 
 l = logging.getLogger("archr.target.docker_target")
 
@@ -21,6 +22,7 @@ class DockerImageTarget(Target):
         self, image_name,
         pull=False,
         rm=True,
+        bind_tmp=True,
         **kwargs
                  #target_port=None,
                  #target_arch=None,
@@ -29,6 +31,9 @@ class DockerImageTarget(Target):
 
         self._client = docker.client.from_env()
         self.image_id = image_name
+
+        if bind_tmp:
+            self.tmp_bind = tempfile.mkdtemp(dir="/tmp/archr_mounts", prefix="tmp_")
 
         if pull:
             self._client.images.pull(self.image_id)
@@ -67,11 +72,16 @@ class DockerImageTarget(Target):
         return self
 
     def start(self, user=None, name=None): #pylint:disable=arguments-differ
+        volumes = { }
+        if self.tmp_bind:
+            volumes[self.tmp_bind] = {'bind': '/tmp/', 'mode': 'rw'}
+
         self.container = self._client.containers.run(
             self.image,
             name=name,
             entrypoint=['/bin/sh'], command=[], environment=self.target_env,
             user=user,
+            volumes=volumes,
             detach=True, auto_remove=self.rm,
             stdin_open=True, stdout=True, stderr=True,
             privileged=True, security_opt=["seccomp=unconfined"], #for now, hopefully...
@@ -89,6 +99,8 @@ class DockerImageTarget(Target):
         if self._local_path:
             os.system(_super_mount_cmd + "umount -l %s" % self.local_path)
             os.system(_super_mount_cmd + "rmdir %s" % self.local_path)
+        if self.tmp_bind:
+            os.system(_super_mount_cmd + "rm -rf %s" % self.tmp_bind)
         return self
 
     def remove(self):
