@@ -111,5 +111,6 @@ class LocalTarget(Target):
         return subprocess.Popen(
             args,
             env=collections.OrderedDict(e.split("=", 1) for e in env),
-            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
+            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0,
+            cwd=self.target_cwd,
         )
