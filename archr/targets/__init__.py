@@ -22,7 +22,8 @@ class Target(ABC):
     # Abstract methods
     #
 
-    def __init__(self, target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux', target_arch='x86_64'):
+    def __init__(self, target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux',
+                 target_arch='x86_64'):
         """
         Create an autom
 
@@ -409,6 +410,7 @@ class Target(ABC):
         :return: A subprocess
         """
         command_args = args or self.target_args
+
         if args_prefix:
             command_args = args_prefix + command_args
         if args_suffix:

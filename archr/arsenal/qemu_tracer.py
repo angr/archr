@@ -134,16 +134,17 @@ class QEMUTracerBow(ContextBow):
 
 
 
-    def qemu_variant(self, record_trace):
+    @staticmethod
+    def qemu_variant(target_os, target_arch, record_trace):
         """
         Need to know if we're tracking or not, specifically for what cgc qemu to use.
         """
 
-        if self.target.target_os == 'cgc':
+        if target_os == 'cgc':
             suffix = "tracer" if record_trace else "base"
             qemu_variant = "shellphish-qemu-cgc-%s" % suffix
         else:
-            qemu_variant = "shellphish-qemu-linux-%s" % self.target.target_arch
+            qemu_variant = "shellphish-qemu-linux-%s" % target_arch
 
         return qemu_variant
 
@@ -156,7 +157,7 @@ class QEMUTracerBow(ContextBow):
         # First, the arrow invocation
         #
 
-        qemu_variant = self.qemu_variant(trace_filename is not None)
+        qemu_variant = self.qemu_variant(self.target.target_os, self.target.target_arch, trace_filename is not None)
         cmd_args = [ "/tmp/shellphish_qemu/fire", qemu_variant]
         cmd_args += [ "-C", coredump_dir]
 
