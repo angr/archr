@@ -41,7 +41,7 @@ class DataScoutBow(Bow):
         elif self.target.target_arch == 'i386':
             return (
                 self._encode_bytes(filename) +
-                "mov ebx, esp; xor ecx, ecx; xor rdx, rdx; mov eax, 5; int 0x80;" + # n = open(path, O_RDONLY, 0)
+                "mov ebx, esp; xor ecx, ecx; xor edx, edx; mov eax, 5; int 0x80;" + # n = open(path, O_RDONLY, 0)
                 "mov ebx, 1; mov ecx, eax; mov edx, 0; mov esi, 0x1000000; mov eax, 187; int 0x80;" + # sendfile(1, n, 0, 0x1000000)
                 "mov eax, 187; int 0x80;" * 5 # sendfile(1, n, 0, 0x1000000)
             )
