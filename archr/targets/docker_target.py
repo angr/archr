@@ -41,6 +41,7 @@ class DockerImageTarget(Target):
         self.rm = rm
         self.image = None
         self.container = None
+        self.volumes = {}
 
     #
     # Lifecycle
@@ -71,20 +72,18 @@ class DockerImageTarget(Target):
         super().build()
         return self
 
-    def start(self, user=None, name=None): #pylint:disable=arguments-differ
-        volumes = { }
+    def start(self, user=None, name=None, entry_point=['/bin/sh']): #pylint:disable=arguments-differ
         if self.tmp_bind:
-            volumes[self.tmp_bind] = {'bind': '/tmp/', 'mode': 'rw'}
+            self.volumes[self.tmp_bind] = {'bind': '/tmp/', 'mode': 'rw'}
 
         self.container = self._client.containers.run(
             self.image,
             name=name,
-            entrypoint=['/bin/sh'], command=[], environment=self.target_env,
+            entrypoint=entry_point, command=[], environment=self.target_env,
             user=user,
-            volumes=volumes,
             detach=True, auto_remove=self.rm,
             stdin_open=True, stdout=True, stderr=True,
-            privileged=True, security_opt=["seccomp=unconfined"], #for now, hopefully...
+            privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes #for now, hopefully...
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
         )
         return self
@@ -137,6 +136,11 @@ class DockerImageTarget(Target):
     def retrieve_tarball(self, target_path):
         stream, _ = self.container.get_archive(target_path)
         return b''.join(stream)
+
+
+    def add_volume(self, src_path, dst_path, mode="rw"):
+        new_vol = {'bind': dst_path, 'mode': mode}
+        self.volumes[src_path] = new_vol
 
     #
     # Info access
