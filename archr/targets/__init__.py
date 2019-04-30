@@ -44,6 +44,7 @@ class Target(ABC):
         self.target_os = target_os
         self.target_arch = target_arch
         self._local_path = None
+        self.target_args_prefix = [ ]
 
     @abstractmethod
     def mount_local(self, where=None):
@@ -409,7 +410,7 @@ class Target(ABC):
         Run a command inside the target.
         :return: A subprocess
         """
-        command_args = args or self.target_args
+        command_args = args or (self.target_args_prefix + self.target_args)
 
         if args_prefix:
             command_args = args_prefix + command_args

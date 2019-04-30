@@ -54,11 +54,14 @@ class DockerImageTarget(Target):
             (self.image.attrs['Config']['Entrypoint'] or [ ]) + (self.image.attrs['Config']['Cmd'] or [ ])
         )
 
-        # let's assume that we're not analyzing either setarch nor /bin/sh
+        # let's assume that we're not analyzing setarch, /bin/sh, or any variant of qemu
         if self.target_args[:2] == [ "/bin/sh", "-c" ]:
             self.target_args = shlex.split(self.target_args[-1])
         if self.target_args[:3] == [ "setarch", "x86_64", "-R" ]:
             self.target_args = self.target_args[3:]
+        if "qemu-" in self.target_args[0]:
+            self.target_args_prefix = self.target_args[:1]
+            self.target_args = self.target_args[1:]
 
         if re.match(r"ld[0-9A-Za-z\-]*\.so.*", os.path.basename(self.target_args[0])) is not None:
             self.target_args = self.target_args[1:]
