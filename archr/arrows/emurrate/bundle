@@ -1,0 +1,48 @@
+#!/bin/bash -e
+
+[ $# -ge 1 ] || { echo "Usage: $0 /path/to/bundle_dir"; exit 1; }
+BUNDLE_DIR=$1
+
+QEMU_BINS=(qemu-x86_64 qemu-mips qemu-i386)
+
+ARROW_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd $ARROW_DIR
+
+REBUILD=0
+[ ! -e qemu ] && git clone --depth=1 git@github.com:Lukas-Dresel/qemu && REBUILD=1
+[ ! -e emurrate ] && git clone --depth=1 git@github.com:Lukas-Dresel/emurrate && REBUILD=1
+git -C qemu pull | grep -q "Already up to date." || REBUILD=1
+git -C emurrate pull | grep -q "Already up to date." || REBUILD=1
+
+for bin in ${QEMU_BINS[*]}
+do 
+	[ -f "$bin" ] || REBUILD=1
+done 
+
+if [ "$REBUILD" -eq 1 ]
+then
+	cd qemu
+	git reset --hard
+	git clean -fxxd .
+	./configure --target-list=i386-linux-user,x86_64-linux-user,mips-linux-user
+	cd ..
+
+	cd emurrate
+	./patch.sh ../qemu
+	cd ..
+
+	cd qemu
+	make -j 4
+	cd ..
+
+	for bin in ${QEMU_BINS[*]}
+	do
+		cp qemu/*/$bin .
+	done
+fi
+
+FIRE_SCRIPT=${0//bundle/fire}
+QEMU_LIBS=$(ldd ${QEMU_BINS[*]} | grep "=>" | awk '{print $3}' | sort -u)
+QEMU_LD=$(ldd ${QEMU_BINS[0]} | tail -n1 | awk '{print $1}')
+cp -L ${QEMU_BINS[*]} $QEMU_LIBS $QEMU_LD $BUNDLE_DIR
+cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire
