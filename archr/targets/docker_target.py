@@ -62,6 +62,7 @@ class DockerImageTarget(Target):
         if "qemu-" in self.target_args[0]:
             self.target_args_prefix = self.target_args[:1]
             self.target_args = self.target_args[1:]
+            self.target_arch = self.target_args_prefix[0].split('qemu-', 1)[1]
 
         if re.match(r"ld[0-9A-Za-z\-]*\.so.*", os.path.basename(self.target_args[0])) is not None:
             self.target_args = self.target_args[1:]
