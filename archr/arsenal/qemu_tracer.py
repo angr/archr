@@ -37,8 +37,8 @@ _trace_new_re = re.compile(br'Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P
 class QEMUTracerBow(ContextBow):
     REQUIRED_ARROW = "shellphish_qemu"
 
-    def __init__(self, target, timeout=10, ld_linux=None, library_path=None, seed=None):
-        super().__init__(target)
+    def __init__(self, target, timeout=10, ld_linux=None, library_path=None, seed=None, **kwargs):
+        super().__init__(target, **kwargs)
         self.timeout = timeout
         self.ld_linux = ld_linux
         self.library_path = library_path

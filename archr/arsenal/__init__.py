@@ -10,12 +10,16 @@ class Bow:
     REQUIRED_ARROW = None
     REQUIRED_BINARY = None
 
-    def __init__(self, target):
+    def __init__(self, target, arrow_bundle=None, arrow_binary=None):
         """
         Initializes the bow.
         :param Target target: the target to work on
         """
         self.target = target
+        if arrow_bundle is not None:
+            self.REQUIRED_ARROW = arrow_bundle
+        if arrow_binary is not None:
+            self.REQUIRED_BINARY = arrow_binary
         self.nock()
 
     def nock(self):
