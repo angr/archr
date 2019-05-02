@@ -136,6 +136,14 @@ class Target(ABC):
 
     @property
     @abstractmethod
+    def ipv6_address(self):
+        """
+        The ipv6 address that this target receives traffic on.
+        """
+        pass
+
+    @property
+    @abstractmethod
     def tcp_ports(self):
         """
         The TCP ports that this target listens on.
