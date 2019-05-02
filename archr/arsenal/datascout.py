@@ -115,38 +115,44 @@ class DataScoutBow(Bow):
             with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/cmdline") +
                                                         self.exit_shellcode(exit_code=exit_code),
                                                aslr=aslr, **kwargs) as p:
-                arg_str,_ = p.communicate()
-                if p.returncode != exit_code:
-                    raise ArchrError("DataScout failed to get argv from the target process.")
-                self.argv = arg_str.split(b'\0')[:-1]
+                arg_str, stderr = p.communicate()
+
+            if p.returncode != exit_code:
+                raise ArchrError("DataScout failed to get argv from the target process.\n"
+                                 "stdout: %s\nstderr: %s" % (arg_str, stderr))
+            self.argv = arg_str.split(b'\0')[:-1]
 
         if not self.env:
             with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/environ") +
                                                         self.exit_shellcode(exit_code=exit_code),
                                                aslr=aslr, **kwargs) as p:
-                env_str,_ = p.communicate()
-                if p.returncode != exit_code:
-                    raise ArchrError("DataScout failed to get env from the target process.")
-                self.env = env_str.split(b'\0')[:-1]
+                env_str, stderr = p.communicate()
+
+            if p.returncode != exit_code:
+                raise ArchrError("DataScout failed to get env from the target process.\n"
+                                 "stdout: %s\nstderr: %s" % (env_str, stderr))
+            self.env = env_str.split(b'\0')[:-1]
 
         if not self.auxv:
             with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/auxv") +
                                                         self.exit_shellcode(exit_code=exit_code),
                                                aslr=aslr, **kwargs) as p:
-                aux_str,_ = p.communicate()
-                if p.returncode != exit_code:
-                    raise ArchrError("DataScout failed to get auxv from the target process.")
-                self.auxv = aux_str
+                aux_str, stderr = p.communicate()
+            if p.returncode != exit_code:
+                raise ArchrError("DataScout failed to get auxv from the target process.\n"
+                                 "stdout: %s\nstderr: %s" % (aux_str, stderr))
+            self.auxv = aux_str
 
         if not self.map:
             with self.target.shellcode_context(asm_code=self.brk_shellcode() +
                                                         self.sendfile_shellcode("/proc/self/maps") +
                                                         self.exit_shellcode(exit_code=exit_code),
                                                aslr=aslr, **kwargs) as p:
-                map_str,_ = p.communicate()
-                if p.returncode != exit_code:
-                    raise ArchrError("DataScout failed to get memory map from the target process.")
-                self.map = parse_proc_maps(map_str)
+                map_str, stderr = p.communicate()
+            if p.returncode != exit_code:
+                raise ArchrError("DataScout failed to get memory map from the target process.\n"
+                                 "stdout: %s\nstderr: %s" % (map_str, stderr))
+            self.map = parse_proc_maps(map_str)
 
         return self.argv, self.env, self.auxv, self.map
 
