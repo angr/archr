@@ -82,6 +82,10 @@ class LocalTarget(Target):
         return "127.13.37.1"
 
     @property
+    def ipv6_address(self):
+        return "::1"
+
+    @property
     def tcp_ports(self):
         return self._tcp_ports
 

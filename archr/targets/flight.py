@@ -63,10 +63,12 @@ class Flight:
                 raise ValueError("Bad channel", channel_name)
         else:
             kind, idx = channel_name.split(':', 1)
-            if kind == 'tcp':
+            if kind in ('tcp', 'tcp6'):
+                family = socket.AF_INET if kind == 'tcp' else socket.AF_INET6
                 mapping = self.target.tcp_ports
                 sock_type = socket.SOCK_STREAM
-            elif kind == 'udp':
+            elif kind in ('udp', 'udp6'):
+                family = socket.AF_INET if kind == 'udp' else socket.AF_INET6
                 mapping = self.target.udp_ports
                 sock_type = socket.SOCK_DGRAM
             else:
@@ -79,21 +81,23 @@ class Flight:
             except LookupError as e:
                 raise ValueError("No mapping for channel number", kind, idx) from e
 
-            # TODO switch between ipv4 and ipv6 here
-            sock = socket.socket(family=socket.AF_INET, type=sock_type)
+            if sock_type == socket.SOCK_STREAM:
+                sock = socket.socket(family=family, type=sock_type)
+                for _ in range(30):
+                    try:
+                        sock.connect((self.target.ipv4_address if kind == 'tcp' else self.target.ipv6_address, port))
+                        break
+                    except ConnectionRefusedError:
+                        time.sleep(1)
+                nc_sock = nclib.Netcat(sock, udp=False)
 
-            for _ in range(30):
-                try:
-                    sock.connect((self.target.ipv4_address, port))
-                    break
-                except ConnectionRefusedError:
-                    l.debug("Connecting to target socket, retrying...")
-                    time.sleep(1)
+            else:
+                nc_sock = nclib.Netcat((self.target.ipv4_address if kind == 'udp' else self.target.ipv6_address, port),
+                                       udp=True)
 
-            nc_sock = nclib.Netcat(sock)
+
             patch_log(nc_sock)
             return nc_sock
-
 
     @property
     def default_channel(self):
@@ -111,7 +115,11 @@ class Flight:
     def stop(self, timeout=1):
         for sock in self._channels.values():
             if not sock.closed:
-                sock.shutdown_wr()
+                try:
+                    sock.shutdown_wr()
+                except OSError:
+                    # an OSError is raised by nclib when it tries to shutdown a UDP socket. just ignore it
+                    pass
         if self.process is not None:
             self.process.stdin.close()
             #time.sleep(2)
