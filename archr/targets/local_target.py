@@ -123,6 +123,9 @@ class LocalTarget(Target):
         aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ): #pylint:disable=arguments-differ,no-self-use
         if not aslr:
+            args = args[::]
+            args[0] = "./" + args[0]
+            # "setarch x86_64 -R elfname" will complain. it expects "setarch x86_64 -R ./elfname"
             args = ['setarch', 'x86_64', '-R'] + args
 
         return subprocess.Popen(
