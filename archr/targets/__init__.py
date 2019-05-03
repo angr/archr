@@ -22,8 +22,11 @@ class Target(ABC):
     # Abstract methods
     #
 
-    def __init__(self, target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux',
-                 target_arch='x86_64'):
+    def __init__(
+        self,
+        target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux', target_arch='x86_64',
+        ip_version=4
+    ):
         """
         Create an autom
 
@@ -45,6 +48,7 @@ class Target(ABC):
         self.target_arch = target_arch
         self._local_path = None
         self.target_args_prefix = [ ]
+        self.ip_version = ip_version
 
     @abstractmethod
     def mount_local(self, where=None):

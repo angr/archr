@@ -101,10 +101,14 @@ class Flight:
 
     @property
     def default_channel(self):
-        if self.target.tcp_ports:
+        if self.target.tcp_ports and self.target.ip_version == 4:
             channel = 'tcp:0'
-        elif self.target.udp_ports:
+        elif self.target.tcp_ports and self.target.ip_version == 6:
+            channel = 'tcp6:0'
+        elif self.target.udp_ports and self.target.ip_version == 4:
             channel = 'udp:0'
+        elif self.target.udp_ports and self.target.ip_version == 6:
+            channel = 'udp6:0'
         elif self.process:
             channel = 'stdio'
         else:
