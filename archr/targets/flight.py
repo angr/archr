@@ -38,7 +38,7 @@ class Flight:
             # TODO: ideally nclib just uses logging
             def print_verbose(self, s):
                 assert isinstance(s, str), "s should be str"
-                l.debug(s)
+                l.debug("to {}: {}".format(self.peer, s))
             nc.verbose = True
             nc._print_verbose = print_verbose.__get__(nc, type(nc))
 

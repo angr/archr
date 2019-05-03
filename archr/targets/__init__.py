@@ -364,8 +364,10 @@ class Target(ABC):
         """
         saved_contents = saved_contents if saved_contents is not None else self.retrieve_contents(target_path)
         self.inject_contents({target_path: temp_contents})
-        yield saved_contents
-        self.inject_contents({target_path: saved_contents})
+        try:
+            yield saved_contents
+        finally:
+            self.inject_contents({target_path: saved_contents})
 
     @contextlib.contextmanager
     def run_context(self, *args, timeout=10, **kwargs):
