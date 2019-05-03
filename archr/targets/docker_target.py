@@ -162,11 +162,9 @@ class DockerImageTarget(Target):
     def ipv6_address(self):
         if self.container is None:
             return None
-        raise NotImplementedError("Please figure out how to get the IPv6 address of a docker container. Should be a one-word change!")
-        # FIXME: How to get the IPv6 address of a docker container?
         return json.loads(
             subprocess.Popen(["docker", "inspect", self.container.id], stdout=subprocess.PIPE).communicate()[0].decode()
-        )[0]['NetworkSettings']['IPAddress']
+        )[0]['NetworkSettings']['GlobalIPv6Address']
 
     @property
     def tcp_ports(self):
