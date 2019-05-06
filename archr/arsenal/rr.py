@@ -199,6 +199,8 @@ class RRTracerBow(ContextBow):
                 self.target.retrieve_into(path, local_tmpdir)
                 os.rename(local_tmpdir + '/latest-trace/', r.trace_dir.name.rstrip('/'))
 
+            assert os.path.isfile(os.path.join(r.trace_dir.name, 'version'))
+
     def _build_command(self, options=None):
         """
         Here, we build the tracing command.

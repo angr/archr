@@ -230,6 +230,8 @@ class DockerImageTarget(Target):
             docker_args += [ "-u", user ]
         docker_args.append(self.container.id)
 
+        l.debug("running command: {}".format(docker_args + args))
+
         return subprocess.Popen(
             docker_args + args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
