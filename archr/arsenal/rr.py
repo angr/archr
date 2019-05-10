@@ -8,6 +8,8 @@ import os
 import re
 import time
 
+from trraces.rr_unsupported_cpuid_features import rr_cpuid_filter_cmd_line_args
+
 l = logging.getLogger("archr.arsenal.rr_tracer")
 
 from . import ContextBow
@@ -31,71 +33,6 @@ def fix_perf():
             l.warning("/proc/sys/kernel/perf_event_paranoid needs to be '-1'. I am setting this system-wide.")
             os.system(_super_perf_cmd)
 _super_perf_cmd = "echo 0 | docker run --rm --privileged -i ubuntu tee /proc/sys/kernel/perf_event_paranoid"
-
-
-# ---------------- RR cpuid command line utilities ----------------
-
-# from rr cpufeatures
-
-def _parse(s):
-    return [int(v, base=0) for v in s.split(',')]
-
-def _bits(*i):
-    v = 0
-    for x in i:
-        v |= 1 << x
-    return v
-
-def _get_disable_cpuid_features(cpu_features):
-    disable_cpu_regex = re.compile('(?<=--disable-cpuid-features )0x[a-fA-F0-9]+(,0x[a-fA-F0-9]+)*')
-    return _parse(disable_cpu_regex.search(cpu_features).group())
-
-def _get_disable_cpuid_features_ext(cpu_features):
-    disable_cpu_regex_ext = re.compile('(?<=--disable-cpuid-features-ext )0x[a-fA-F0-9]+(,0x[a-fA-F0-9]+)*')
-    return _parse(disable_cpu_regex_ext.search(cpu_features).group())
-
-def _get_disable_cpuid_features_xsave(cpu_features):
-    disable_cpu_regex_xsave = re.compile('(?<=--disable-cpuid-features-xsave )0x[a-fA-F0-9]+(,0x[a-fA-F0-9]+)*')
-    return _parse(disable_cpu_regex_xsave.search(cpu_features).group())
-
-def _cpuid_cmd_line_args():
-    try:
-        cpu_features = subprocess.check_output('rr cpufeatures', shell=True).decode('utf-8')
-    except subprocess.CalledProcessError:
-        raise Exception('Please install rr or add rr to your PATH')
-
-    feat_ECX, feat_EDX = _get_disable_cpuid_features(cpu_features)
-    ext_EBX, ext_ECX, ext_EDX = _get_disable_cpuid_features_ext(cpu_features)
-    xsave_EAX, = _get_disable_cpuid_features_xsave(cpu_features)
-
-    f = {
-        'feat': {
-            'edx': dict(sse2=26, FXSR_FXSAVE=24),
-            'ecx': dict(xsave=26, osxsave=27, avx=28)
-            },
-        'ext': {
-            'ebx': dict(avx2=5, avx512pf=26),
-            'ecx': dict(),
-            'edx': dict(),
-            },
-        'xsave': {
-            'eax': dict(XSAVEC=1, XG1=2) # XG1 gatex XGETBV instruction, XSAVEC gates XSAVEC instruction
-            }
-        }
-
-    feat_ECX |= _bits(*f['feat']['ecx'].values())
-    feat_EDX |= _bits(*f['feat']['edx'].values())
-    ext_EBX |= _bits(*f['ext']['ebx'].values())
-    ext_ECX |= _bits(*f['ext']['ecx'].values())
-    ext_EDX |= _bits(*f['ext']['edx'].values())
-    xsave_EAX |= _bits(*f['xsave']['eax'].values())
-    return [
-        '--disable-cpuid-features', '0x{:x},0x{:x}'.format(feat_ECX, feat_EDX),
-        '--disable-cpuid-features-ext', '0x{:x},0x{:x},0x{:x}'.format(ext_EBX, ext_ECX, ext_EDX),
-        '--disable-cpuid-features-xsave', '0x{:x}'.format(xsave_EAX),
-    ]
-
-# ---------------- End RR cpuid command line utilities ----------------
 
 class RRTraceResult:
     returncode = None
@@ -172,7 +109,7 @@ class RRTracerBow(ContextBow):
 
 
         with self._target_mk_tmpdir() as remote_tmpdir:
-            record_command = ['/tmp/rr/fire', 'record', '-n']  + _cpuid_cmd_line_args() + self.target.target_args
+            record_command = ['/tmp/rr/fire', 'record', '-n']  + rr_cpuid_filter_cmd_line_args() + self.target.target_args
             record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
             r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
             try:
