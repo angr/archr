@@ -8,8 +8,6 @@ import os
 import re
 import time
 
-from trraces.rr_unsupported_cpuid_features import rr_cpuid_filter_cmd_line_args
-
 l = logging.getLogger("archr.arsenal.rr_tracer")
 
 from . import ContextBow
@@ -109,7 +107,9 @@ class RRTracerBow(ContextBow):
 
 
         with self._target_mk_tmpdir() as remote_tmpdir:
-            record_command = ['/tmp/rr/fire', 'record', '-n']  + rr_cpuid_filter_cmd_line_args() + self.target.target_args
+            record_command = ['/tmp/rr/fire', 'record', '-n']
+            record_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
+            record_command += self.target.target_args
             record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
             r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
             try:
