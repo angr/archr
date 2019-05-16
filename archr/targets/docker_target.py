@@ -34,6 +34,8 @@ class DockerImageTarget(Target):
 
         if bind_tmp:
             self.tmp_bind = tempfile.mkdtemp(dir="/tmp/archr_mounts", prefix="tmp_")
+        else:
+            self.tmp_bind = None
 
         if pull:
             self._client.images.pull(self.image_id)
