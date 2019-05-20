@@ -36,7 +36,10 @@ class angrProjectBow(Bow):
             the_binary = self.target.resolve_local_path(self.target.target_path)
 
             # preload the binary to decide if it supports setting library options or base addresses
-            preloader = cle.Loader(the_binary, **kwargs)
+            preload_kwargs = dict(kwargs)
+            preload_kwargs.pop('use_sim_procedures', None)  # TODO do something less hacky than this
+            preload_kwargs['auto_load_libs'] = False
+            preloader = cle.Loader(the_binary, **preload_kwargs)
             if preloader.main_object.os == "cgc":
                 # CGC binaries do not have libraries to load
                 the_libs = { }
@@ -48,7 +51,7 @@ class angrProjectBow(Bow):
                 _,_,_,self._mem_mapping = self.scout_bow.fire()
                 the_libs = [ self.target.resolve_local_path(lib) for lib in self._mem_mapping if lib.startswith("/") ]
                 lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in self._mem_mapping.items() }
-                bin_opts = { "base_addr": 0x555555554000 }
+                bin_opts = { "base_addr": 0x555555554000 } if preloader.main_object.pic else {}
 
             if return_loader:
                 return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **kwargs)

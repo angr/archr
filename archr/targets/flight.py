@@ -34,45 +34,25 @@ class Flight:
         return channel
 
     def open_channel(self, channel_name):
-        def patch_log(nc):
-            # TODO: ideally nclib just uses logging
-            def print_verbose(self, s):
-                assert isinstance(s, str), "s should be str"
-                l.debug("to {}: {}".format(self.peer, s))
-            nc.verbose = True
-            nc._print_verbose = print_verbose.__get__(nc, type(nc))
-
-        if ':' not in channel_name:
+        if channel_name == 'stdio':
             if self.process is None:
                 raise ValueError("Can't get stdio for remote process")
             if channel_name == 'stdio':
-                stdout = nclib.Netcat(sock=self.process.stdout)
-                stderr = nclib.Netcat(sock=self.process.stderr)
-                merged_output = nclib.merge.MergePipes([stdout, stderr])
-
-                def close(self):
-                    # TODO: ideally nclib just does this
-                    for nc in self.readables:
-                        nc.close()
-                merged_output.close = close.__get__(merged_output, nclib.merge.MergePipes)
-
-                stdio = nclib.Netcat(sock=merged_output, sock_send=self.process.stdin)
-                patch_log(stdio)
-                return stdio
-            else:
-                raise ValueError("Bad channel", channel_name)
-        else:
+                channel = nclib.merge([self.process.stdout, self.process.stderr], sock_send=self.process.stdin)
+        elif ':' in channel_name:
             kind, idx = channel_name.split(':', 1)
             if kind in ('tcp', 'tcp6'):
-                family = socket.AF_INET if kind == 'tcp' else socket.AF_INET6
+                ipv6 = kind == 'tcp6'
                 mapping = self.target.tcp_ports
-                sock_type = socket.SOCK_STREAM
+                udp = False
             elif kind in ('udp', 'udp6'):
-                family = socket.AF_INET if kind == 'udp' else socket.AF_INET6
+                ipv6 = kind == 'udp6'
                 mapping = self.target.udp_ports
-                sock_type = socket.SOCK_DGRAM
+                udp = True
             else:
                 raise ValueError("Bad channel", kind)
+
+            address = self.target.ipv6_address if ipv6 else self.target.ipv4_address
 
             try:
                 port = mapping[int(idx)]
@@ -81,23 +61,13 @@ class Flight:
             except LookupError as e:
                 raise ValueError("No mapping for channel number", kind, idx) from e
 
-            if sock_type == socket.SOCK_STREAM:
-                sock = socket.socket(family=family, type=sock_type)
-                for _ in range(30):
-                    try:
-                        sock.connect((self.target.ipv4_address if kind == 'tcp' else self.target.ipv6_address, port))
-                        break
-                    except ConnectionRefusedError:
-                        time.sleep(1)
-                nc_sock = nclib.Netcat(sock, udp=False)
+            channel = nclib.Netcat((address, port), udp=udp, ipv6=ipv6, retry=30)
+        else:
+            raise ValueError("Bad channel", channel_name)
 
-            else:
-                nc_sock = nclib.Netcat((self.target.ipv4_address if kind == 'udp' else self.target.ipv6_address, port),
-                                       udp=True)
-
-
-            patch_log(nc_sock)
-            return nc_sock
+        logger = nclib.logger.StandardLogger(nclib.simplesock.SimpleLogger('archr.log'))
+        channel.add_logger(logger)
+        return channel
 
     @property
     def default_channel(self):
@@ -119,11 +89,7 @@ class Flight:
     def stop(self, timeout=1):
         for sock in self._channels.values():
             if not sock.closed:
-                try:
-                    sock.shutdown_wr()
-                except OSError:
-                    # an OSError is raised by nclib when it tries to shutdown a UDP socket. just ignore it
-                    pass
+                sock.shutdown_wr()
         if self.process is not None:
             self.process.stdin.close()
             #time.sleep(2)

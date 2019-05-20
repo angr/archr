@@ -1,25 +1,29 @@
 import sys
 import time
-import socket
 
 import nclib
 
 from . import Arrowhead
 
 
-class Log:
-    def __init__(self, channel_name, direction, data):
+class Log(nclib.logger.Logger):
+    def __init__(self, channel_name, log):
         self.channel_name = channel_name
-        self.direction = direction
-        self.data = data
+        self.log = log
 
-    def write(self, data):
-        self.data.append({
+    def _entry(self, direction, data):
+        self.log.append({
             'time': time.time(),
             'data': data,
             'channel': self.channel_name,
-            'direction': self.direction
+            'direction': direction
         })
+
+    def buffering(self, data):
+        self._entry('recv', data)
+
+    def sending(self, data):
+        self._entry('send', data)
 
 
 class ArrowheadFletcher(Arrowhead):
@@ -32,6 +36,7 @@ class ArrowheadFletcher(Arrowhead):
     """
 
     def __init__(self, insock=sys.stdin, outsock=sys.stdout):
+        super().__init__()
         self.insock = insock
         self.outsock = outsock
         self.result = []
@@ -42,27 +47,13 @@ class ArrowheadFletcher(Arrowhead):
 
         channel = flight.default_channel
 
-        def log(sock, direction):
-            name = {
-                flight.process.stdin: 'stdin',
-                flight.process.stdout: 'stdout',
-                flight.process.stderr: 'stderr',
-            }.get(sock)
-            if not name:
-                if type(sock) is socket.socket:
-                    # TODO: it is always TCP
-                    name = 'tcp/' + str(sock.getpeername()[1])
-                else:
-                    name = 'unknown'
-
-            return Log(name, direction, self.result)
-
-        channel.log_send = log(channel.sock_send, 'send')
-
-        if type(channel.sock) is nclib.merge.MergePipes:
-            for sub_channel in channel.sock.readables:
-                sub_channel.log_recv = log(sub_channel.sock, 'recv')
+        if flight.target.tcp_ports:
+            name = 'tcp/%d' % flight.target.tcp_ports[0]
+        elif flight.target.udp_ports:
+            name = 'udp/%d' % flight.target.udp_ports[0]
         else:
-            channel.log_recv = log(channel.sock, 'recv')
+            name = 'stdio'
 
+        logger = Log(name, self.result)
+        channel.add_logger(logger)
         channel.interact(self.insock, self.outsock)
