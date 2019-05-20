@@ -1,4 +1,5 @@
 import archr
+import nose
 import os
 
 
@@ -19,10 +20,14 @@ def get_ls_trace(t):
 
 # This test case fails because the docker image is broken
 def test_miniupnpd():
+    if archr.arsenal.rr.trraces is None:
+        raise nose.SkipTest
     with archr.targets.DockerImageTarget('ikanak/miniupnpd').build().start() as t:
         get_miniupnpd_trace(t)
 
 def test_ls():
+    if archr.arsenal.rr.trraces is None:
+        raise nose.SkipTest
     with archr.targets.DockerImageTarget('phate/archr_rr', pull=True).build().start(name='test_rr_bow') as t:
         get_ls_trace(t)
 
