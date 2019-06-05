@@ -75,6 +75,6 @@ class angrProjectBow(Bow):
                 simprocs[name] = simproc
 
         for sym in self.project.loader.main_object.symbols:
-            if sym.type == cle.Symbol.TYPE_FUNCTION and sym.name in simprocs:
+            if sym.type == cle.SymbolType.TYPE_FUNCTION and sym.name in simprocs:
                 l.debug("Hooking symbol %s in binary %s.", sym.name, self.project.filename)
                 self.project.hook_symbol(sym.name, simprocs[sym.name]())
