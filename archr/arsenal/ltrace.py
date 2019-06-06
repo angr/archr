@@ -1,7 +1,9 @@
-from . import ContextBow
-from .strace import super_yama
+import os
 import logging
 from contextlib import contextmanager
+
+from . import ContextBow
+from .strace import super_yama
 
 l = logging.getLogger("archr.arsenal.ltrace")
 
@@ -21,7 +23,8 @@ class LTraceBow(ContextBow):
         :return: Target instance returned by run_command
         """
 
-        args_prefix = (args_prefix or []) + ["/tmp/ltrace/fire"] + (trace_args or []) + ["--"]
+        fire_path = os.path.join(self.target.tmpwd, "ltrace", "fire")
+        args_prefix = (args_prefix or []) + [fire_path] + (trace_args or []) + ["--"]
         with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
             yield flight
         flight.result = flight.process.stderr.read() # illegal, technically
@@ -46,7 +49,8 @@ class LTraceAttachBow(ContextBow):
 
         super_yama()
 
-        cmd_args = ["/tmp/ltrace/fire"] + (trace_args or []) + ["-p", "%d" % pid]
+        fire_path = os.path.join(self.target.tmpwd, "ltrace", "fire")
+        cmd_args = [fire_path] + (trace_args or []) + ["-p", "%d" % pid]
         with self.target.flight_context(args=cmd_args, **kwargs) as flight:
             yield flight
         flight.result = flight.process.stderr.read() # illegal, technically

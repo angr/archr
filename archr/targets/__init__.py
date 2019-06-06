@@ -13,6 +13,7 @@ l = logging.getLogger("archr.targets")
 from abc import ABC
 from abc import abstractmethod
 
+
 class Target(ABC):
     """
     An autom defines a packetized unit of vulnerable software
@@ -159,6 +160,14 @@ class Target(ABC):
     def udp_ports(self):
         """
         The UDP ports that this target listens on.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def tmpwd(self):
+        """
+        Temporary working directory in the target.
         """
         pass
 

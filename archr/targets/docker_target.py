@@ -182,6 +182,10 @@ class DockerImageTarget(Target):
         except KeyError:
             return [ ]
 
+    @property
+    def tmpwd(self):
+        return "/tmp/"
+
     def get_proc_pid(self, proc):
         if not self.container:
             return None

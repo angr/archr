@@ -1,3 +1,4 @@
+import os
 import logging
 
 l = logging.getLogger("archr.arsenal.memory_map")
@@ -12,4 +13,5 @@ class GDBServerBow(ContextBow):
     REQUIRED_ARROW = "gdbserver"
 
     def fire_context(self, port=31337, aslr=False, **kwargs):
-        return self.target.flight_context(args_prefix=["/tmp/gdbserver/fire", "0.0.0.0:%d"%port], aslr=aslr, **kwargs)
+        fire_path = os.path.join(self.target.tmpwd, "gdbserver", "fire")
+        return self.target.flight_context(args_prefix=[fire_path, "0.0.0.0:%d"%port], aslr=aslr, **kwargs)
