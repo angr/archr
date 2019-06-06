@@ -107,7 +107,8 @@ class RRTracerBow(ContextBow):
 
 
         with self._target_mk_tmpdir() as remote_tmpdir:
-            record_command = ['/tmp/rr/fire', 'record', '-n']
+            fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
+            record_command = [fire_path, 'record', '-n']
             record_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
             record_command += self.target.target_args
             record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
@@ -134,7 +135,8 @@ class RRTracerBow(ContextBow):
                     r.signal = signal.SIGILL
 
             path = remote_tmpdir + '/latest-trace/'
-            self.target.run_command(['/tmp/rr/fire', 'pack', path]).communicate()
+            fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
+            self.target.run_command([fire_path, 'pack', path]).communicate()
             with self._local_mk_tmpdir() as local_tmpdir:
                 self.target.retrieve_into(path, local_tmpdir)
                 os.rename(local_tmpdir + '/latest-trace/', r.trace_dir.name.rstrip('/'))
@@ -149,7 +151,8 @@ class RRTracerBow(ContextBow):
         #
         # First, the arrow invocation
         #
-        cmd_args = ["/tmp/rr/fire"] + options
+        fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
+        cmd_args = [fire_path] + options
 
         #
         # Now, we add the program arguments.

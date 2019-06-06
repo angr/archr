@@ -6,6 +6,8 @@ import tarfile
 import logging
 import io
 import os
+import tempfile
+import shutil
 
 l = logging.getLogger("archr.target.local_target")
 
@@ -36,6 +38,8 @@ class LocalTarget(Target):
         self._udp_ports = udp_ports
         self.use_qemu = use_qemu
 
+        self._tmpwd = tempfile.mkdtemp()
+
     #
     # Lifecycle
     #
@@ -50,6 +54,10 @@ class LocalTarget(Target):
         return self
 
     def remove(self):
+        try:
+            shutil.rmtree(self._tmpwd)
+        except OSError:
+            pass
         return self
 
     #
@@ -93,6 +101,10 @@ class LocalTarget(Target):
     def udp_ports(self):
         return self._udp_ports
 
+    @property
+    def tmpwd(self):
+        return self._tmpwd
+
     def get_proc_pid(self, proc):
         p = self._run_command(args="ps -A -o comm,pid".split(), env=[])
         output = p.stdout.read().decode('utf-8')
@@ -118,7 +130,8 @@ class LocalTarget(Target):
         # by specifying args_prefix
         if not args_prefix and self.use_qemu and args[0] == os.path.basename(self.target_path):
             qemu = QEMUTracerBow.qemu_variant(self.target_os, self.target_arch, False)
-            args = ["/tmp/shellphish_qemu/%s" % qemu] + args
+            qemu_path = os.path.join(self.tmpwd, "shellphish_qemu", qemu)
+            args = [qemu_path] + args
 
         return super().run_command(args=args, args_prefix=args_prefix, args_suffix=args_suffix, env=env, **kwargs)
 

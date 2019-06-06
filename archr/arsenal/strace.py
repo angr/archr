@@ -30,7 +30,8 @@ class STraceBow(ContextBow):
         :return: Target instance returned by run_command
         """
 
-        args_prefix = (args_prefix or []) + ["/tmp/strace/fire"] + (trace_args or []) + ["--"]
+        fire_path = os.path.join(self.target.tmpwd, "strace", "fire")
+        args_prefix = (args_prefix or []) + [fire_path] + (trace_args or []) + ["--"]
         with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
             yield flight
         flight.result = flight.process.stderr.read() # illegal, technically
@@ -55,7 +56,8 @@ class STraceAttachBow(ContextBow):
 
         super_yama()
 
-        args_prefix = (args_prefix or []) + ["/tmp/strace/fire"] + (trace_args or []) + ["-p", str(pid), "--"]
+        fire_path = os.path.join(self.target.tmpwd, "strace", "fire")
+        args_prefix = (args_prefix or []) + [fire_path] + (trace_args or []) + ["-p", str(pid), "--"]
         with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
             yield flight
         flight.result = flight.process.stderr.read()

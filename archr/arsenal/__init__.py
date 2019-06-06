@@ -28,16 +28,17 @@ class Bow:
         """
         if self.REQUIRED_ARROW:
             with arrows.bundle(self.REQUIRED_ARROW) as b:
-                self.target.inject_path(b, "/tmp/%s" % self.REQUIRED_ARROW)
+                self.target.inject_path(b, os.path.join(self.target.tmpwd, self.REQUIRED_ARROW))
         if self.REQUIRED_BINARY:
             with arrows.bundle_binary(self.REQUIRED_BINARY) as b:
-                self.target.inject_path(b, "/tmp/%s" % os.path.basename(self.REQUIRED_BINARY))
+                self.target.inject_path(b, os.path.join(self.target.tmpwd, os.path.basename(self.REQUIRED_BINARY)))
 
     def fire(self, *args, **kwargs):
         """
         Fire the bow at the target.
         """
         raise NotImplementedError()
+
 
 class ContextBow(Bow):
     """
