@@ -20,7 +20,7 @@ class LocalTarget(Target):
     """
 
     def __init__(self, target_args, target_path=None, target_env=None, target_cwd=None, tcp_ports=(), udp_ports=(),
-                 use_qemu=False, **kwargs):
+                 use_qemu=False, ipv4_address="127.13.37.1", **kwargs):
         if type(target_args) is str:
             target_args = [target_args]
         if target_path is None and target_args is not None:
@@ -34,6 +34,7 @@ class LocalTarget(Target):
             target_cwd=target_cwd or "/",
             **kwargs
         )
+        self._ipv4_address = ipv4_address
         self._tcp_ports = tcp_ports
         self._udp_ports = udp_ports
         self.use_qemu = use_qemu
@@ -87,7 +88,7 @@ class LocalTarget(Target):
 
     @property
     def ipv4_address(self):
-        return "127.13.37.1"
+        return self._ipv4_address
 
     @property
     def ipv6_address(self):
