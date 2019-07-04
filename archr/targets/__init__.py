@@ -51,6 +51,9 @@ class Target(ABC):
         self.target_args_prefix = [ ]
         self.ip_version = ip_version
 
+        self.tmp_bind = None  # the /tmp in the target is mapped to `tmp_bind` on the host. currently only used in
+                              # DockerTarget. it impacts how resolve_local_path() works.
+
     @abstractmethod
     def mount_local(self, where=None):
         """
@@ -205,14 +208,28 @@ class Target(ABC):
         The local equivalent of target_path on the host.
         :returns str: the local path
         """
+
+        def _chroot_path(path, root):
+            """
+            Make sure the final path always starts with @root. No escape is allowed.
+            """
+            realpath = os.path.realpath(path)
+            if not realpath.startswith(root):
+                realpath = os.path.join(root, realpath.lstrip(os.path.sep))
+            return realpath
+
         if not target_path.startswith("/"):
             l.warning("Non-absolute path resolution is hit and miss, depending on context. Be careful.")
 
+        if self.tmp_bind and target_path.startswith("/tmp"):
+            # Handle tmp_bind
+            target_path = os.path.join(self.tmp_bind, target_path[4:].lstrip(os.path.sep))
+            realpath = _chroot_path(target_path, self.tmp_bind)
+            return realpath
+
         if not target_path.startswith(self.local_path):
-            target_path = os.path.join(self.local_path, target_path.lstrip("/"))
-        realpath = os.path.realpath(target_path)
-        if not realpath.startswith(self.local_path):
-            realpath = os.path.join(self.local_path, realpath.lstrip("/"))
+            target_path = os.path.join(self.local_path, target_path.lstrip(os.path.sep))
+        realpath = _chroot_path(target_path, self.local_path)
         return realpath
 
     def resolve_glob(self, target_glob):
@@ -225,7 +242,19 @@ class Target(ABC):
         """
         try:
             local_glob = glob.glob(self.resolve_local_path(target_glob))
-            return [ g[len(self.local_path.rstrip('/')):] for g in local_glob ]
+            # note that resolved globs may not start with self.local_path. they can start with self.tmp_bind as well.
+            fixed_paths = [ ]
+            local_path_prefix = self.local_path.rstrip(os.path.sep)
+            tmp_bind_prefix = self.tmp_bind.rstrip(os.path.sep) if self.tmp_bind else None
+            for g in local_glob:
+                if g.startswith(local_path_prefix):
+                    fixed_paths.append(g[len(local_path_prefix)])
+                elif tmp_bind_prefix and g.startswith(tmp_bind_prefix):
+                    fixed_paths.append(os.path.join("/tmp", g[len(tmp_bind_prefix):].lstrip("/")))
+                else:
+                    raise ValueError("Unexpected resolved local path %s. "
+                                     "It should start with either local_path or tmp_bind." % g)
+            return fixed_paths
         except ArchrError:
             stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
             paths = [ p.decode('utf-8') for p in stdout.split() ]
