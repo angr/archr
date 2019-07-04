@@ -208,16 +208,28 @@ class Target(ABC):
         The local equivalent of target_path on the host.
         :returns str: the local path
         """
+
+        def _chroot_path(path, root):
+            """
+            Make sure the final path always starts with @root. No escape is allowed.
+            """
+            realpath = os.path.realpath(path)
+            if not realpath.startswith(root):
+                realpath = os.path.join(root, realpath.lstrip(os.path.sep))
+            return realpath
+
         if not target_path.startswith("/"):
             l.warning("Non-absolute path resolution is hit and miss, depending on context. Be careful.")
 
-        if target_path.startswith("/tmp"):
+        if self.tmp_bind and target_path.startswith("/tmp"):
+            # Handle tmp_bind
             target_path = os.path.join(self.tmp_bind, target_path[4:].lstrip(os.path.sep))
-        elif not target_path.startswith(self.local_path):
+            realpath = _chroot_path(target_path, self.tmp_bind)
+            return realpath
+
+        if not target_path.startswith(self.local_path):
             target_path = os.path.join(self.local_path, target_path.lstrip(os.path.sep))
-        realpath = os.path.realpath(target_path)
-        if not realpath.startswith(self.local_path):
-            realpath = os.path.join(self.local_path, realpath.lstrip(os.path.sep))
+        realpath = _chroot_path(target_path, self.local_path)
         return realpath
 
     def resolve_glob(self, target_glob):
