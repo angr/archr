@@ -250,7 +250,7 @@ class Target(ABC):
                 if g.startswith(local_path_prefix):
                     fixed_paths.append(g[len(local_path_prefix)])
                 elif tmp_bind_prefix and g.startswith(tmp_bind_prefix):
-                    fixed_paths.append(g[len(tmp_bind_prefix):])
+                    fixed_paths.append(os.path.join("/tmp", g[len(tmp_bind_prefix):].lstrip("/")))
                 else:
                     raise ValueError("Unexpected resolved local path %s. "
                                      "It should start with either local_path or tmp_bind." % g)
