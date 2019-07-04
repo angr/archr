@@ -242,7 +242,19 @@ class Target(ABC):
         """
         try:
             local_glob = glob.glob(self.resolve_local_path(target_glob))
-            return [ g[len(self.local_path.rstrip('/')):] for g in local_glob ]
+            # note that resolved globs may not start with self.local_path. they can start with self.tmp_bind as well.
+            fixed_paths = [ ]
+            local_path_prefix = self.local_path.rstrip(os.path.sep)
+            tmp_bind_prefix = self.tmp_bind.rstrip(os.path.sep) if self.tmp_bind else None
+            for g in local_glob:
+                if g.startswith(local_path_prefix):
+                    fixed_paths.append(g[len(local_path_prefix)])
+                elif tmp_bind_prefix and g.startswith(tmp_bind_prefix):
+                    fixed_paths.append(g[len(tmp_bind_prefix):])
+                else:
+                    raise ArchrError("Unexpected resolved local path %s. "
+                                     "It should start with either local_path or tmp_bind." % g)
+            return fixed_paths
         except ArchrError:
             stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
             paths = [ p.decode('utf-8') for p in stdout.split() ]
