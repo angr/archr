@@ -252,7 +252,7 @@ class Target(ABC):
                 elif tmp_bind_prefix and g.startswith(tmp_bind_prefix):
                     fixed_paths.append(g[len(tmp_bind_prefix):])
                 else:
-                    raise ArchrError("Unexpected resolved local path %s. "
+                    raise ValueError("Unexpected resolved local path %s. "
                                      "It should start with either local_path or tmp_bind." % g)
             return fixed_paths
         except ArchrError:
