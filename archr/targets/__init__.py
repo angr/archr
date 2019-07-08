@@ -244,13 +244,16 @@ class Target(ABC):
             local_glob = glob.glob(self.resolve_local_path(target_glob))
             # note that resolved globs may not start with self.local_path. they can start with self.tmp_bind as well.
             fixed_paths = [ ]
-            local_path_prefix = self.local_path.rstrip(os.path.sep)
-            tmp_bind_prefix = self.tmp_bind.rstrip(os.path.sep) if self.tmp_bind else None
+            local_path_prefix = self.local_path
+            tmp_bind_prefix = self.tmp_bind if self.tmp_bind else None
             for g in local_glob:
-                if g.startswith(local_path_prefix):
-                    fixed_paths.append(g[len(local_path_prefix)])
-                elif tmp_bind_prefix and g.startswith(tmp_bind_prefix):
-                    fixed_paths.append(os.path.join("/tmp", g[len(tmp_bind_prefix):].lstrip("/")))
+                # we assume self.tmp_bind is never a prefix of self.local_path.
+                # otherwise the elif case will never be satisfied.
+                if tmp_bind_prefix and g.startswith(tmp_bind_prefix):
+                    fixed_paths.append(os.path.join("/tmp",
+                        g[len(tmp_bind_prefix.rstrip(os.path.sep)):].lstrip("/")))
+                elif g.startswith(local_path_prefix):
+                    fixed_paths.append(g[len(local_path_prefix.rstrip(os.path.sep)):])
                 else:
                     raise ValueError("Unexpected resolved local path %s. "
                                      "It should start with either local_path or tmp_bind." % g)
