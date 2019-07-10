@@ -174,7 +174,8 @@ class QEMUTracerBow(ContextBow):
         if trace_filename:
             cmd_args += ["-d", "nochain,exec,page", "-D", trace_filename] if 'cgc' not in qemu_variant else ["-d", "exec", "-D", trace_filename]
         else:
-            cmd_args += ["-enable_double_empty_exiting"]
+            if 'cgc' in qemu_variant:
+                cmd_args += ["-enable_double_empty_exiting"]
 
         # save CGC magic page
         if magic_filename:
