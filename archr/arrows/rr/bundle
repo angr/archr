@@ -7,7 +7,7 @@ mkdir -p $BUNDLE_DIR/libs
 mkdir -p $BUNDLE_DIR/share
 
 FIRE_SCRIPT=${0//bundle/fire}
-RR_PATH=$(which rr)
+RR_PATH=$( (python -c "print(__import__('trraces').get_rr_path())" 2>&1 || which rr) | tail -n1 )
 RR_LIBS=$(ldd $RR_PATH | grep "=>" | awk '{print $3}' | sort -u)
 RR_LD=$(ldd $RR_PATH | grep ld-linux | awk '{print $1}')
 RR_BIN_PATH=$(dirname $RR_PATH)
