@@ -36,25 +36,26 @@ class angrProjectBow(Bow):
             the_binary = self.target.resolve_local_path(self.target.target_path)
 
             # preload the binary to decide if it supports setting library options or base addresses
-            preload_kwargs = dict(kwargs)
-            preload_kwargs.pop('use_sim_procedures', None)  # TODO do something less hacky than this
+            cle_args = dict(kwargs)
+            cle_args.update(cle_args.pop('load_options', {}))
+            cle_args.pop('use_sim_procedures', None)  # TODO do something less hacky than this
+            preload_kwargs = dict(cle_args)
             preload_kwargs['auto_load_libs'] = False
             preloader = cle.Loader(the_binary, **preload_kwargs)
-            if preloader.main_object.os == "cgc":
-                # CGC binaries do not have libraries to load
-                the_libs = { }
-                lib_opts = { }
-                # CGC binaries cannot be rebased
-                bin_opts = { }
-                self._mem_mapping = { }
-            else:
+
+            if self.scout_bow is not None:
                 _,_,_,self._mem_mapping = self.scout_bow.fire()
                 the_libs = [ self.target.resolve_local_path(lib) for lib in self._mem_mapping if lib.startswith("/") ]
                 lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in self._mem_mapping.items() }
                 bin_opts = { "base_addr": 0x555555554000 } if preloader.main_object.pic else {}
+            else:
+                the_libs = { }
+                lib_opts = { }
+                bin_opts = { }
+            self._mem_mapping = { }
 
             if return_loader:
-                return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **kwargs)
+                return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **cle_args)
             self.project = angr.Project(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **kwargs)
 
             if self.static_simproc:
