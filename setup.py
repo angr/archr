@@ -23,7 +23,7 @@ setup(
         'pygdbmi',
         'angr',
         'docker',
-        'nclib==0.8.4rc2',
+        'nclib>=1.0.0rc3',
     ],
     description='Target-centric program analysis.',
     url='https://github.com/angr/archr',
