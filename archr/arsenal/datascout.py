@@ -108,6 +108,8 @@ class DataScoutBow(Bow):
         self.map = None
 
     def fire(self, aslr=False, **kwargs): #pylint:disable=arguments-differ
+        if self.target.target_os == 'cgc':
+            return [], [], b'', {}
 
         exit_code = 42
 
