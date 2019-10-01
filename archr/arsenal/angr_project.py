@@ -52,7 +52,7 @@ class angrProjectBow(Bow):
                 the_libs = { }
                 lib_opts = { }
                 bin_opts = { }
-            self._mem_mapping = { }
+                self._mem_mapping = { }
 
             if return_loader:
                 return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **cle_args)
