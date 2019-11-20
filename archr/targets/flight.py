@@ -84,8 +84,6 @@ class Flight:
         else:
             raise ValueError("Target has no channels defined")
 
-        print(channel)
-
         return self.get_channel(channel)
 
     def stop(self, timeout=1, timeout_exception=True):
