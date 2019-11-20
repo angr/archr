@@ -79,7 +79,7 @@ class DockerImageTarget(Target):
         super().build()
         return self
 
-    def start(self, user=None, name=None, working_dir=None, entry_point=['/bin/sh']): #pylint:disable=arguments-differ
+    def start(self, user=None, name=None, working_dir=None, labels=[], entry_point=['/bin/sh']): #pylint:disable=arguments-differ
         if self.tmp_bind:
             self.volumes[self.tmp_bind] = {'bind': '/tmp/', 'mode': 'rw'}
 
@@ -87,7 +87,7 @@ class DockerImageTarget(Target):
             self.image,
             name=name,
             entrypoint=entry_point, command=[], environment=self.target_env,
-            user=user,
+            user=user, labels=labels,
             detach=True, auto_remove=self.rm, working_dir=working_dir,
             stdin_open=True, stdout=True, stderr=True,
             privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes #for now, hopefully...
