@@ -84,9 +84,11 @@ class Flight:
         else:
             raise ValueError("Target has no channels defined")
 
+        print(channel)
+
         return self.get_channel(channel)
 
-    def stop(self, timeout=1):
+    def stop(self, timeout=1, timeout_exception=True):
         for sock in self._channels.values():
             if not sock.closed:
                 sock.shutdown_wr()
@@ -101,4 +103,5 @@ class Flight:
             except subprocess.TimeoutExpired:
                 self.process.terminate()
                 self.process.wait()
-                raise
+                if timeout_exception:
+                    raise

@@ -432,12 +432,12 @@ class Target(ABC):
         return Flight(self, self.run_command(*args, **kwargs), result=result)
 
     @contextlib.contextmanager
-    def flight_context(self, *args, timeout=1, **kwargs):
+    def flight_context(self, *args, timeout=1, timeout_exception=True, **kwargs):
         flight = self.flight(*args, **kwargs)
         try:
             yield flight
         finally:
-            flight.stop(timeout=timeout)
+            flight.stop(timeout=timeout, timeout_exception=timeout_exception)
 
     @contextlib.contextmanager
     def shellcode_context(self, *args, asm_code=None, bin_code=None, **kwargs):
