@@ -43,5 +43,3 @@ class ArrowheadLog(Arrowhead):
             else:
                 channel.shutdown_wr()
 
-
-from .fletcher import ArrowheadFletcher
