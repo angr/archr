@@ -3,9 +3,6 @@ import time
 from contextlib import contextmanager
 #from typing import ContextManager
 
-from ..arrowheads import ArrowheadLog
-
-
 class Bow:
     REQUIRED_ARROW = None
     REQUIRED_BINARY = None
@@ -43,20 +40,23 @@ class Bow:
 class ContextBow(Bow):
     """
     A Bow base class for bows that implement a fire_context instead of a fire.
-    Provides a default .fire() that replays a testcase (an Arrowhead).
+    Provides a default .fire() that replays a testcase.
     """
 
-    def fire(self, *args, testcase=None, **kwargs): #pylint:disable=arguments-differ
+    def fire(self, *args, testcase=None, channel=None, **kwargs): #pylint:disable=arguments-differ
         with self.fire_context(*args, **kwargs) as flight:
-            if testcase is not None:
-
-                assert type(testcase) is not str
-
-                if type(testcase) is bytes:
-                    testcase = ArrowheadLog.oneshot(testcase)
-                testcase.run(flight)
+            r = flight.default_channel if channel is None else flight.get_channel(channel)
+            if type(testcase) is bytes:
+                r.write(testcase)
+            elif type(testcase) in (list, tuple):
+                for s in testcase:
+                    r.write(s)
+                    time.sleep(0.1)
+            elif testcase is None:
+                pass
             else:
-                time.sleep(0.2)
+                raise ValueError("invalid testcase type %s" % type(testcase))
+
         return flight.result
 
     @contextmanager
