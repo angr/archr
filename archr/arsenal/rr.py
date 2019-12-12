@@ -92,7 +92,7 @@ class RRTracerBow(ContextBow):
             return home_dir.decode("utf-8")
 
     @contextlib.contextmanager
-    def fire_context(self, save_core=False, record_magic=False, report_bad_args=False):
+    def fire_context(self, save_core=False, record_magic=False, report_bad_args=False, rr_args=None):
         if save_core or record_magic or report_bad_args:
             raise ArchrError("I can't do any of these things!")
 
@@ -109,7 +109,10 @@ class RRTracerBow(ContextBow):
         with self._target_mk_tmpdir() as remote_tmpdir:
             fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
             record_command = [fire_path, 'record', '-n']
-            record_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
+            if trraces:
+                record_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
+            if rr_args:
+                record_command += rr_args
             record_command += self.target.target_args
             record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
             r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
