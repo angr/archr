@@ -39,6 +39,7 @@ class RRTraceResult:
     timed_out = False
 
     trace_dir = None
+    remote_trace_dir = None
     symbolic_fd = None
 
     def __init__(self, trace_dir=None, symbolic_fd=None):
@@ -53,8 +54,7 @@ class RRTraceResult:
             raise Exception("need to install trraces")
         return trraces.replay_interfaces.angr.technique.Trracer(self.trace_dir.name, symbolic_fd=self.symbolic_fd, **kwargs)
 
-
-class RRTracerBow(ContextBow):
+class RRBow(ContextBow):
     REQUIRED_ARROW = "rr"
     REMOTE_TRACE_DIR_PREFIX = "/tmp/rr_trace_"
 
@@ -91,60 +91,7 @@ class RRTracerBow(ContextBow):
             home_dir = stdout.split(b'\nHOME=')[1].split(b'\n')[0]
             return home_dir.decode("utf-8")
 
-    @contextlib.contextmanager
-    def fire_context(self, save_core=False, record_magic=False, report_bad_args=False, rr_args=None):
-        if save_core or record_magic or report_bad_args:
-            raise ArchrError("I can't do any of these things!")
 
-        fix_perf()
-
-        if self.local_trace_dir:
-            if os.path.exists(self.local_trace_dir):
-                shutil.rmtree(self.local_trace_dir)
-            os.mkdir(self.local_trace_dir)
-        else:
-            self.local_trace_dir = tempfile.mkdtemp(prefix="/tmp/rr_tracer_")
-
-
-        with self._target_mk_tmpdir() as remote_tmpdir:
-            fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
-            record_command = [fire_path, 'record', '-n']
-            if trraces:
-                record_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
-            if rr_args:
-                record_command += rr_args
-            record_command += self.target.target_args
-            record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
-            r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
-            try:
-                with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r) as flight:
-                    # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
-                    time.sleep(0.1)
-                    yield flight
-            except subprocess.TimeoutExpired:
-                r.timed_out = True
-            else:
-                r.timed_out = False
-
-                r.returncode = flight.process.returncode
-                assert r.returncode is not None
-
-                # did a crash occur?
-                if r.returncode in [139, -11]:
-                    r.crashed = True
-                    r.signal = signal.SIGSEGV
-                elif r.returncode == [132, -9]:
-                    r.crashed = True
-                    r.signal = signal.SIGILL
-
-            path = remote_tmpdir + '/latest-trace/'
-            fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
-            self.target.run_command([fire_path, 'pack', path]).communicate()
-            with self._local_mk_tmpdir() as local_tmpdir:
-                self.target.retrieve_into(path, local_tmpdir)
-                os.rename(local_tmpdir + '/latest-trace/', r.trace_dir.name.rstrip('/'))
-
-            assert os.path.isfile(os.path.join(r.trace_dir.name, 'version'))
 
     def _build_command(self, options=None):
         """
@@ -164,5 +111,107 @@ class RRTracerBow(ContextBow):
 
         return cmd_args
 
+
+
+class RRTracerBow(RRBow):
+    @contextlib.contextmanager
+    def fire_context(self, save_core=False, record_magic=False, report_bad_args=False, rr_args=None):
+        if save_core or record_magic or report_bad_args:
+            raise ArchrError("I can't do any of these things!")
+
+        fix_perf()
+
+        if self.local_trace_dir:
+            if os.path.exists(self.local_trace_dir):
+                shutil.rmtree(self.local_trace_dir)
+            os.mkdir(self.local_trace_dir)
+        else:
+            self.local_trace_dir = tempfile.mkdtemp(prefix="/tmp/rr_tracer_")
+
+
+        with self._target_mk_tmpdir() as remote_tmpdir:
+            fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
+            replay_command = [fire_path, 'record', '-n']
+            if trraces:
+                replay_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
+            if rr_args:
+                replay_command += rr_args
+            replay_command += self.target.target_args
+            record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
+            r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
+            try:
+                with self.target.flight_context(replay_command, env=record_env, timeout=self.timeout, result=r) as flight:
+                    # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
+                    time.sleep(0.1)
+                    yield flight
+            except subprocess.TimeoutExpired:
+                r.timed_out = True
+            else:
+                r.timed_out = False
+
+                r.returncode = flight.process.returncode
+                assert r.returncode is not None
+
+                # did a crash occur?
+                if r.returncode in [139, -11]:
+                    r.crashed = True
+                    r.signal = signal.SIGSEGV
+                elif r.returncode == [132, -9]:
+                    r.crashed = True
+                    r.signal = signal.SIGILL
+            path = remote_tmpdir + '/latest-trace/'
+            r.remote_trace_dir = path
+            fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
+            self.target.run_command([fire_path, 'pack', path]).communicate()
+            with self._local_mk_tmpdir() as local_tmpdir:
+                self.target.retrieve_into(path, local_tmpdir)
+                os.rename(local_tmpdir + '/latest-trace/', r.trace_dir.name.rstrip('/'))
+
+            assert os.path.isfile(os.path.join(r.trace_dir.name, 'version'))
+
+class RRReplayBow(RRBow):
+    @contextlib.contextmanager
+    def fire_context(self, rr_args=None, trace_dir=None, gdb_script=None):
+
+        fix_perf()
+
+        fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
+        replay_command = [fire_path, 'replay']
+        if trraces:
+            replay_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
+        if rr_args:
+            replay_command += rr_args
+        if gdb_script:
+            paths = {}
+            d_src = os.path.dirname(gdb_script)
+            d_dst = os.path.dirname(fire_path)
+            paths[d_dst] = d_src
+            self.target.inject_paths(paths)
+            script_remote_path = os.path.join(d_dst, os.path.basename(gdb_script))
+            replay_command += ["-x", script_remote_path]
+        if trace_dir:
+            replay_command += [trace_dir]
+        import IPython; IPython.embed()
+        r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
+        try:
+            with self.target.flight_context(replay_command, timeout=self.timeout, result=r) as flight:
+                # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
+                time.sleep(0.1)
+                yield flight
+        except subprocess.TimeoutExpired:
+            r.timed_out = True
+        else:
+            r.timed_out = False
+
+            r.returncode = flight.process.returncode
+            assert r.returncode is not None
+
+            # did a crash occur?
+            if r.returncode in [139, -11]:
+                r.crashed = True
+                r.signal = signal.SIGSEGV
+            elif r.returncode == [132, -9]:
+                r.crashed = True
+                r.signal = signal.SIGILL
 
 from ..errors import ArchrError
