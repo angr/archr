@@ -171,8 +171,15 @@ class RRTracerBow(RRBow):
 
 class RRReplayBow(RRBow):
     @contextlib.contextmanager
-    def fire_context(self, rr_args=None, trace_dir=None, gdb_script=None):
+    def fire_context(self, rr_args=None, trace_dir=None, gdb_script=None, pid=None):
+        """Run an rr-replay inside the target.
 
+        Keyword arguments:
+        rr_args -- additional rr arguments (default None)
+        trace_dir -- directory containing the rr-trace in the target (default None)
+        gdb_script -- Path of an optional gdb_script file (default None)
+        pid -- pid to attach instead of the initial one (give -N for the Nth-last pid in the trace)
+        """
         fix_perf()
 
         fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
@@ -189,9 +196,17 @@ class RRReplayBow(RRBow):
             self.target.inject_paths(paths)
             script_remote_path = os.path.join(d_dst, os.path.basename(gdb_script))
             replay_command += ["-x", script_remote_path]
+        if pid:
+            if pid > 0:
+                replay_command += ['-p', str(pid)]
+            else:
+                actual_pid = self.get_trace_pid(trace_dir, pid)
+                if not actual_pid:
+                    print("archr-ERROR: Couldn't get PID: {} from trace {}".format(pid, trace_dir))
+                    return None
+                replay_command += ['-p', str(actual_pid)]
         if trace_dir:
             replay_command += [trace_dir]
-        import IPython; IPython.embed()
         r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
         try:
             with self.target.flight_context(replay_command, timeout=self.timeout, result=r) as flight:
@@ -213,5 +228,26 @@ class RRReplayBow(RRBow):
             elif r.returncode == [132, -9]:
                 r.crashed = True
                 r.signal = signal.SIGILL
+
+
+    def get_trace_pid(self, trace_dir, pid_idx):
+        pids = []
+        fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
+        ps_command = [fire_path, 'ps']
+        ps_command += [trace_dir]
+        with self.target.flight_context(ps_command, timeout=self.timeout) as flight:
+            channel = flight.get_channel('stdio')
+            output = channel.read().decode('utf-8')
+            for line in output.split('\n'):
+                parts = line.split('\t')
+                try:
+                    pid = int(parts[0])
+                    pids.append(pid)
+                except:
+                    continue
+        if abs(pid_idx) > len(pids):
+            return None
+        return pids[pid_idx]
+
 
 from ..errors import ArchrError
