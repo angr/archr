@@ -25,12 +25,14 @@ cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire
 GDB_PATH=$(which gdb)
 GDB_LIBS=$(ldd $GDB_PATH | grep "=>" | awk '{print $3}' | sort -u)
 GDB_LD=$(ldd $GDB_PATH | grep ld-linux | awk '{print $1}')
+GDB_SHARE_PATH=$(realpath "$(dirname $GDB_PATH)/../share/gdb")
 PYTHON_VERSION=$(ldd $GDB_PATH | grep -oh "python.\.." | head -1)
 PYTHON_VERSION_MAJOR=$(ldd $GDB_PATH | grep -oh "python." | head -1)
 PYTHON_LIB_PATH=$(realpath "$(dirname $GDB_PATH)/../lib/$PYTHON_VERSION")
 PYTHON_SHARE_PATH=$(realpath "$(dirname $GDB_PATH)/../share/$PYTHON_VERSION_MAJOR")
 cp -L $GDB_LIBS $BUNDLE_DIR/libs
 cp -L $GDB_PATH $BUNDLE_DIR/bin/
+cp -L -r $GDB_SHARE_PATH $BUNDLE_DIR/share
 cp -L -r $PYTHON_LIB_PATH $BUNDLE_DIR/lib
 cp -L -r $PYTHON_SHARE_PATH $BUNDLE_DIR/share
 patchelf --set -interpreter "./$(basename GDB_LD)" $BUNDLE_DIR/bin/gdb
