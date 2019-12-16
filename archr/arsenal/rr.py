@@ -131,16 +131,16 @@ class RRTracerBow(RRBow):
 
         with self._target_mk_tmpdir() as remote_tmpdir:
             fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
-            replay_command = [fire_path, 'record', '-n']
+            record_command = [fire_path, 'record', '-n']
             if trraces:
-                replay_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
+                record_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
             if rr_args:
-                replay_command += rr_args
-            replay_command += self.target.target_args
+                record_command += rr_args
+            record_command += self.target.target_args
             record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
             r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
             try:
-                with self.target.flight_context(replay_command, env=record_env, timeout=self.timeout, result=r) as flight:
+                with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r) as flight:
                     # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
                     time.sleep(0.1)
                     yield flight
