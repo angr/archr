@@ -1,3 +1,5 @@
+from ..errors import ArchrError
+from . import ContextBow
 import contextlib
 import subprocess
 import tempfile
@@ -10,7 +12,6 @@ import time
 
 l = logging.getLogger("archr.arsenal.rr_tracer")
 
-from . import ContextBow
 
 try:
     import trraces
@@ -25,12 +26,17 @@ class FakeTempdir:
     def cleanup(self):
         return
 
+
 def fix_perf():
     with open("/proc/sys/kernel/perf_event_paranoid", 'rb') as c:
         if c.read().strip() != b"-1":
-            l.warning("/proc/sys/kernel/perf_event_paranoid needs to be '-1'. I am setting this system-wide.")
+            l.warning(
+                "/proc/sys/kernel/perf_event_paranoid needs to be '-1'. I am setting this system-wide.")
             os.system(_super_perf_cmd)
+
+
 _super_perf_cmd = "echo 0 | docker run --rm --privileged -i ubuntu tee /proc/sys/kernel/perf_event_paranoid"
+
 
 class RRTraceResult:
     returncode = None
@@ -44,7 +50,8 @@ class RRTraceResult:
 
     def __init__(self, trace_dir=None, symbolic_fd=None):
         if trace_dir is None:
-            self.trace_dir = tempfile.TemporaryDirectory(prefix='rr_trace_dir_')
+            self.trace_dir = tempfile.TemporaryDirectory(
+                prefix='rr_trace_dir_')
         else:
             self.trace_dir = FakeTempdir(trace_dir)
         self.symbolic_fd = symbolic_fd
@@ -53,6 +60,7 @@ class RRTraceResult:
         if trraces is None:
             raise Exception("need to install trraces")
         return trraces.replay_interfaces.angr.technique.Trracer(self.trace_dir.name, symbolic_fd=self.symbolic_fd, **kwargs)
+
 
 class RRBow(ContextBow):
     REQUIRED_ARROW = "rr"
@@ -91,8 +99,6 @@ class RRBow(ContextBow):
             home_dir = stdout.split(b'\nHOME=')[1].split(b'\n')[0]
             return home_dir.decode("utf-8")
 
-
-
     def _build_command(self, options=None):
         """
         Here, we build the tracing command.
@@ -112,7 +118,6 @@ class RRBow(ContextBow):
         return cmd_args
 
 
-
 class RRTracerBow(RRBow):
     @contextlib.contextmanager
     def fire_context(self, save_core=False, record_magic=False, report_bad_args=False, rr_args=None):
@@ -128,7 +133,6 @@ class RRTracerBow(RRBow):
         else:
             self.local_trace_dir = tempfile.mkdtemp(prefix="/tmp/rr_tracer_")
 
-
         with self._target_mk_tmpdir() as remote_tmpdir:
             fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
             record_command = [fire_path, 'record', '-n']
@@ -138,7 +142,8 @@ class RRTracerBow(RRBow):
                 record_command += rr_args
             record_command += self.target.target_args
             record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
-            r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
+            r = RRTraceResult(trace_dir=self.local_trace_dir,
+                              symbolic_fd=self.symbolic_fd)
             try:
                 with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r) as flight:
                     # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
@@ -165,9 +170,11 @@ class RRTracerBow(RRBow):
             self.target.run_command([fire_path, 'pack', path]).communicate()
             with self._local_mk_tmpdir() as local_tmpdir:
                 self.target.retrieve_into(path, local_tmpdir)
-                os.rename(local_tmpdir + '/latest-trace/', r.trace_dir.name.rstrip('/'))
+                os.rename(local_tmpdir + '/latest-trace/',
+                          r.trace_dir.name.rstrip('/'))
 
             assert os.path.isfile(os.path.join(r.trace_dir.name, 'version'))
+
 
 class RRReplayBow(RRBow):
     @contextlib.contextmanager
@@ -178,7 +185,7 @@ class RRReplayBow(RRBow):
         rr_args -- additional rr arguments (default None)
         trace_dir -- directory containing the rr-trace in the target (default None)
         gdb_script -- Path of an optional gdb_script file (default None)
-        pid -- pid to attach instead of the initial one (give -N for the Nth-last pid in the trace)
+        pid -- pid to attach instead of the initial one, see rr(1) (Give N/-N for the Nth/Nth-last pid in the trace)
         """
         fix_perf()
 
@@ -194,20 +201,20 @@ class RRReplayBow(RRBow):
             d_dst = os.path.dirname(fire_path)
             paths[d_dst] = d_src
             self.target.inject_paths(paths)
-            script_remote_path = os.path.join(d_dst, os.path.basename(gdb_script))
+            script_remote_path = os.path.join(
+                d_dst, os.path.basename(gdb_script))
             replay_command += ["-x", script_remote_path]
         if pid:
-            if pid > 0:
-                replay_command += ['-p', str(pid)]
-            else:
-                actual_pid = self.get_trace_pid(trace_dir, pid)
-                if not actual_pid:
-                    print("archr-ERROR: Couldn't get PID: {} from trace {}".format(pid, trace_dir))
-                    return None
-                replay_command += ['-p', str(actual_pid)]
+            actual_pid = self.get_trace_pid(trace_dir, pid)
+            if not actual_pid:
+                l.error(
+                    "archr-ERROR: Couldn't get PID: %d from trace %s", pid, trace_dir)
+                return None
+            replay_command += ['-p', str(actual_pid)]
         if trace_dir:
             replay_command += [trace_dir]
-        r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
+        r = RRTraceResult(trace_dir=self.local_trace_dir,
+                          symbolic_fd=self.symbolic_fd)
         try:
             with self.target.flight_context(replay_command, timeout=self.timeout, result=r) as flight:
                 # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
@@ -229,7 +236,6 @@ class RRReplayBow(RRBow):
                 r.crashed = True
                 r.signal = signal.SIGILL
 
-
     def get_trace_pid(self, trace_dir, pid_idx):
         pids = []
         fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
@@ -248,6 +254,3 @@ class RRReplayBow(RRBow):
         if abs(pid_idx) > len(pids):
             return None
         return pids[pid_idx]
-
-
-from ..errors import ArchrError
