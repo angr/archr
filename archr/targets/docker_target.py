@@ -24,6 +24,7 @@ class DockerImageTarget(Target):
         pull=False,
         rm=True,
         bind_tmp=True,
+        network_mode='bridge',
         **kwargs
                  #target_port=None,
                  #target_arch=None,
@@ -42,6 +43,7 @@ class DockerImageTarget(Target):
             self._client.images.pull(self.image_id)
 
         self.rm = rm
+        self.network_mode = network_mode
         self.image = None
         self.container = None
         self.volumes = {}
@@ -90,7 +92,8 @@ class DockerImageTarget(Target):
             user=user, labels=labels,
             detach=True, auto_remove=self.rm, working_dir=working_dir,
             stdin_open=True, stdout=True, stderr=True,
-            privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes #for now, hopefully...
+            privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
+            network_mode=self.network_mode #for now, hopefully...
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
         )
         return self
