@@ -53,6 +53,9 @@ class Flight:
                 raise ValueError("Bad channel", kind)
 
             address = self.target.ipv6_address if ipv6 else self.target.ipv4_address
+            # if we run in network_mode=host we don't get an IP
+            if not address:
+                address = 'localhost'
 
             try:
                 port = mapping[int(idx)]
