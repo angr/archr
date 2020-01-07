@@ -24,6 +24,7 @@ setup(
         'angr',
         'docker',
         'nclib>=1.0.0rc3',
+        'patchelf-wrapper'
     ],
     description='Target-centric program analysis.',
     url='https://github.com/angr/archr',
