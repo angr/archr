@@ -35,4 +35,4 @@ cp -L $GDB_PATH $BUNDLE_DIR/bin/
 cp -L -r $GDB_SHARE_PATH $BUNDLE_DIR/share
 cp -L -r $PYTHON_LIB_PATH $BUNDLE_DIR/lib
 cp -L -r $PYTHON_SHARE_PATH $BUNDLE_DIR/share
-patchelf --set -interpreter "./$(basename GDB_LD)" $BUNDLE_DIR/bin/gdb
+patchelf --set-interpreter "./$(basename GDB_LD)" $BUNDLE_DIR/bin/gdb
