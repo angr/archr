@@ -23,7 +23,7 @@ class DockerImageTarget(Target):
         self, image_name,
         pull=False,
         rm=True,
-        bind_tmp=True,
+        bind_tmp=False,
         network_mode='bridge',
         **kwargs
                  #target_port=None,
