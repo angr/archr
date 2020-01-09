@@ -19,7 +19,7 @@ def get_ls_trace(t):
     print("Done! You can find your trace in {} (timed out?: {})".format(res.trace_dir.name, res.timed_out))
 
 # This test case fails because the docker image is broken
-def test_miniupnpd():
+def broken_miniupnpd():
     if archr.arsenal.rr.trraces is None:
         raise nose.SkipTest
     with archr.targets.DockerImageTarget('ikanak/miniupnpd').build().start() as t:
@@ -33,5 +33,5 @@ def test_ls():
 
 
 if __name__ == '__main__':
-#     test_miniupnpd()
+    #test_miniupnpd()
     test_ls()
