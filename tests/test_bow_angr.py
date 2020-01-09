@@ -37,6 +37,20 @@ def test_env_angr_local():
         angr_checks(t)
     os.unlink(tf)
 
+def test_angr_catflag():
+    with archr.targets.DockerImageTarget('archr-test:cat-flag').build().start() as t:
+        dsb = archr.arsenal.DataScoutBow(t)
+        apb = archr.arsenal.angrProjectBow(t, dsb)
+        asb = archr.arsenal.angrStateBow(t, apb)
+        project = apb.fire()
+        state = asb.fire()
+        simgr = project.factory.simulation_manager(state)
+        simgr.run()
+        assert len(simgr.errored) == 0
+        assert len(simgr.deadended) == 1
+        assert simgr.one_deadended.posix.dumps(1) == b"archr-flag\n"
+
 if __name__ == '__main__':
+    test_angr_catflag()
     test_env_angr_local()
     test_env_angr()
