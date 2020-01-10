@@ -130,6 +130,8 @@ class DockerImageTarget(Target):
         if p.wait() != 0:
             raise ArchrError("Unexpected error when making target_path in container: " + p.stdout.read() + " " + p.stderr.read())
         self.container.put_archive(target_path, tarball_contents)
+        if self.user != 'root':
+            self.run_command(["chown", "-R", f"{self.user}:{self.user}", target_path], user="root")
 
     def retrieve_tarball(self, target_path):
         stream, _ = self.container.get_archive(target_path)
@@ -177,6 +179,13 @@ class DockerImageTarget(Target):
     @property
     def tmpwd(self):
         return "/tmp/"
+
+    @property
+    def user(self):
+        if 'User' in self.image.attrs['Config']:
+            return self.image.attrs['Config']['User']
+        else:
+            return 'root'
 
     def get_proc_pid(self, proc):
         if not self.container:
