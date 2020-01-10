@@ -47,21 +47,11 @@ class Target(ABC):
         self.target_cwd = target_cwd
         self.target_os = target_os
         self.target_arch = target_arch
-        self._local_path = None
         self.target_args_prefix = [ ]
         self.ip_version = ip_version
 
         self.tmp_bind = None  # the /tmp in the target is mapped to `tmp_bind` on the host. currently only used in
                               # DockerTarget. it impacts how resolve_local_path() works.
-
-    @abstractmethod
-    def mount_local(self, where=None):
-        """
-        Mounts the target on the local filesystem.
-
-        :param str where: the path to mount it to
-        """
-        pass
 
     def build(self):
         """
@@ -182,15 +172,6 @@ class Target(ABC):
     def __exit__(self, *args): self.stop()
 
     @property
-    def local_path(self):
-        """
-        The local mounted path on the host.
-        """
-        if self._local_path is None:
-            raise ArchrError("target.mount_local() must be run before target.local_path can be accessed.")
-        return self._local_path
-
-    @property
     def main_binary_args(self):
         """
         Return the args that will be passed to the main binary.
@@ -203,65 +184,17 @@ class Target(ABC):
             return args
         return self.target_args
 
-    def resolve_local_path(self, target_path):
-        """
-        The local equivalent of target_path on the host.
-        :returns str: the local path
-        """
-
-        def _chroot_path(path, root):
-            """
-            Make sure the final path always starts with @root. No escape is allowed.
-            """
-            realpath = os.path.realpath(path)
-            if not realpath.startswith(root):
-                realpath = os.path.join(root, realpath.lstrip(os.path.sep))
-            return realpath
-
-        if not target_path.startswith("/"):
-            l.warning("Non-absolute path resolution is hit and miss, depending on context. Be careful.")
-
-        if self.tmp_bind and target_path.startswith("/tmp"):
-            # Handle tmp_bind
-            target_path = os.path.join(self.tmp_bind, target_path[4:].lstrip(os.path.sep))
-            realpath = _chroot_path(target_path, self.tmp_bind)
-            return realpath
-
-        if not target_path.startswith(self.local_path):
-            target_path = os.path.join(self.local_path, target_path.lstrip(os.path.sep))
-        realpath = _chroot_path(target_path, self.local_path)
-        return realpath
-
     def resolve_glob(self, target_glob):
         """
         Should resolve a glob on the target.
-        WARNING: THE DEFAULT IMPLEMENTATION OF THIS IS INSECURE OUT OF LAZINESS AND WILL FAIL WITH SPACES IN FILES OR MULTIPLE FILES
+        WARNING: THE DEFAULT IMPLEMENTATION OF THIS IS INSANELY INSECURE OUT OF LAZINESS AND WILL FAIL WITH SPACES IN FILES OR MULTIPLE FILES
 
         :param string target_glob: the glob
         :returns list: a list of the resulting paths (as strings)
         """
-        try:
-            local_glob = glob.glob(self.resolve_local_path(target_glob))
-            # note that resolved globs may not start with self.local_path. they can start with self.tmp_bind as well.
-            fixed_paths = [ ]
-            local_path_prefix = self.local_path
-            tmp_bind_prefix = self.tmp_bind if self.tmp_bind else None
-            for g in local_glob:
-                # we assume self.tmp_bind is never a prefix of self.local_path.
-                # otherwise the elif case will never be satisfied.
-                if tmp_bind_prefix and g.startswith(tmp_bind_prefix):
-                    fixed_paths.append(os.path.join("/tmp",
-                        g[len(tmp_bind_prefix.rstrip(os.path.sep)):].lstrip("/")))
-                elif g.startswith(local_path_prefix):
-                    fixed_paths.append(g[len(local_path_prefix.rstrip(os.path.sep)):])
-                else:
-                    raise ValueError("Unexpected resolved local path %s. "
-                                     "It should start with either local_path or tmp_bind." % g)
-            return fixed_paths
-        except ArchrError:
-            stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
-            paths = [ p.decode('utf-8') for p in stdout.split() ]
-            return paths
+        stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
+        paths = [ p.decode('utf-8') for p in stdout.split() ]
+        return paths
 
     @abstractmethod
     def get_proc_pid(self, proc):

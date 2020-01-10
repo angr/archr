@@ -8,22 +8,23 @@ import io
 def setup_module():
     os.system("cd %s/dockers; ./build_all.sh" % os.path.dirname(__file__))
 
-def test_env_mount():
-    t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start().mount_local()
-    assert os.path.exists(os.path.join(t.local_path, "./"+t.target_path))
-    t.stop()
-    assert not os.path.exists(os.path.join(t.local_path, "./"+t.target_path))
+#def test_env_mount():
+#   t = archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start().mount_local()
+#   assert os.path.exists(os.path.join(t.local_path, "./"+t.target_path))
+#   t.stop()
+#   assert not os.path.exists(os.path.join(t.local_path, "./"+t.target_path))
 
 def test_env_injection():
     with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
-        t.mount_local()
         t.inject_path("/etc/passwd", "/poo")
-        with open("/etc/passwd") as lf, open(t.resolve_local_path("/poo")) as rf:
-            assert lf.read() == rf.read()
+        rf = t.retrieve_contents("/poo")
+        with open("/etc/passwd", "rb") as lf:
+            assert lf.read() == rf
 
         t.inject_paths({"/poobin": "/bin", "/poolib": "/lib64"})
-        assert len(os.listdir("/bin")) == len(os.listdir(t.resolve_local_path("/poobin")))
-        assert len(os.listdir("/lib64")) == len(os.listdir(t.resolve_local_path("/poolib")))
+        rf = t.retrieve_contents("/poobin/true")
+        with open("/bin/true", "rb") as lf:
+            assert lf.read() == rf
 
 def test_env_retrieval():
     with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
@@ -100,7 +101,6 @@ def test_glob_retrieval():
 
     # and now, with mounts
     with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
-        t.mount_local()
         assert t.retrieve_glob("/etc/hostna*").startswith(t.container.id[:5].encode('utf-8'))
 
 def test_temporary_replacement():
@@ -125,6 +125,6 @@ if __name__ == '__main__':
     test_tmp_bind()
     test_glob_retrieval()
     test_retrieval_context()
-    test_env_mount()
+    #test_env_mount()
     test_env_injection()
     test_env_retrieval()

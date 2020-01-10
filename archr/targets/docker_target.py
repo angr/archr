@@ -105,9 +105,6 @@ class DockerImageTarget(Target):
     def stop(self):
         if self.container:
             self.container.kill()
-        if self._local_path:
-            os.system(_super_mount_cmd + "umount -l %s" % self.local_path)
-            os.system(_super_mount_cmd + "rmdir %s" % self.local_path)
         if self.tmp_bind:
             os.system(_super_mount_cmd + "rm -rf %s" % self.tmp_bind)
         return self
@@ -124,15 +121,6 @@ class DockerImageTarget(Target):
     @property
     def _merged_path(self):
         return self.container.attrs['GraphDriver']['Data']['MergedDir']
-
-    def mount_local(self, where=None):
-        if self._local_path:
-            return self
-
-        self._local_path = where or "/tmp/archr_mounts/%s" % self.container.id
-        os.system(_super_mount_cmd + "mkdir -p %s" % (self.local_path))
-        os.system(_super_mount_cmd + "mount -o bind %s %s" % (self._merged_path, self.local_path))
-        return self
 
     def inject_tarball(self, target_path, tarball_path=None, tarball_contents=None):
         if tarball_contents is None:
