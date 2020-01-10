@@ -26,7 +26,8 @@ class Target(ABC):
     def __init__(
         self,
         target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux', target_arch='x86_64',
-        ip_version=4
+        ip_version=4,
+        persistent=True,
     ):
         """
         Create an autom
@@ -50,8 +51,10 @@ class Target(ABC):
         self.target_args_prefix = [ ]
         self.ip_version = ip_version
 
-        self.tmp_bind = None  # the /tmp in the target is mapped to `tmp_bind` on the host. currently only used in
-                              # DockerTarget. it impacts how resolve_local_path() works.
+        self._built = False
+        self.build()
+        if persistent:
+            self.start()
 
     def build(self):
         """
@@ -63,6 +66,8 @@ class Target(ABC):
             self.target_env.append("PWD=%s"%self.target_cwd)
         if "LD_BIND_NOW=1" not in self.target_env:
             self.target_env.append("LD_BIND_NOW=1")
+
+        self._built = True
         return self
 
     @abstractmethod

@@ -114,6 +114,7 @@ def test_temporary_replacement():
 
 def test_tmp_bind():
     with archr.targets.DockerImageTarget('archr-test:entrypoint-env', bind_tmp=True).build().start() as t:
+        assert t.tmp_bind is not None
         t.inject_contents({"/tmp/foo": b"asdf", "/tmp/bar": b"fdsa"})
         assert t.retrieve_contents("/tmp/foo") == b"asdf"
         assert t.retrieve_contents("/tmp/bar") == b"fdsa"

@@ -61,7 +61,7 @@ def test_context_env():
         assert b"ARCHR=YES" in stdout.split(b'\n')
 
 def test_user():
-    with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start(user="nobody") as t:
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env', persistent=False).build().start(user="nobody") as t:
         assert t.run_command(["touch", "/"]).wait() != 0
         assert t.run_command(["touch", "/"], user="root").wait() == 0
 

@@ -29,8 +29,6 @@ class DockerImageTarget(Target):
                  #target_port=None,
                  #target_arch=None,
     ):
-        super(DockerImageTarget, self).__init__(**kwargs)
-
         self._client = docker.client.from_env()
         self.image_id = image_name
 
@@ -48,11 +46,17 @@ class DockerImageTarget(Target):
         self.container = None
         self.volumes = {}
 
+        super(DockerImageTarget, self).__init__(**kwargs)
+        print(self.tmp_bind)
+
     #
     # Lifecycle
     #
 
     def build(self):
+        if self._built:
+            return self
+
         self.image = self._client.images.get(self.image_id)
         self.target_args = (
             self.target_args or
@@ -81,25 +85,32 @@ class DockerImageTarget(Target):
         super().build()
         return self
 
-    def start(self, user=None, name=None, working_dir=None, labels=[], entry_point=['/bin/sh']): #pylint:disable=arguments-differ
+    def start(self, entry_point=('/bin/sh',), **kwargs): #pylint:disable=arguments-differ
+        if self.container is not None:
+            self.container.reload()
+            if self.container.status == 'running':
+                return self
+
         if self.tmp_bind:
             self.volumes[self.tmp_bind] = {'bind': '/tmp/', 'mode': 'rw'}
 
         self.container = self._client.containers.run(
             self.image,
-            name=name,
-            entrypoint=entry_point, command=[], environment=self.target_env,
-            user=user, labels=labels,
-            detach=True, auto_remove=self.rm, working_dir=working_dir,
+            entrypoint=entry_point, environment=self.target_env,
+            detach=True, auto_remove=self.rm,
             stdin_open=True, stdout=True, stderr=True,
             privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
-            network_mode=self.network_mode #for now, hopefully...
+            network_mode=self.network_mode, #for now, hopefully...
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
+            **kwargs
         )
         return self
 
     def restart(self):
-        self.container.restart()
+        if self.container:
+            self.container.restart()
+        else:
+            self.start()
         return self
 
     def stop(self):
@@ -237,7 +248,7 @@ class DockerImageTarget(Target):
             docker_args += [ "-u", user ]
         docker_args.append(self.container.id)
 
-        l.debug("running command: {}".format(docker_args + args))
+        l.debug("running command: %s", docker_args + args)
 
         return subprocess.Popen(
             docker_args + args,
