@@ -1,3 +1,4 @@
+import tempfile
 import logging
 import angr
 import cle
@@ -25,15 +26,15 @@ class angrProjectBow(Bow):
         super(angrProjectBow, self).__init__(target)
         self.scout_bow = scout_bow
         self.static_simproc = static_simproc
-        self.target.mount_local()
 
         self.project = None
         self._mem_mapping = None
 
     def fire(self, return_loader=False, **kwargs): #pylint:disable=arguments-differ
         if self.project is None:
-
-            the_binary = self.target.resolve_local_path(self.target.target_path)
+            tmpdir = tempfile.mkdtemp()
+            self.target.retrieve_into(self.target.target_path, tmpdir)
+            the_binary = os.path.join(tmpdir, os.path.basename(self.target.target_path))
 
             # preload the binary to decide if it supports setting library options or base addresses
             cle_args = dict(kwargs)
@@ -45,7 +46,13 @@ class angrProjectBow(Bow):
 
             if self.scout_bow is not None:
                 _,_,_,self._mem_mapping = self.scout_bow.fire()
-                the_libs = [ self.target.resolve_local_path(lib) for lib in self._mem_mapping if lib.startswith("/") ]
+
+                target_libs = [ lib for lib in self._mem_mapping if lib.startswith("/") ]
+                the_libs = [ ]
+                for target_lib in target_libs:
+                    local_lib = os.path.join(tmpdir, os.path.basename(target_lib))
+                    self.target.retrieve_into(target_lib, tmpdir)
+                    the_libs.append(local_lib)
                 lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in self._mem_mapping.items() }
                 bin_opts = { "base_addr": 0x555555554000 } if preloader.main_object.pic else {}
             else:

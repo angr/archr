@@ -12,7 +12,7 @@ def angr_checks(t):
     apb = archr.arsenal.angrProjectBow(t, dsb)
     asb = archr.arsenal.angrStateBow(t, apb)
     project = apb.fire()
-    assert all(obj.binary.startswith(t.local_path) for obj in project.loader.all_elf_objects[1:])
+    assert all(obj.binary.startswith("/tmp") for obj in project.loader.all_elf_objects[1:])
     state = asb.fire()
     initial_stack = state.solver.eval(state.memory.load(state.regs.rsp, 200), cast_to=bytes)
     assert b"ARCHR=YES" in initial_stack
