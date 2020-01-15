@@ -105,13 +105,16 @@ class DockerImageTarget(Target):
     def stop(self):
         if self.container:
             self.container.kill()
+            self.container = None
         if self.tmp_bind:
             os.system(_super_mount_cmd + "rm -rf %s" % self.tmp_bind)
+        super().stop()
         return self
 
     def remove(self):
         if self.container:
             self.container.remove(force=True)
+        super().remove()
         return self
 
     #
@@ -141,6 +144,13 @@ class DockerImageTarget(Target):
     def add_volume(self, src_path, dst_path, mode="rw"):
         new_vol = {'bind': dst_path, 'mode': mode}
         self.volumes[src_path] = new_vol
+
+    def resolve_local_path(self, target_path):
+        local_path = self.local_workdir + "/" + target_path # os.path.join fucks up with absolute paths
+        if not os.path.exists(local_path):
+            self.retrieve_into(target_path, os.path.dirname(local_path))
+        return local_path
+
 
     #
     # Info access
