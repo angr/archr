@@ -1,13 +1,13 @@
 import collections
-import re
 import subprocess
 import contextlib
+import tempfile
 import tarfile
 import logging
+import shutil
 import io
 import os
-import tempfile
-import shutil
+import re
 
 l = logging.getLogger("archr.target.local_target")
 
@@ -48,19 +48,13 @@ class LocalTarget(Target):
     #
 
     def remove(self):
-        try:
+        with contextlib.suppress(OSError):
             shutil.rmtree(self._tmpwd)
-        except OSError:
-            pass
         return self
 
     #
     # File access
     #
-
-    def mount_local(self, where=None):
-        self._local_path = "/"
-        return self
 
     def inject_tarball(self, target_path, tarball_path=None, tarball_contents=None):
         t = tarfile.TarFile(name=tarball_path, mode="r", fileobj=io.BytesIO(tarball_contents) if tarball_contents else None)
