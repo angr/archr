@@ -50,6 +50,7 @@ class LocalTarget(Target):
     def remove(self):
         with contextlib.suppress(OSError):
             shutil.rmtree(self._tmpwd)
+        super().remove()
         return self
 
     #
@@ -68,6 +69,9 @@ class LocalTarget(Target):
         t.add(target_path, arcname=os.path.basename(target_path.rstrip('/'))) # stupid docker compatibility --- it just uses the basename
         f.seek(0)
         return f.read()
+
+    def resolve_local_path(self, target_path):
+        return target_path
 
     #
     # Info access

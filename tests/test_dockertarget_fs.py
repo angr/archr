@@ -121,7 +121,17 @@ def test_tmp_bind():
         assert open(os.path.join(t.tmp_bind, "bar"), 'rb').read() == b"fdsa"
     assert not os.path.exists(t.tmp_bind)
 
+def test_local_workdir():
+    with archr.targets.DockerImageTarget('archr-test:entrypoint-env', bind_tmp=True).build().start() as t:
+        assert os.path.exists(t.local_workdir)
+        t.inject_contents({"/tmp/foo": b"asdf"})
+        assert t.retrieve_contents("/tmp/foo") == b"asdf"
+        assert os.path.exists(t.resolve_local_path("/tmp/foo"))
+        assert open(t.resolve_local_path("/tmp/foo"), 'rb').read() == b"asdf"
+    assert not os.path.exists(t.local_workdir)
+
 if __name__ == '__main__':
+    test_local_workdir()
     test_tmp_bind()
     test_glob_retrieval()
     test_retrieval_context()

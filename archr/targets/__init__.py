@@ -3,6 +3,7 @@ import contextlib
 import tempfile
 import tarfile
 import logging
+import shutil
 import glob
 import os
 import io
@@ -53,6 +54,8 @@ class Target(ABC):
         self.tmp_bind = None  # the /tmp in the target is mapped to `tmp_bind` on the host. currently only used in
                               # DockerTarget. it impacts how resolve_local_path() works.
 
+        self.local_workdir = tempfile.mkdtemp()
+
     def build(self):
         """
         Some automs require a "build" step.  For example, Vagrant/Docker/Ansible will need to run for some targets
@@ -70,28 +73,30 @@ class Target(ABC):
         The opposite of build().
         :return:
         """
-        pass
+        with contextlib.suppress(OSError):
+            shutil.rmtree(self.local_workdir)
+        return self
 
     def start(self):
         """
         Start the target.
         :return:
         """
-        pass
+        return self
 
     def stop(self):
         """
         Start the target.
         :return:
         """
-        pass
+        return self
 
     def restart(self):
         """
         Restart the target.
         :return:
         """
-        pass
+        return self
 
     @abstractmethod
     def _run_command(self, args, env, **kwargs):
@@ -166,7 +171,10 @@ class Target(ABC):
     #
 
     def __enter__(self): return self
-    def __exit__(self, *args): self.stop()
+    def __exit__(self, *args):
+        self.stop()
+        self.remove()
+    def __del__(self): self.remove()
 
     @property
     def main_binary_args(self):
@@ -281,6 +289,15 @@ class Target(ABC):
             with tarfile.open(fileobj=f, mode='r') as t:
                 with t.extractfile(os.path.basename(target_path)) as fp:
                     return fp.read()
+
+    @abstractmethod
+    def resolve_local_path(self, target_path):
+        """
+        Returns a filepath to a locally-accessible copy of the target path.
+        For some targets, this will be the actual file.
+        :returns str: the local path
+        """
+        return
 
     def retrieve_glob(self, target_glob):
         """
