@@ -65,7 +65,6 @@ class Target(ABC):
             self.target_env.append("LD_BIND_NOW=1")
         return self
 
-    @abstractmethod
     def remove(self):
         """
         The opposite of build().
@@ -73,7 +72,6 @@ class Target(ABC):
         """
         pass
 
-    @abstractmethod
     def start(self):
         """
         Start the target.
@@ -88,7 +86,6 @@ class Target(ABC):
         """
         pass
 
-    @abstractmethod
     def restart(self):
         """
         Restart the target.

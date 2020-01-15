@@ -47,15 +47,6 @@ class LocalTarget(Target):
     # Lifecycle
     #
 
-    def start(self):
-        return self
-
-    def restart(self):
-        return self
-
-    def stop(self):
-        return self
-
     def remove(self):
         try:
             shutil.rmtree(self._tmpwd)
