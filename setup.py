@@ -21,11 +21,13 @@ setup(
     install_requires=[
         'shellphish_qemu',
         'pygdbmi',
-        'angr',
         'docker',
         'nclib>=1.0.0rc3',
         'patchelf-wrapper'
     ],
+    extras_require = {
+        'angr':  ["angr"]
+    }
     description='Target-centric program analysis.',
     url='https://github.com/angr/archr',
 )

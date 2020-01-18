@@ -1,6 +1,6 @@
 import pygdbmi.gdbcontroller
 import archr
-import angr
+import nose
 import os
 
 def setup_module():
@@ -71,6 +71,10 @@ def test_offsetprinter32():
     t.stop()
 
 def test_stack():
+    if not archr._angr_available:
+        raise nose.SkipTest
+    import angr
+
     t = archr.targets.DockerImageTarget('archr-test:stackprinter64').build().start()
     reference_str = t.run_command(aslr=False).stdout.read()
 

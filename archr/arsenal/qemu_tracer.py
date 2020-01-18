@@ -4,7 +4,6 @@ import tempfile
 import logging
 import signal
 import shutil
-import angr
 import glob
 import re
 import os
@@ -13,6 +12,9 @@ import os
 l = logging.getLogger("archr.arsenal.qemu_tracer")
 
 from . import ContextBow
+from .. import _angr_available
+if _angr_available:
+    import angr
 
 class QemuTraceResult:
     # results

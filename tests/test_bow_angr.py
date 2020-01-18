@@ -2,6 +2,7 @@ import tempfile
 import claripy
 import shutil
 import archr
+import nose
 import os
 
 def setup_module():
@@ -27,10 +28,14 @@ def angr_checks(t):
     project.loader.close()
 
 def test_env_angr():
+    if not archr._angr_available:
+        raise nose.SkipTest
     with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
         angr_checks(t)
 
 def test_env_angr_local():
+    if not archr._angr_available:
+        raise nose.SkipTest
     tf = tempfile.mktemp()
     shutil.copy("/usr/bin/env", tf)
     with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build().start() as t:
@@ -38,6 +43,8 @@ def test_env_angr_local():
     os.unlink(tf)
 
 def test_angr_catflag():
+    if not archr._angr_available:
+        raise nose.SkipTest
     with archr.targets.DockerImageTarget('archr-test:cat-flag').build().start() as t:
         dsb = archr.arsenal.DataScoutBow(t)
         apb = archr.arsenal.angrProjectBow(t, dsb)

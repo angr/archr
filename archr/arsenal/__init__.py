@@ -68,8 +68,10 @@ class ContextBow(Bow):
             yield flight
 
 
-from .angr_project import angrProjectBow
-from .angr_state import angrStateBow
+from .. import _angr_available
+if _angr_available:
+    from .angr_project import angrProjectBow
+    from .angr_state import angrStateBow
 from .qemu_tracer import QEMUTracerBow
 from .datascout import DataScoutBow
 from .gdbserver import GDBServerBow
