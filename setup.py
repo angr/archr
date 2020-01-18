@@ -27,7 +27,7 @@ setup(
     ],
     extras_require = {
         'angr':  ["angr"]
-    }
+    },
     description='Target-centric program analysis.',
     url='https://github.com/angr/archr',
 )
