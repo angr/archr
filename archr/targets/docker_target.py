@@ -25,6 +25,7 @@ class DockerImageTarget(Target):
         rm=True,
         bind_tmp=False,
         network_mode='bridge',
+        network=None,
         **kwargs
                  #target_port=None,
                  #target_arch=None,
@@ -43,7 +44,8 @@ class DockerImageTarget(Target):
             self._client.images.pull(self.image_id)
 
         self.rm = rm
-        self.network_mode = network_mode
+        self.network_mode = network_mode if not network else None
+        self.network = network
         self.image = None
         self.container = None
         self.volumes = {}
@@ -93,9 +95,11 @@ class DockerImageTarget(Target):
             detach=True, auto_remove=self.rm, working_dir=working_dir,
             stdin_open=True, stdout=True, stderr=True,
             privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
-            network_mode=self.network_mode #for now, hopefully...
+            network_mode=self.network_mode,
+            network=self.network
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
         )
+        self.container.reload()  # update self.container.attrs
         return self
 
     def restart(self):
@@ -160,17 +164,19 @@ class DockerImageTarget(Target):
     def ipv4_address(self):
         if self.container is None:
             return None
-        return json.loads(
-            subprocess.Popen(["docker", "inspect", self.container.id], stdout=subprocess.PIPE).communicate()[0].decode()
-        )[0]['NetworkSettings']['IPAddress']
+        settings = self.container.attrs['NetworkSettings']
+        if self.network:
+            settings = settings['Networks'][self.network]
+        return settings['IPAddress']
 
     @property
     def ipv6_address(self):
         if self.container is None:
             return None
-        return json.loads(
-            subprocess.Popen(["docker", "inspect", self.container.id], stdout=subprocess.PIPE).communicate()[0].decode()
-        )[0]['NetworkSettings']['GlobalIPv6Address']
+        settings = self.container.attrs['NetworkSettings']
+        if self.network:
+            settings = settings['Networks'][self.network]
+        return settings['GlobalIPv6Address']
 
     @property
     def tcp_ports(self):
