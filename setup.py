@@ -23,7 +23,8 @@ setup(
         'pygdbmi',
         'docker',
         'nclib>=1.0.0rc3',
-        'patchelf-wrapper'
+        'patchelf-wrapper',
+        'cle'
     ],
     extras_require = {
         'angr':  ["angr"]
