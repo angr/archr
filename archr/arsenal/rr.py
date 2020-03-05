@@ -145,7 +145,7 @@ class RRTracerBow(RRBow):
             r = RRTraceResult(trace_dir=self.local_trace_dir,
                               symbolic_fd=self.symbolic_fd)
             try:
-                with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r) as flight:
+                with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as flight:
                     # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
                     time.sleep(0.1)
                     yield flight
