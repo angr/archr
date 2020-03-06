@@ -181,17 +181,33 @@ class DockerImageTarget(Target):
 
     @property
     def tcp_ports(self):
+        ports = []
         try:
-            return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'tcp' in k ]
+            ports.extend([int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'tcp' in k])
         except KeyError:
-            return [ ]
+            pass
+        try:
+            ports.extend([int(k.split('=')[-1]) for k in self.image.attrs['ContainerConfig']['Env'] if k.startswith('TCP_PORT')])
+        except ValueError:
+            l.warning('An enviroment variable for %s starts with "TCP_PORT", but the value is not an integer.', self.image_id)
+        except KeyError:
+            pass
+        return ports
 
     @property
     def udp_ports(self):
+        ports = []
         try:
-            return [ int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k ]
+            ports.extend([int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k])
         except KeyError:
-            return [ ]
+            pass
+        try:
+            ports.extend([int(k.split('=')[-1]) for k in self.image.attrs['ContainerConfig']['Env'] if k.startswith('UDP_PORT')])
+        except ValueError:
+            l.warning('An enviroment variable for %s starts with "UDP_PORT", but the value is not an integer.', self.image_id)
+        except KeyError:
+            pass
+        return ports
 
     @property
     def tmpwd(self):
