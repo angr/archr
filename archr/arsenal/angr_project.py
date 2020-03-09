@@ -10,7 +10,7 @@ from . import Bow
 
 class angrProjectBow(Bow):
     """
-    Describes a target in the form of a Docker image.
+    Constructs an angr project to match the target precisely
     """
 
     def __init__(self, target, scout_bow, static_simproc=False):
