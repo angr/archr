@@ -54,7 +54,9 @@ class DockerImageTarget(Target):
     # Lifecycle
     #
 
-    def build(self):
+    def build(self, pull=False):
+        if pull and not self._client.images.list(self.image_id):
+            self._client.images.pull(self.image_id)
         self.image = self._client.images.get(self.image_id)
         self.target_args = (
             self.target_args or
