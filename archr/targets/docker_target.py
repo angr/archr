@@ -77,8 +77,10 @@ class DockerImageTarget(Target):
                 self.target_args = self.target_args[2:]
 
         self.target_env = self.target_env or self.image.attrs['Config']['Env']
-        self.target_path = self.target_path or self.target_args[0]
         self.target_cwd = self.target_cwd or self.image.attrs['Config']['WorkingDir'] or "/"
+        specified_path = self.target_path or self.target_args[0]
+        self.target_path = specified_path if os.path.isabs(specified_path) else \
+            os.path.realpath(os.path.join(self.target_cwd, specified_path))
 
         super().build()
         return self
