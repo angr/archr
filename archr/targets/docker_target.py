@@ -142,8 +142,10 @@ class DockerImageTarget(Target):
             raise ArchrError("Unexpected error when making target_path in container: " + p.stdout.read() + " " + p.stderr.read())
         self.container.put_archive(target_path, tarball_contents)
         if self.user != 'root':
-            p = self.run_command(["chown", "-R", f"{self.user}:{self.user}", target_path], user="root", stderr=subprocess.DEVNULL)
-            p.wait()
+            # TODO: this is probably important, but as implemented (path resolves to /), it is way to slow. If someone wants this, implement it correctly.
+            # p = self.run_command(["chown", "-R", f"{self.user}:{self.user}", target_path], user="root", stderr=subprocess.DEVNULL)
+            # p.wait()
+            pass
 
     def retrieve_tarball(self, target_path):
         stream, _ = self.container.get_archive(target_path)
