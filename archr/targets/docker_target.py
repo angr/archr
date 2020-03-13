@@ -143,8 +143,8 @@ class DockerImageTarget(Target):
         self.container.put_archive(target_path, tarball_contents)
         if self.user != 'root':
             # TODO: this is probably important, but as implemented (path resolves to /), it is way to slow. If someone wants this, implement it correctly.
-            # p = self.run_command(["chown", "-R", f"{self.user}:{self.user}", target_path], user="root", stderr=subprocess.DEVNULL)
-            # p.wait()
+            p = self.run_command(["chown", "-R", f"{self.user}:{self.user}", '/tmp'], user="root", stderr=subprocess.DEVNULL)
+            p.wait()
             pass
 
     def retrieve_tarball(self, target_path):
