@@ -2,6 +2,8 @@ import subprocess
 import tempfile
 import archr
 import os
+import unittest
+
 
 def test_hook():
     with open("/bin/false", 'rb') as off:
@@ -15,9 +17,10 @@ def test_hook():
     assert subprocess.Popen([nfn]).wait() == 42
     os.unlink(nfn)
 
+
 def test_deps():
     assert sorted(archr.utils.lib_dependencies("/bin/false")) == [ "/lib/x86_64-linux-gnu/libc.so.6", "/lib64/ld-linux-x86-64.so.2" ]
 
+
 if __name__ == "__main__":
-    test_deps()
-    test_hook()
+    unittest.main()
