@@ -27,8 +27,6 @@ class DockerImageTarget(Target):
         network_mode='bridge',
         network=None,
         **kwargs
-                 #target_port=None,
-                 #target_arch=None,
     ):
         super(DockerImageTarget, self).__init__(**kwargs)
 
@@ -44,6 +42,18 @@ class DockerImageTarget(Target):
             self._client.images.pull(self.image_id)
 
         self.rm = rm
+
+        # If we're running in docker-by-docker, default the network to the same network
+        if check_in_docker() and not check_dockerd_running() and network is None:
+            try:
+                container_id = os.environ["HOSTNAME"]
+                container_inspect = self._client.api.inspect_container(container_id)
+                network_dict = container_inspect["NetworkSettings"]["Networks"]
+                # Grab "first" network
+                network = list(network_dict.keys())[0]
+            except (KeyError, IndexError, docker.errors.APIError):
+                l.warning("Detected archr is being run from a docker container, but couldn't retrieve network information")
+
         self.network_mode = network_mode if not network else None
         self.network = network
         self.image = None
@@ -282,5 +292,16 @@ class DockerImageTarget(Target):
             docker_args + args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
         )
+
+
+def check_in_docker() -> bool:
+    with open("/proc/1/cgroup", "r") as f:
+        return "docker" in f.read()
+
+
+def check_dockerd_running() -> bool:
+    ps = subprocess.run(["ps", "-aux"], stdout=subprocess.PIPE)
+    return b"/usr/bin/dockerd" in ps.stdout
+
 
 from ..errors import ArchrError
