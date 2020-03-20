@@ -293,6 +293,15 @@ class DockerImageTarget(Target):
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
         )
 
+    #
+    # Python magic
+    #
+
+    def __del__(self):
+        if self.rm:
+            self.stop()
+        return super().__del__()
+
 
 def check_in_docker() -> bool:
     with open("/proc/1/cgroup", "r") as f:
