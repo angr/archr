@@ -31,14 +31,14 @@ class TestLocalTarget(unittest.TestCase):
             assert p.returncode == -11
 
     def test_local_nccat(self):
-        with archr.targets.LocalTarget("socat tcp-l:1337,reuseaddr exec:cat".split(), tcp_ports=[1337]).build().start() as t:
+        with archr.targets.LocalTarget("socat tcp-l:40001,reuseaddr exec:cat".split(), tcp_ports=[40001]).build().start() as t:
             t.run_command()
-            assert t.tcp_ports == [ 1337 ]
+            assert t.tcp_ports == [ 40001 ]
             try:
-                s = socket.create_connection((t.ipv4_address, 1337))
+                s = socket.create_connection((t.ipv4_address, 40001))
             except ConnectionRefusedError:
                 time.sleep(5)
-                s = socket.create_connection((t.ipv4_address, 1337))
+                s = socket.create_connection((t.ipv4_address, 40001))
             s.send(b"Hello\n")
             assert s.recv(6) == b"Hello\n"
 

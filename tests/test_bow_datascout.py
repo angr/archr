@@ -63,8 +63,8 @@ class TestDatascout(unittest.TestCase):
                 '/lib/x86_64-linux-gnu/ld-2.27.so': 0x7ffff7dd5000,
                 '[stack-end]': 0x7ffffffff000,
                 '[heap]': 0x55555575d000,
-                '[vvar]': 0x7ffff7ff7000,
-                '[vdso]': 0x7ffff7ffa000,
+                '[vvar]': 0x7ffff7ff8000,
+                '[vdso]': 0x7ffff7ffb000,
                 '[vsyscall]': 0xffffffffff600000
             }
             assert all(maps[x] == docker_ref[x] for x in docker_ref)
@@ -80,8 +80,8 @@ class TestDatascout(unittest.TestCase):
                 '/lib/x86_64-linux-gnu/ld-2.27.so': 0x7ffff7dd5000,
                 '[stack-end]': 0x7ffffffff000,
                 '[heap]': 0x55555575d000,
-                '[vvar]': 0x7ffff7ff7000,
-                '[vdso]': 0x7ffff7ffa000,
+                '[vvar]': 0x7ffff7ff8000,
+                '[vdso]': 0x7ffff7ffb000,
                 '[vsyscall]': 0xffffffffff600000
             }
             assert all(maps[x] == local_ref[x] for x in local_ref)

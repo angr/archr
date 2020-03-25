@@ -16,9 +16,8 @@ class TestBowRR(unittest.TestCase):
         res = b.fire(testcase=crash)
         print("Done! You can find your trace in {} (timed out?: {})".format(res.trace_dir.name, res.timed_out))
 
-    # This test case fails because the docker image is broken
+    # @unittest.skipUnless(archr.arsenal.rr.trraces, "trraces required")
     @unittest.skip("broken docker image")
-    @unittest.skipUnless(archr.arsenal.rr.trraces, "trraces required")
     def test_miniupnpd(self):
         with archr.targets.DockerImageTarget('ikanak/miniupnpd').build().start() as t:
             get_miniupnpd_trace(t)
