@@ -1,3 +1,3 @@
-from ubuntu:18.04
+from ubuntu:bionic
 copy shellcode_tester /
 entrypoint [ "/shellcode_tester" ]

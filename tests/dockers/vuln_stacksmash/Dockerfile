@@ -1,4 +1,4 @@
-from ubuntu:18.04
+from ubuntu:bionic
 
 RUN dpkg --add-architecture i386 && apt update && apt install -y libc6:i386
 
