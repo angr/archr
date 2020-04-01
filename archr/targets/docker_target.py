@@ -39,7 +39,7 @@ class DockerImageTarget(Target):
             self.tmp_bind = None
 
         if pull:
-            self._client.images.pull(self.image_id)
+            self._pull()
 
         self.rm = rm
 
@@ -66,7 +66,7 @@ class DockerImageTarget(Target):
 
     def build(self, pull=False):
         if pull and not self._client.images.list(self.image_id):
-            self._client.images.pull(self.image_id)
+            self._pull()
         self.image = self._client.images.get(self.image_id)
         self.target_args = (
             self.target_args or
@@ -293,6 +293,14 @@ class DockerImageTarget(Target):
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
         )
 
+    #
+    # Docker wrappers
+    #
+    def _pull(self):
+        try:
+            self._client.images.pull(self.image_id)
+        except docker.errors.ImageNotFound as err:
+            l.info("Unable to pull image {}, got error {}, ignoring and continuing on".format(self.image_id, err))
 
 def check_in_docker() -> bool:
     with open("/proc/1/cgroup", "r") as f:
