@@ -38,10 +38,15 @@ class DockerImageTarget(Target):
         else:
             self.tmp_bind = None
 
+        self.network = None
+        self.network_mode = None
+        self.image = None
+        self.container = None
+        self.volumes = { }
+        self.rm = rm
+
         if pull:
             self._pull()
-
-        self.rm = rm
 
         # If we're running in docker-by-docker, default the network to the same network
         if check_in_docker() and not check_dockerd_running() and network is None:
@@ -54,11 +59,8 @@ class DockerImageTarget(Target):
             except (KeyError, IndexError, docker.errors.APIError):
                 l.warning("Detected archr is being run from a docker container, but couldn't retrieve network information")
 
-        self.network_mode = network_mode if not network else None
         self.network = network
-        self.image = None
-        self.container = None
-        self.volumes = {}
+        self.network_mode = network_mode if not network else None
 
     #
     # Lifecycle
