@@ -25,6 +25,8 @@ class QemuTraceResult:
 
     # introspection
     trace = None
+    syscall_trace = None
+    complete_trace = None
     crash_address = None
     base_address = None
     magic_contents = None
@@ -32,9 +34,6 @@ class QemuTraceResult:
 
     def tracer_technique(self, **kwargs):
         return angr.exploration_techniques.Tracer(self.trace, crash_addr=self.crash_address, **kwargs)
-
-_trace_old_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
-_trace_new_re = re.compile(br'Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P<flags>.*)\].*')
 
 class QEMUTracerBow(ContextBow):
     REQUIRED_ARROW = "shellphish_qemu"
@@ -111,11 +110,41 @@ class QEMUTracerBow(ContextBow):
                 # Find where qemu loaded the binary. Primarily for PIE
                 r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
 
+                def maybe_int(s):
+                    try:
+                        if s.startswith(b'0x'):
+                            return int(s, 16)
+                        return int(s)
+                    except ValueError as e:
+                        return s
+
                 # record the trace
-                _trace_re = _trace_old_re if self.target.target_os == 'cgc' else _trace_new_re
-                r.trace = [
-                    int(_trace_re.match(t).group('addr'), 16) for t in trace_iter if t.startswith(b"Trace ")
-                ]
+                trace_re = (br'^Trace (.*) \[(?P<addr>.*)\].*$' if self.target.target_os == 'cgc'
+                            else br'^Trace (.*) \[(.*)\/(?P<addr>.*)\/(?P<flags>.*)\].*$')
+                syscall_re = br'^\d+ (?P<syscall>\w+)\((?P<args>.*?)\)(.|\n)*? = (?P<result>.*)$'
+                complete_re = b'|'.join(b'(' + e + b')' for e in ([trace_re] if self.target.target_os == 'cgc'
+                                                                 else [trace_re, syscall_re]))
+                r.trace = []
+                r.syscall_trace = []
+                r.complete_trace = []
+                for match in re.finditer(complete_re, trace, re.MULTILINE):
+                    match = match.groupdict()
+                    if match.get('addr'):
+                        addr = int(match['addr'], 16)
+                        r.trace.append(addr)
+                        r.complete_trace.append(('addr', addr))
+                    if match.get('syscall'):
+                        # Requires linux-qemu >= v5.0.0, which cgc is not
+                        # This will run into issues if syscall arguments contain ')'
+                        # args will be incorrectly split if one contains a ','
+                        # ((.|\n)*?) is designed to catch logging between syscall enter and syscall exit (tested against logging durring mmap syscall)
+                        # result_info may contain additional information, e.g. "errno=2 (No such file or directory)" where result is "-1"
+                        syscall = match['syscall']
+                        args = tuple(maybe_int(arg) for arg in match['args'].split(b','))
+                        result, _, result_info = match['result'].partition(b' ')
+                        result = maybe_int(result)
+                        r.syscall_trace.append((syscall, args, result, result_info))
+                        r.complete_trace.append(('syscall', (syscall, args, result, result_info)))
 
                 # grab the faulting address
                 if r.crashed:
@@ -174,7 +203,7 @@ class QEMUTracerBow(ContextBow):
 
         # record trace
         if trace_filename:
-            cmd_args += ["-d", "nochain,exec,page", "-D", trace_filename] if 'cgc' not in qemu_variant else ["-d", "exec", "-D", trace_filename]
+            cmd_args += ["-d", "nochain,exec,page,strace", "-D", trace_filename] if 'cgc' not in qemu_variant else ["-d", "exec", "-D", trace_filename]
         else:
             if 'cgc' in qemu_variant:
                 cmd_args += ["-enable_double_empty_exiting"]

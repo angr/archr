@@ -19,7 +19,7 @@ setup(
         'archr': ['arrows/*.sh', 'arrows/*/*']
     },
     install_requires=[
-        'shellphish_qemu',
+        'shellphish_qemu>=0.10.0',
         'pygdbmi',
         'docker',
         'nclib>=1.0.0rc3',
