@@ -133,7 +133,11 @@ class DockerImageTarget(Target):
 
     def remove(self):
         if self.container:
-            self.container.remove(force=True)
+            try:
+                self.container.remove(force=True)
+            except docker.errors.NotFound:
+                # the container is already gone before we attempt to remove it
+                pass
         super().remove()
         return self
 
