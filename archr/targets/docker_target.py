@@ -78,7 +78,7 @@ class DockerImageTarget(Target):
         # let's assume that we're not analyzing setarch, /bin/sh, or any variant of qemu
         if self.target_args[:2] == [ "/bin/sh", "-c" ]:
             self.target_args = shlex.split(self.target_args[-1])
-        if self.target_args[:3] == [ "tmux", "new-session", "-d"]:
+        if self.target_args[:3] == [ "tmux", "new-session", "-d;"]:
             self.target_args = shlex.split(self.target_args[-1])
         if self.target_args[:3] == [ "setarch", "x86_64", "-R" ]:
             self.target_args = self.target_args[3:]
