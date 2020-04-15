@@ -34,7 +34,10 @@ class STraceBow(ContextBow):
         args_prefix = (args_prefix or []) + [fire_path] + (trace_args or []) + ["--"]
         with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
             yield flight
-        flight.result = flight.process.stderr.read() # illegal, technically
+        try:
+            flight.result = flight.process.stderr.read() # illegal, technically
+        except ValueError:
+            flight.result = b''
 
 
 class STraceAttachBow(ContextBow):
