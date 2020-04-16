@@ -120,7 +120,7 @@ class RRBow(ContextBow):
 
 class RRTracerBow(RRBow):
     @contextlib.contextmanager
-    def fire_context(self, save_core=False, record_magic=False, report_bad_args=False, rr_args=None):
+    def fire_context(self, save_core=False, record_magic=False, report_bad_args=False, rr_args=None, sleep_time=0.1):
         if save_core or record_magic or report_bad_args:
             raise ArchrError("I can't do any of these things!")
 
@@ -147,7 +147,7 @@ class RRTracerBow(RRBow):
             try:
                 with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as flight:
                     # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
-                    time.sleep(0.1)
+                    time.sleep(sleep_time)
                     yield flight
             except subprocess.TimeoutExpired:
                 r.timed_out = True
