@@ -60,6 +60,8 @@ class RRReplayBow(ContextBow):
             script_remote_path = os.path.join(
                 d_dst, os.path.basename(gdb_script))
             gdb_command += ["-x", script_remote_path]
+            gdb_command += ["--args"]
+            gdb_command += self.target.target_args
 
         r = GDBResult()
         try:
