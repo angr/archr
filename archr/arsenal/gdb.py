@@ -11,6 +11,12 @@ import time
 
 l = logging.getLogger("archr.arsenal.gdb")
 
+class FakeTempdir:
+    def __init__(self, path):
+        self.name = path
+
+    def cleanup(self):
+        return
 
 class GDBResult:
     returncode = None
@@ -18,16 +24,20 @@ class GDBResult:
     crashed = False
     timed_out = False
 
-    def __init__(self):
-        self.trace_dir = tempfile.TemporaryDirectory(prefix='gdb_trace_dir_')
+    def __init__(self, trace_dir=None):
+        if trace_dir is None:
+            self.trace_dir = tempfile.TemporaryDirectory(prefix='gdb_trace_dir_')
+        else:
+            self.trace_dir = FakeTempdir(trace_dir)
 
 
 class GDBBow(ContextBow):
     REQUIRED_ARROW = "gdb"
 
-    def __init__(self, target, timeout=10):
+    def __init__(self, target, local_trace_dir=None, timeout=10):
         super().__init__(target)
         self.timeout = timeout
+        self.local_trace_dir = local_trace_dir
 
     @contextlib.contextmanager
     def fire_context(self, prefix_args=None, gdb_args=None, gdb_script=None, sleep_time=0.1):
@@ -38,6 +48,13 @@ class GDBBow(ContextBow):
         gdb_args -- addition args for gdb (default None)
         gdb_script -- Path of an optional gdb_script file (default None)
         """
+
+        if self.local_trace_dir:
+            if os.path.exists(self.local_trace_dir):
+                shutil.rmtree(self.local_trace_dir)
+            os.mkdir(self.local_trace_dir)
+        else:
+            self.local_trace_dir = tempfile.mkdtemp(prefix="/tmp/gdb_tracer_")
 
         fire_path = os.path.join(self.target.tmpwd, "gdb", "fire")
         gdb_command = []
