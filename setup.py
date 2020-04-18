@@ -12,7 +12,7 @@ if bytes is str:
 
 setup(
     name='archr',
-    version='8.20.9.1',
+    version='8.20.9.2',
     python_requires='>=3.5',
     packages=packages,
     package_data = {
