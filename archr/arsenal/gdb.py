@@ -75,7 +75,7 @@ class GDBBow(ContextBow):
             gdb_command += ["--args"]
             gdb_command += self.target.target_args
 
-        r = GDBResult()
+        r = GDBResult(trace_dir=self.local_trace_dir)
         try:
             with self.target.flight_context(gdb_command, timeout=self.timeout, result=r) as flight:
                 # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
