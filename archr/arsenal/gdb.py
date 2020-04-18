@@ -18,24 +18,19 @@ class GDBResult:
     crashed = False
     timed_out = False
 
+    def __init__(self):
+        self.trace_dir = tempfile.TemporaryDirectory(prefix='gdb_trace_dir_')
+
 
 class GDBBow(ContextBow):
     REQUIRED_ARROW = "gdb"
 
-    def __init__(self, target, timeout=10, local_trace_dir=None, symbolic_fd=None):
-        super().__init__(target)
-        self.timeout = timeout
-        self.local_trace_dir = local_trace_dir
-
-
-
-class RRReplayBow(ContextBow):
-    def __init__(self, target, timeout):
+    def __init__(self, target, timeout=10):
         super().__init__(target)
         self.timeout = timeout
 
     @contextlib.contextmanager
-    def fire_context(self, prefix_args=None, gdb_args=None, trace_dir=None, gdb_script=None, sleep_time=0.1):
+    def fire_context(self, prefix_args=None, gdb_args=None, gdb_script=None, sleep_time=0.1):
         """Run the target with gdb.
 
         Keyword arguments:
