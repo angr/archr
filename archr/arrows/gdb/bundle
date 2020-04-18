@@ -21,6 +21,7 @@ PYTHON_LIB_PATH=$(realpath "$(dirname $GDB_PATH)/../lib/$PYTHON_VERSION")
 PYTHON_SHARE_PATH=$(realpath "$(dirname $GDB_PATH)/../share/$PYTHON_VERSION_MAJOR")
 cp -L $GDB_LIBS $BUNDLE_DIR/libs
 cp -L $GDB_LD $BUNDLE_DIR/bin
+cp -L $GDB_LD $BUNDLE_DIR
 cp -L $GDB_PATH $BUNDLE_DIR/bin/
 cp -L -r $GDB_SHARE_PATH $BUNDLE_DIR/share
 cp -L -r $PYTHON_LIB_PATH $BUNDLE_DIR/lib
