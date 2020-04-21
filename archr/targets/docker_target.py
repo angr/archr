@@ -110,6 +110,7 @@ class DockerImageTarget(Target):
             name=name,
             entrypoint=entry_point, command=[], environment=self.target_env,
             user=user, labels=labels,
+            hostname='archr-target',
             detach=True, auto_remove=self.rm, working_dir=working_dir,
             stdin_open=True, stdout=True, stderr=True,
             privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
