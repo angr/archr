@@ -318,7 +318,7 @@ def check_in_docker() -> bool:
 
 def check_dockerd_running() -> bool:
     ps = subprocess.run(["ps", "-aux"], stdout=subprocess.PIPE)
-    return b"/usr/bin/dockerd" in ps.stdout
+    return b"dockerd" in ps.stdout
 
 
 from ..errors import ArchrError
