@@ -55,7 +55,7 @@ class DataScoutBow(Bow):
                 "li $a3, 0x1000000; li $v0, 4207; syscall;" * 5  # sendfile(1, n, 0, 0x1000000)
             )
         else:
-            raise NotImplementedError()
+            raise NotImplementedError("Unknown target architecure: \"%s\"!" % self.target.target_arch)
 
     def echo_shellcode(self, what):
         if self.target.target_arch == 'x86_64':

@@ -96,7 +96,10 @@ class QEMUTracerBow(ContextBow):
 
             if local_core_filename:
                 target_cores = self.target.resolve_glob(os.path.join(tmpdir, "qemu_*.core"))
-                if len(target_cores) != 1:
+                if len(target_cores) == 0:
+                    raise ArchrError("the target didn't crash inside qemu! Make sure you launch it correctly!\n"+
+                                     "command: %s" % ' '.join(target_cmd))
+                elif len(target_cores) > 1:
                     raise ArchrError("expected 1 core file but found %d" % len(target_cores))
                 with self._local_mk_tmpdir() as local_tmpdir:
                     self.target.retrieve_into(target_cores[0], local_tmpdir)
