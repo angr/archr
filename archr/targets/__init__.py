@@ -28,7 +28,7 @@ class Target(ABC):
         self,
         target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux', target_arch='x86_64',
         ip_version=4
-    ):
+        ):
         """
         Create an autom
 
@@ -208,6 +208,15 @@ class Target(ABC):
         :return: Process pid
         """
         pass
+
+    def remove_path(self, path):
+        """
+        Remove a file from the target, very important if the target
+        is a LocalTarget
+
+        :param str path: the path of the file (on the target)
+        """
+        self.run_command(['rm', path])
 
     def inject_path(self, src, dst=None):
         """
