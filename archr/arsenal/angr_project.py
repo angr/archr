@@ -32,6 +32,7 @@ class angrProjectBow(Bow):
 
     def fire(self, return_loader=False, **kwargs): #pylint:disable=arguments-differ
         if self.project is None:
+            # TODO: this introduce file leak. However, we probably need some redesign to fix it
             tmpdir = tempfile.mkdtemp()
             self.target.retrieve_into(self.target.target_path, tmpdir)
             the_binary = os.path.join(tmpdir, os.path.basename(self.target.target_path))
