@@ -37,8 +37,7 @@ class Flight:
         if channel_name == 'stdio':
             if self.process is None:
                 raise ValueError("Can't get stdio for remote process")
-            if channel_name == 'stdio':
-                channel = nclib.merge([self.process.stdout, self.process.stderr], sock_send=self.process.stdin)
+            channel = nclib.merge([self.process.stdout, self.process.stderr], sock_send=self.process.stdin)
         elif ':' in channel_name:
             kind, idx = channel_name.split(':', 1)
             if kind in ('tcp', 'tcp6'):
