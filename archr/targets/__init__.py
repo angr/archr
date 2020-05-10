@@ -54,7 +54,7 @@ class Target(ABC):
         self.tmp_bind = None  # the /tmp in the target is mapped to `tmp_bind` on the host. currently only used in
                               # DockerTarget. it impacts how resolve_local_path() works.
 
-        self.local_workdir = tempfile.mkdtemp()
+        self.local_workdir = tempfile.mkdtemp(prefix="archr_target_")
 
     def build(self):
         """
@@ -336,7 +336,7 @@ class Target(ABC):
                 to_yield = local_thing
                 local_file = stack.enter_context(open(local_thing, "wb"))
             elif local_thing is None:
-                to_yield = tempfile.mktemp()
+                to_yield = tempfile.mktemp(prefix="archr_retrieval_")
                 local_file = stack.enter_context(open(to_yield, "wb"))
             elif hasattr(local_thing, "write"):
                 to_yield = local_thing

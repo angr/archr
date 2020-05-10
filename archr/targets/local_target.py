@@ -41,7 +41,7 @@ class LocalTarget(Target):
         self._udp_ports = udp_ports
         self.use_qemu = use_qemu
 
-        self._tmpwd = tempfile.mkdtemp()
+        self._tmpwd = tempfile.mkdtemp(prefix="archr_local_")
 
     #
     # Lifecycle
