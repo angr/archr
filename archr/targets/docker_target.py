@@ -310,9 +310,11 @@ class DockerImageTarget(Target):
         except docker.errors.ImageNotFound as err:
             l.info("Unable to pull image {}, got error {}, ignoring and continuing on".format(self.image_id, err))
 
+
 def check_in_docker() -> bool:
     with open("/proc/1/cgroup", "r") as f:
         return "docker" in f.read()
+
 
 def check_dockerd_running() -> bool:
     ps = subprocess.run(["ps", "-aux"], stdout=subprocess.PIPE)
