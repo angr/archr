@@ -28,7 +28,7 @@ class Target(ABC):
         self,
         target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux', target_arch='x86_64',
         ip_version=4
-    ):
+        ):
         """
         Create an autom
 
@@ -54,7 +54,7 @@ class Target(ABC):
         self.tmp_bind = None  # the /tmp in the target is mapped to `tmp_bind` on the host. currently only used in
                               # DockerTarget. it impacts how resolve_local_path() works.
 
-        self.local_workdir = tempfile.mkdtemp()
+        self.local_workdir = tempfile.mkdtemp(prefix="archr_target_")
 
     def build(self):
         """
@@ -209,6 +209,15 @@ class Target(ABC):
         """
         pass
 
+    def remove_path(self, path):
+        """
+        Remove a file from the target, very important if the target
+        is a LocalTarget
+
+        :param str path: the path of the file (on the target)
+        """
+        self.run_command(['rm', path])
+
     def inject_path(self, src, dst=None):
         """
         Injects a file or directory into the target.
@@ -327,7 +336,7 @@ class Target(ABC):
                 to_yield = local_thing
                 local_file = stack.enter_context(open(local_thing, "wb"))
             elif local_thing is None:
-                to_yield = tempfile.mktemp()
+                to_yield = tempfile.mktemp(prefix="archr_retrieval_")
                 local_file = stack.enter_context(open(to_yield, "wb"))
             elif hasattr(local_thing, "write"):
                 to_yield = local_thing

@@ -33,7 +33,7 @@ class CoreBow(ContextBow):
 
         r = CoreResults()
         r.target_core_path = os.path.join(os.path.dirname(self.target.target_path), "core")
-        r.local_core_path = tempfile.mktemp()
+        r.local_core_path = tempfile.mktemp(prefix="arch_core_")
         try:
             with self.target.flight_context(result=r, **kwargs) as flight:
                 yield flight

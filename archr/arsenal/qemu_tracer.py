@@ -132,10 +132,16 @@ class QEMUTracerBow(ContextBow):
 
                 l.debug("Trace consists of %d basic blocks", len(r.trace))
 
+                # remove the trace file on the target
+                self.target.remove_path(target_trace_filename)
+
             if target_magic_filename:
                 r.magic_contents = self.target.retrieve_contents(target_magic_filename)
                 if len(r.magic_contents) != 0x1000:
                     raise ArchrError("Magic content read from QEMU improper size, should be a page in length")
+
+                # remove the magic file on the target
+                self.target.remove_path(target_magic_filename)
 
 
 

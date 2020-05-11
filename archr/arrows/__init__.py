@@ -5,7 +5,7 @@ import os
 
 @contextlib.contextmanager
 def bundle(arrow_name):
-    bundle_path = tempfile.mkdtemp()
+    bundle_path = tempfile.mkdtemp(prefix="archr_bundle_")
 
     bundle_base_dir = os.path.dirname(__file__)
     if os.path.exists(os.path.join(bundle_base_dir, arrow_name)):
@@ -18,7 +18,7 @@ def bundle(arrow_name):
 
 @contextlib.contextmanager
 def bundle_binary(path):
-    bundle_path = tempfile.mkdtemp()
+    bundle_path = tempfile.mkdtemp(prefix="archr_bundle_binary_")
 
     bundle_base_dir = os.path.dirname(__file__)
     os.system("%s/GENERIC/bundle %s %s" % (bundle_base_dir, bundle_path, path))

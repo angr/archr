@@ -27,7 +27,7 @@ class DockerImageTarget(Target):
         network_mode='bridge',
         network=None,
         **kwargs
-    ):
+        ):
         super(DockerImageTarget, self).__init__(**kwargs)
 
         self._client = docker.client.from_env()
@@ -170,7 +170,6 @@ class DockerImageTarget(Target):
         stream, _ = self.container.get_archive(target_path)
         return b''.join(stream)
 
-
     def add_volume(self, src_path, dst_path, mode="rw"):
         new_vol = {'bind': dst_path, 'mode': mode}
         self.volumes[src_path] = new_vol
@@ -281,7 +280,7 @@ class DockerImageTarget(Target):
     def _run_command(
         self, args, env,
         user=None, aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    ): #pylint:disable=arguments-differ
+        ): #pylint:disable=arguments-differ
         if self.container is None:
             raise ArchrError("target.start() must be called before target.run_command()")
 
@@ -310,6 +309,7 @@ class DockerImageTarget(Target):
             self._client.images.pull(self.image_id)
         except docker.errors.ImageNotFound as err:
             l.info("Unable to pull image {}, got error {}, ignoring and continuing on".format(self.image_id, err))
+
 
 def check_in_docker() -> bool:
     with open("/proc/1/cgroup", "r") as f:
