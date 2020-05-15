@@ -77,7 +77,7 @@ class GDBBow(ContextBow):
 
         r = GDBResult(trace_dir=self.local_trace_dir)
         try:
-            with self.target.flight_context(gdb_command, timeout=self.timeout, result=r) as flight:
+            with self.target.flight_context(gdb_command, timeout=self.timeout, result=r, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as flight:
                 # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
                 time.sleep(sleep_time)
                 yield flight
