@@ -31,7 +31,7 @@ class TestLocalTarget(unittest.TestCase):
             assert p.returncode == -11
 
     def test_local_nccat(self):
-        with archr.targets.LocalTarget("socat tcp-l:40001,reuseaddr exec:cat".split(), tcp_ports=[40001]).build().start() as t:
+        with archr.targets.LocalTarget("socat tcp-l:40001,reuseaddr exec:cat".split(), tcp_ports=[40001], ipv4_address="127.0.0.1").build().start() as t:
             t.run_command()
             assert t.tcp_ports == [ 40001 ]
             try:
