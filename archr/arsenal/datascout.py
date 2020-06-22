@@ -5,6 +5,10 @@ l = logging.getLogger("archr.arsenal.datascout")
 from ..errors import ArchrError
 from . import Bow
 
+# Keystone engine 0.9.2 (incorrectly) defaults to radix 16. so we'd better off only using 0x-prefixed integers from now.
+# See the related PR: https://github.com/keystone-engine/keystone/pull/382
+# and the related issue: https://github.com/keystone-engine/keystone/issues/436
+
 
 class DataScoutBow(Bow):
     """
@@ -38,21 +42,21 @@ class DataScoutBow(Bow):
                 self._encode_bytes(filename) +
                 "mov rdi, rsp; xor rsi, rsi; xor rdx, rdx; mov rax, 2; syscall;" + # n = open(path, O_RDONLY, 0)
                 "mov rdi, 1; mov rsi, rax; mov rdx, 0; mov r10, 0x1000000; mov rax, 40; syscall;" + # sendfile(1, n, 0, 0x1000000)
-                "mov rax, 40; syscall;" * 5 # sendfile(1, n, 0, 0x1000000)
+                "mov rax, 0x28; syscall;" * 5 # sendfile(1, n, 0, 0x1000000)
             )
         elif self.target.target_arch == 'i386':
             return (
                 self._encode_bytes(filename) +
                 "mov ebx, esp; xor ecx, ecx; xor edx, edx; mov eax, 5; int 0x80;" + # n = open(path, O_RDONLY, 0)
-                "mov ebx, 1; mov ecx, eax; mov edx, 0; mov esi, 0x1000000; mov eax, 187; int 0x80;" + # sendfile(1, n, 0, 0x1000000)
-                "mov eax, 187; int 0x80;" * 5 # sendfile(1, n, 0, 0x1000000)
+                "mov ebx, 1; mov ecx, eax; mov edx, 0; mov esi, 0x1000000; mov eax, 0xbb; int 0x80;" + # sendfile(1, n, 0, 0x1000000)
+                "mov eax, 0xbb; int 0x80;" * 5 # sendfile(1, n, 0, 0x1000000)
             )
         elif self.target.target_arch in ('mips', 'mipsel'):
             return (
                 self._encode_bytes(filename) +
-                "move $a0, $sp; xor $a1, $a1, $a1; xor $a2, $a2, $a2; li $v0, 4005; syscall;" +  # n = open(path, O_RDONLY, 0)
-                "li $a0, 1; move $a1, $v0; xor $a2, $a2, $a2; li $a3, 0x1000000; li $v0, 4207; syscall;" +  # sendfile(1, n, 0, 0x1000000)
-                "li $a3, 0x1000000; li $v0, 4207; syscall;" * 5  # sendfile(1, n, 0, 0x1000000)
+                "move $a0, $sp; xor $a1, $a1, $a1; xor $a2, $a2, $a2; li $v0, 0xfa5; syscall;" +  # n = open(path, O_RDONLY, 0)
+                "li $a0, 1; move $a1, $v0; xor $a2, $a2, $a2; li $a3, 0x1000000; li $v0, 0x106f; syscall;" +  # sendfile(1, n, 0, 0x1000000)
+                "li $a3, 0x1000000; li $v0, 0x106f; syscall;" * 5  # sendfile(1, n, 0, 0x1000000)
             )
         else:
             raise NotImplementedError("Unknown target architecure: \"%s\"!" % self.target.target_arch)
@@ -61,42 +65,42 @@ class DataScoutBow(Bow):
         if self.target.target_arch == 'x86_64':
             return (
                 self._encode_bytes(what) +
-                "mov rdi, 1; mov rsi, rsp; mov rdx, %d; mov rax, 1; syscall;" % len(what) # n = write(1, rsp, 0x1000)
+                "mov rdi, 1; mov rsi, rsp; mov rdx, %#x; mov rax, 1; syscall;" % len(what) # n = write(1, rsp, 0x1000)
             )
         elif self.target.target_arch == 'i386':
             return (
                 self._encode_bytes(what) +
-                "mov ebx, 1; mov ecx, esp; mov edx, %d; mov eax, 4; int 0x80;" % len(what) # n = write(1, rsp, 0x1000)
+                "mov ebx, 1; mov ecx, esp; mov edx, %#x; mov eax, 4; int 0x80;" % len(what) # n = write(1, rsp, 0x1000)
             )
         elif self.target.target_arch in ('mips', 'mipsel'):
             return (
                 self._encode_bytes(what) +
-                "li $a0, 1; move $a1, $sp; li $a2, %d; li $v0, 4004; syscall;" % len(what)  # n = write(1, rsp, 0x1000)
+                "li $a0, 1; move $a1, $sp; li $a2, %#x; li $v0, 0xfa4; syscall;" % len(what)  # n = write(1, rsp, 0x1000)
             )
         else:
             raise NotImplementedError()
 
     def brk_shellcode(self):
         if self.target.target_arch == 'x86_64':
-            return "mov rax, 12; xor rdi, rdi; syscall; mov rdi, rax; add rdi, 0x1000; mov rax, 12; syscall;"
+            return "mov rax, 0xc; xor rdi, rdi; syscall; mov rdi, rax; add rdi, 0x1000; mov rax, 0xc; syscall;"
         elif self.target.target_arch == 'i386':
             # n = brk 0
             # brk n + 0x1000
-            return "mov eax, 45; xor ebx, ebx; int 0x80; mov ebx, eax; add ebx, 0x1000; mov eax, 45; int 0x80;"
+            return "mov eax, 0x2d; xor ebx, ebx; int 0x80; mov ebx, eax; add ebx, 0x1000; mov eax, 0x2d; int 0x80;"
         elif self.target.target_arch in ('mips', 'mipsel'):
             # n = brk 0
             # brk n + 0x1000
-            return "xor $a0, $a0, $a0; li $v0, 4045; syscall; add $a0, $v0, 0x1000; li $v0, 4045; syscall;"
+            return "xor $a0, $a0, $a0; li $v0, 0xfcd; syscall; add $a0, $v0, 0x1000; li $v0, 0xfcd; syscall;"
         else:
             raise NotImplementedError()
 
     def exit_shellcode(self, exit_code=42):
         if self.target.target_arch == 'x86_64':
-            return "mov rdi, %d; mov rax, 60; syscall;" % exit_code # exit(42)
+            return "mov rdi, %#x; mov rax, 0x3c; syscall;" % exit_code # exit(42)
         elif self.target.target_arch == 'i386':
-            return "mov ebx, %d; mov eax, 1; int 0x80;" % exit_code # exit(42)
+            return "mov ebx, %#x; mov eax, 1; int 0x80;" % exit_code # exit(42)
         elif self.target.target_arch in ('mips', 'mipsel'):
-            return "li $a0, %d; li $v0, 4001; syscall;" % exit_code  # exit(code)
+            return "li $a0, %#x; li $v0, 0xfa1; syscall;" % exit_code  # exit(code)
         else:
             raise NotImplementedError()
 
