@@ -9,7 +9,7 @@ def test_hook():
     with open("/bin/false", 'rb') as off:
         ofb = off.read()
     nfn = tempfile.mktemp()
-    nfb = archr.utils.hook_entry(ofb, "mov rax, 60; mov rdi, 42; syscall")
+    nfb = archr.utils.hook_entry(ofb, "mov rax, 0x3c; mov rdi, 0x2a; syscall")
     with open(nfn, 'wb') as nff:
         nff.write(nfb)
     os.chmod(nfn, 0o755)

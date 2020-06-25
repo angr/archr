@@ -15,7 +15,7 @@ class TestShellcodeHook(unittest.TestCase):
     def test_dockerfile_hook(self):
         with archr.targets.DockerImageTarget('archr-test:entrypoint-false').build().start() as t:
             assert t.run_command().wait() == 1
-            with t.shellcode_context(asm_code="mov rax, 60; mov rdi, 42; syscall") as p:
+            with t.shellcode_context(asm_code="mov rax, 0x3c; mov rdi, 0x2a; syscall") as p:
                 assert p.wait() == 42
             assert t.run_command().wait() == 1
 
@@ -25,7 +25,7 @@ class TestShellcodeHook(unittest.TestCase):
         shutil.copy("/bin/false", tf)
         with archr.targets.LocalTarget([tf]).build().start() as t:
             assert t.run_command().wait() == 1
-            with t.shellcode_context(asm_code="mov rax, 60; mov rdi, 42; syscall") as p:
+            with t.shellcode_context(asm_code="mov rax, 0x3c; mov rdi, 0x2a; syscall") as p:
                 assert p.wait() == 42
             assert t.run_command().wait() == 1
         os.unlink(tf)
