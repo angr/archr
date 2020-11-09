@@ -27,12 +27,12 @@ class angrUltimateTracerAnalyzer(Analyzer):
     Construct an angr project with ultimate tracer enabled. All syscalls will be out-sourced to an external syscall
     agent.
     """
-    def __init__(self, target, project_bow: 'angrProjectAnalyzer'):
+    def __init__(self, target, project_analyzer: 'angrProjectAnalyzer'):
         if angr is None or syscall_agent is None:
             raise ImportError("Failed to import angr or syscall_agent. Make sure angr and syscall_agent are installed.")
 
         super().__init__(target)
-        self.project_bow: 'angrProjectAnalyzer' = project_bow
+        self.project_analyzer: 'angrProjectAnalyzer' = project_analyzer
 
     def _invoke_syscall_agent(self, project: 'angr.Project') -> subprocess.Popen:
         """
@@ -47,15 +47,15 @@ class angrUltimateTracerAnalyzer(Analyzer):
         return proc
 
     def make_project(self):
-        if self.project_bow.project is not None:
-            return self.project_bow.project
+        if self.project_analyzer.project is not None:
+            return self.project_analyzer.project
 
         engine = angr.engines.UberEngineSyscallTracing
-        if self.project_bow.project is not None:
+        if self.project_analyzer.project is not None:
             _l.warning("An angr project was created. Destroying it.")
-            self.project_bow.project = None
+            self.project_analyzer.project = None
 
-        project = self.project_bow.fire(project_kwargs={
+        project = self.project_analyzer.fire(project_kwargs={
             'auto_load_libs': True,
             'engine': engine,
             'use_sim_procedures': False,

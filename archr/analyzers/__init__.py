@@ -9,7 +9,7 @@ class Analyzer:
 
     def __init__(self, target, arrow_bundle=None, arrow_binary=None):
         """
-        Initializes the bow.
+        Initializes the analyzer.
         :param Target target: the target to work on
         """
         self.target = target
@@ -32,14 +32,14 @@ class Analyzer:
 
     def fire(self, *args, **kwargs):
         """
-        Fire the bow at the target.
+        Fire the analyzer at the target.
         """
         raise NotImplementedError()
 
 
 class ContextAnalyzer(Analyzer):
     """
-    A Analyzer base class for bows that implement a fire_context instead of a fire.
+    A Analyzer base class for analyzers that implement a fire_context instead of a fire.
     Provides a default .fire() that replays a testcase.
     """
 
@@ -62,7 +62,7 @@ class ContextAnalyzer(Analyzer):
     @contextmanager
     def fire_context(self, *args, **kwargs):  # -> ContextManager[Flight]:
         """
-        A context manager for the bow. Should yield a Flight object.
+        A context manager for the analyzer. Should yield a Flight object.
         """
         with self.target.flight_context(*args, **kwargs) as flight:
             yield flight

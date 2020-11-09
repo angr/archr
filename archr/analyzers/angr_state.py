@@ -26,22 +26,22 @@ class angrStateAnalyzer(Analyzer):
     Constructs an angr state (full init variety) to match the target precisely
     """
 
-    def __init__(self, target, project_bow):
+    def __init__(self, target, project_analyzer):
         super(angrStateAnalyzer, self).__init__(target)
-        self.project_bow = project_bow
+        self.project_analyzer = project_analyzer
 
     def fire(self, **kwargs): #pylint:disable=arguments-differ
-        project = self.project_bow.fire()
+        project = self.project_analyzer.fire()
         if 'cwd' not in kwargs:
-            cwd = os.path.dirname(self.project_bow.target.target_path)
+            cwd = os.path.dirname(self.project_analyzer.target.target_path)
             kwargs['cwd'] = bytes(cwd, 'utf-8')
 
         concrete_fs = kwargs.pop('concrete_fs', True)
         chroot = kwargs.pop('chroot', '/ARCHR-INVALID')
-        stack_end = kwargs.pop('stack_end', self.project_bow._mem_mapping.get('[stack-end]', None))
+        stack_end = kwargs.pop('stack_end', self.project_analyzer._mem_mapping.get('[stack-end]', None))
         args = kwargs.pop('args', self.target.main_binary_args)
         env = kwargs.pop('env', self.target.target_env)
-        brk = kwargs.pop('brk', self.project_bow._mem_mapping.get('[heap]', None))
+        brk = kwargs.pop('brk', self.project_analyzer._mem_mapping.get('[heap]', None))
 
         s = project.factory.full_init_state(
             concrete_fs=concrete_fs,

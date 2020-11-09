@@ -13,18 +13,18 @@ class angrProjectAnalyzer(Analyzer):
     Constructs an angr project to match the target precisely
     """
 
-    def __init__(self, target, scout_bow, static_simproc=False):
+    def __init__(self, target, scout_analyzer, static_simproc=False):
         """
 
         :param target:          The target to work on.
-        :param scout_bow:       The scout bow.
+        :param scout_analyzer:      The scout analyzer.
         :param static_simproc:  When enabled, angr will hook functions in the main binary with SimProcedures if
                                 available. This is useful when dealing with statically linked binaries.
         :type static_simproc:   bool
         """
 
         super(angrProjectAnalyzer, self).__init__(target)
-        self.scout_bow = scout_bow
+        self.scout_analyzer = scout_analyzer
         self.static_simproc = static_simproc
 
         self.project = None
@@ -33,7 +33,7 @@ class angrProjectAnalyzer(Analyzer):
     def fire(self, return_loader=False, project_kwargs=None, **cle_args): #pylint:disable=arguments-differ
         if self.project is None:
             # TODO: this introduce file leak. However, we probably need some redesign to fix it
-            tmpdir = tempfile.mkdtemp(prefix="archr_angr_project_bow_")
+            tmpdir = tempfile.mkdtemp(prefix="archr_angr_project_analyzer")
             self.target.retrieve_into(self.target.target_path, tmpdir)
             the_binary = os.path.join(tmpdir, os.path.basename(self.target.target_path))
 
@@ -44,8 +44,8 @@ class angrProjectAnalyzer(Analyzer):
             preload_kwargs['auto_load_libs'] = False
             preloader = cle.Loader(the_binary, **preload_kwargs)
 
-            if self.scout_bow is not None:
-                _,_,_,self._mem_mapping = self.scout_bow.fire()
+            if self.scout_analyzer is not None:
+                _,_,_,self._mem_mapping = self.scout_analyzer.fire()
 
                 target_libs = [ lib for lib in self._mem_mapping if lib.startswith("/") ]
                 the_libs = [ ]
