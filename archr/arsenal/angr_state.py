@@ -36,11 +36,20 @@ class angrStateBow(Bow):
             cwd = os.path.dirname(self.project_bow.target.target_path)
             kwargs['cwd'] = bytes(cwd, 'utf-8')
 
+        concrete_fs = kwargs.pop('concrete_fs', True)
+        chroot = kwargs.pop('chroot', '/ARCHR-INVALID')
+        stack_end = kwargs.pop('stack_end', self.project_bow._mem_mapping.get('[stack-end]', None))
+        args = kwargs.pop('args', self.target.main_binary_args)
+        env = kwargs.pop('env', self.target.target_env)
+        brk = kwargs.pop('brk', self.project_bow._mem_mapping.get('[heap]', None))
+
         s = project.factory.full_init_state(
-            concrete_fs=True, chroot="/ARCHR-INVALID",
-            stack_end=self.project_bow._mem_mapping.get('[stack-end]', None), args=self.target.main_binary_args,
-            env=self.target.target_env,
-            brk=self.project_bow._mem_mapping.get('[heap]', None),
+            concrete_fs=concrete_fs,
+            chroot=chroot,
+            stack_end=stack_end,
+            args=args,
+            env=env,
+            brk=brk,
             **kwargs
         )
         s.fs.mount("/", SimArchrMount(self.target))
