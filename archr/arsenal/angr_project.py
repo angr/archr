@@ -30,7 +30,7 @@ class angrProjectBow(Bow):
         self.project = None
         self._mem_mapping = None
 
-    def fire(self, return_loader=False, **kwargs): #pylint:disable=arguments-differ
+    def fire(self, return_loader=False, project_kwargs=None, **cle_args): #pylint:disable=arguments-differ
         if self.project is None:
             # TODO: this introduce file leak. However, we probably need some redesign to fix it
             tmpdir = tempfile.mkdtemp(prefix="archr_angr_project_bow_")
@@ -38,7 +38,6 @@ class angrProjectBow(Bow):
             the_binary = os.path.join(tmpdir, os.path.basename(self.target.target_path))
 
             # preload the binary to decide if it supports setting library options or base addresses
-            cle_args = dict(kwargs)
             cle_args.update(cle_args.pop('load_options', {}))
             cle_args.pop('use_sim_procedures', None)  # TODO do something less hacky than this
             preload_kwargs = dict(cle_args)
@@ -63,8 +62,12 @@ class angrProjectBow(Bow):
                 self._mem_mapping = { }
 
             if return_loader:
-                return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **cle_args)
-            self.project = angr.Project(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **kwargs)
+                return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts,
+                                  **cle_args)
+            if project_kwargs is None:
+                project_kwargs = { }
+            self.project = angr.Project(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts,
+                                        **project_kwargs)
 
             if self.static_simproc:
                 self._apply_simprocedures()
