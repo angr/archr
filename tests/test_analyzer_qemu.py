@@ -15,13 +15,13 @@ class TestAnalyzerQemu(unittest.TestCase):
         build_container("vuln_stacksmash")
         build_container("shellcode_tester")
 
-    def test_arrow_injection_docker(self):
+    def test_implant_injection_docker(self):
         with archr.targets.DockerImageTarget('archr-test:crasher').build().start() as t:
             archr.analyzers.QEMUTracerAnalyzer(t)
             fire_path = os.path.join(t.tmpwd, "shellphish_qemu", "fire")
             assert t.retrieve_contents(fire_path).startswith(b"#!/bin/sh")
 
-    def test_arrow_injection_local(self):
+    def test_implant_injection_local(self):
         with archr.targets.LocalTarget([os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher")]).build().start() as t:
             archr.analyzers.QEMUTracerAnalyzer(t)
             fire_path = os.path.join(t.tmpwd, "shellphish_qemu", "fire")

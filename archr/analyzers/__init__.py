@@ -4,28 +4,28 @@ from contextlib import contextmanager
 #from typing import ContextManager
 
 class Analyzer:
-    REQUIRED_ARROW = None
+    REQUIRED_IMPLANT = None
     REQUIRED_BINARY = None
 
-    def __init__(self, target, arrow_bundle=None, arrow_binary=None):
+    def __init__(self, target, implant_bundle=None, implant_binary=None):
         """
         Initializes the analyzer.
         :param Target target: the target to work on
         """
         self.target = target
-        if arrow_bundle is not None:
-            self.REQUIRED_ARROW = arrow_bundle
-        if arrow_binary is not None:
-            self.REQUIRED_BINARY = arrow_binary
+        if implant_bundle is not None:
+            self.REQUIRED_IMPLANT = implant_bundle
+        if implant_binary is not None:
+            self.REQUIRED_BINARY = implant_binary
         self.nock()
 
     def nock(self):
         """
-        Prepare the arrow (inject it into the target).
+        Prepare the implant (inject it into the target).
         """
-        if self.REQUIRED_ARROW:
-            with implants.bundle(self.REQUIRED_ARROW) as b:
-                self.target.inject_path(b, os.path.join(self.target.tmpwd, self.REQUIRED_ARROW))
+        if self.REQUIRED_IMPLANT:
+            with implants.bundle(self.REQUIRED_IMPLANT) as b:
+                self.target.inject_path(b, os.path.join(self.target.tmpwd, self.REQUIRED_IMPLANT))
         if self.REQUIRED_BINARY:
             with implants.bundle_binary(self.REQUIRED_BINARY) as b:
                 self.target.inject_path(b, os.path.join(self.target.tmpwd, os.path.basename(self.REQUIRED_BINARY)))

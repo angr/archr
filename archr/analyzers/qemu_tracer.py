@@ -37,7 +37,7 @@ _trace_old_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
 _trace_new_re = re.compile(br'Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P<flags>.*)\].*')
 
 class QEMUTracerAnalyzer(ContextAnalyzer):
-    REQUIRED_ARROW = "shellphish_qemu"
+    REQUIRED_IMPLANT = "shellphish_qemu"
 
     def __init__(self, target, timeout=10, ld_linux=None, library_path=None, seed=None, **kwargs):
         super().__init__(target, **kwargs)
@@ -165,7 +165,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         """
 
         #
-        # First, the arrow invocation
+        # First, the implant invocation
         #
 
         qemu_variant = self.qemu_variant(self.target.target_os, self.target.target_arch, trace_filename is not None)

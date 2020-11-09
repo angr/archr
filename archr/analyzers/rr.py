@@ -63,7 +63,7 @@ class RRTraceResult:
 
 
 class RRAnalyzer(ContextAnalyzer):
-    REQUIRED_ARROW = "rr"
+    REQUIRED_IMPLANT = "rr"
     REMOTE_TRACE_DIR_PREFIX = "/tmp/rr_trace_"
 
     def __init__(self, target, timeout=10, local_trace_dir=None, symbolic_fd=None):
@@ -105,7 +105,7 @@ class RRAnalyzer(ContextAnalyzer):
         """
 
         #
-        # First, the arrow invocation
+        # First, the implant invocation
         #
         fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
         cmd_args = [fire_path] + options

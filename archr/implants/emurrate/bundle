@@ -5,8 +5,8 @@ BUNDLE_DIR=$1
 
 QEMU_BINS=(qemu-x86_64 qemu-mips qemu-i386)
 
-ARROW_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd $ARROW_DIR
+IMPLANT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd $IMPLANT_DIR
 
 REBUILD=0
 [ ! -e qemu ] && git clone --depth=1 git@github.com:Lukas-Dresel/qemu && REBUILD=1

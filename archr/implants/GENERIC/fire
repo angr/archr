@@ -4,4 +4,4 @@ ulimit -c unlimited
 ulimit -f unlimited
 
 OUR_DIR=$(dirname $0)
-exec $OUR_DIR/ld-linux-* --library-path $OUR_DIR $OUR_DIR/ARROW_NAME "$@"
+exec $OUR_DIR/ld-linux-* --library-path $OUR_DIR $OUR_DIR/IMPLANT_NAME "$@"

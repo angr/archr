@@ -15,7 +15,7 @@ class DataScoutAnalyzer(Analyzer):
     Grabs the environment and auxiliary vector from the target.
     """
 
-    REQUIRED_ARROW = "shellphish_qemu"
+    REQUIRED_IMPLANT = "shellphish_qemu"
 
     def _encode_bytes(self, s):
 

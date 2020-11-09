@@ -13,7 +13,7 @@ class LTraceAnalyzer(ContextAnalyzer):
     Returns an ltrace instance which has launched a fresh instance of the process
     """
 
-    REQUIRED_ARROW = "ltrace"
+    REQUIRED_IMPLANT = "ltrace"
 
     @contextmanager
     def fire_context(self, args_prefix=None, trace_args=None, **kwargs):
@@ -35,7 +35,7 @@ class LTraceAttachAnalyzer(ContextAnalyzer):
     Returns an ltrace instance attached to a running instance of the target.
     """
 
-    REQUIRED_ARROW = "ltrace"
+    REQUIRED_IMPLANT = "ltrace"
 
     @contextmanager
     def fire_context(self, pid=None, trace_args=None, **kwargs):

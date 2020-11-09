@@ -32,7 +32,7 @@ class GDBResult:
 
 
 class GDBAnalyzer(ContextAnalyzer):
-    REQUIRED_ARROW = "gdb"
+    REQUIRED_IMPLANT = "gdb"
 
     def __init__(self, target, local_trace_dir=None, timeout=10):
         super().__init__(target)

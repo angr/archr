@@ -10,7 +10,7 @@ class GDBServerAnalyzer(ContextAnalyzer):
     Launches a gdb server.
     """
 
-    REQUIRED_ARROW = "gdbserver"
+    REQUIRED_IMPLANT = "gdbserver"
 
     def fire_context(self, port=31337, aslr=False, **kwargs):
         fire_path = os.path.join(self.target.tmpwd, "gdbserver", "fire")
