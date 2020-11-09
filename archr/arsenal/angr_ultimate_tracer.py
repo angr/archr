@@ -43,7 +43,7 @@ class angrUltimateTracerBow(Bow):
             raise RuntimeError("Cannot find a syscall agent for project %r (architecture %s)" % (project,
                                                                                                  project.arch.name))
         project.bureau.start()  # get it ready to receive connections
-        proc = agent.launch("tcp://127.0.0.1:5555")  # launch the agent process
+        proc = agent.launch("tcp://127.0.0.1:%d" % project.bureau.zmq_port)  # launch the agent process
         return proc
 
     def make_project(self):
