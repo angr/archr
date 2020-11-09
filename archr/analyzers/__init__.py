@@ -83,3 +83,20 @@ from .input_fd import InputFDAnalyzer
 from .rr import RRTracerAnalyzer, RRReplayAnalyzer
 from .gdb import GDBAnalyzer
 from .. import implants
+
+# backwards compatibility
+angrProjectBow = angrProjectAnalyzer
+angrStateBow = angrStateAnalyzer
+angrUltimateTracerBow = angrUltimateTracerAnalyzer
+QEMUTracerBow = QEMUTracerAnalyzer
+DataScoutBow = DataScoutAnalyzer
+GDBServerBow = GDBServerAnalyzer
+CoreBow = CoreAnalyzer
+LTraceBow = LTraceAnalyzer
+LTraceAttachBow = LTraceAttachAnalyzer
+STraceBow = STraceAnalyzer
+STraceAttachBow = STraceAttachAnalyzer
+InputFDBow = InputFDAnalyzer
+RRTracerBow = RRTracerAnalyzer
+RRReplayBow = RRReplayAnalyzer
+GDBBow = GDBAnalyzer
