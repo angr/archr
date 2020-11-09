@@ -12,7 +12,7 @@ class TestangrAnalyzer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         build_container("entrypoint-env")
-        # build_container("cat-flag")
+        build_container("cat-flag")
 
     def angr_checks(self, t):
         dsb = archr.analyzers.DataScoutAnalyzer(t)
@@ -46,7 +46,6 @@ class TestangrAnalyzer(unittest.TestCase):
             self.angr_checks(t)
         os.unlink(tf)
 
-    @unittest.skip("missing docker image")
     @unittest.skipUnless(archr._angr_available, "angr required")
     def test_angr_catflag(self):
         with archr.targets.DockerImageTarget('archr-test:cat-flag').build().start() as t:

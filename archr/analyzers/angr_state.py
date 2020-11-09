@@ -21,13 +21,53 @@ class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
         content = self.target.retrieve_contents(guest_path)
         return angr.SimFile(name='file://' + guest_path, content=content, size=len(content))
 
+    def _load_file(self, guest_path):
+        content = self.target.retrieve_contents(guest_path)
+        return angr.SimFile(name='file://' + guest_path, content=content, size=len(content))
+
+    def _get_stat(self, guest_path):
+        stat_output = self.target.run_command([
+            "stat", "-c", "%n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o %B",
+            guest_path.replace("file://", "")
+        ]).communicate()[0]
+        # %n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o %C
+        (
+            _, # %n file name
+            st_size, # %s total size, in bytes
+            st_blocks, # %b number of blocks allocated (see %B)
+            st_mode, # %f raw mode in hex
+            st_uid, # %u     user ID of owner
+            st_gid, # %g     group ID of owner
+            st_dev, # %D     device number in hex
+            st_ino, # %i     inode number
+            st_nlink, # %h number of hard links
+            _, # %t major device type in hex, for character/block device special files
+            _, # %T minor device type in hex, for character/block device special files
+            st_atime, # %X time of last access, seconds since Epoch
+            st_mtime, # %Y time of last data modification, seconds since Epoch
+            st_ctime, # %Z time of last status change, seconds since Epoch
+            _, # %W time of file birth, seconds since Epoch; 0 if unknown
+            _, # %o optimal I/O transfer size hint
+            st_blksize, # %B block size
+        ) = stat_output.split()
+        st_mtime_ns = st_mtime * 1000000
+        st_atime_ns = st_atime * 1000000
+        st_ctime_ns = st_ctime * 1000000
+        WRONG_rdev = 0 # TODO: build from major and minor: https://code.woboq.org/qt5/include/bits/sysmacros.h.html
+        st = angr.state_plugins.filesystem.Stat(
+            st_dev, st_ino, st_nlink, st_mode, st_uid, st_gid,
+            WRONG_rdev, st_size, st_blksize, st_blocks,
+            st_atime, st_atime_ns, st_mtime, st_mtime_ns, st_ctime, st_ctime_ns
+        )
+        return st
+
 class angrStateAnalyzer(Analyzer):
     """
     Constructs an angr state (full init variety) to match the target precisely
     """
 
     def __init__(self, target, project_analyzer):
-        super(angrStateAnalyzer, self).__init__(target)
+        super().__init__(target)
         self.project_analyzer = project_analyzer
 
     def fire(self, **kwargs): #pylint:disable=arguments-differ
