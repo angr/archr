@@ -72,6 +72,7 @@ from .. import _angr_available
 if _angr_available:
     from .angr_project import angrProjectBow
     from .angr_state import angrStateBow
+    from .angr_ultimate_tracer import angrUltimateTracerBow
 from .qemu_tracer import QEMUTracerBow
 from .datascout import DataScoutBow
 from .gdbserver import GDBServerBow
