@@ -12,12 +12,12 @@ class TestBowInputFd(unittest.TestCase):
 
     def test_id_network(self):
         with archr.targets.DockerImageTarget('archr-test:socat-echo').build().start() as t:
-            fd = archr.arsenal.InputFDBow(t).fire()
+            fd = archr.analyzers.InputFDBow(t).fire()
             assert fd == 8
 
     def test_id_network_local(self):
         with archr.targets.LocalTarget("socat PIPE tcp-l:4817,reuseaddr".split(), tcp_ports=[4817]).build().start() as t:
-            fd = archr.arsenal.InputFDBow(t).fire()
+            fd = archr.analyzers.InputFDBow(t).fire()
             assert fd == 8
 
 

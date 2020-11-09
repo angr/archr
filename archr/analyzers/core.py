@@ -3,7 +3,7 @@ import tempfile
 import logging
 import os
 
-l = logging.getLogger("archr.arsenal.core_bow")
+l = logging.getLogger("archr.analyzers.core_bow")
 
 from . import ContextBow
 

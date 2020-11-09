@@ -10,7 +10,7 @@ import os
 import re
 import time
 
-l = logging.getLogger("archr.arsenal.rr_tracer")
+l = logging.getLogger("archr.analyzers.rr_tracer")
 
 
 try:

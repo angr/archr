@@ -1,6 +1,6 @@
 import logging
 
-l = logging.getLogger("archr.arsenal.datascout")
+l = logging.getLogger("archr.analyzers.datascout")
 
 from ..errors import ArchrError
 from . import Bow

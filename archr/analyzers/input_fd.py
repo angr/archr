@@ -1,7 +1,7 @@
 import logging
 import time
 
-l = logging.getLogger("archr.arsenal.input_fd")
+l = logging.getLogger("archr.analyzers.input_fd")
 
 from . import Bow
 

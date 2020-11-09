@@ -17,7 +17,7 @@ class TestSync(unittest.TestCase):
         return { w.split(b":")[0]: int(w.split(b":")[1], 16) for w in s.splitlines() }
 
     def do_gdb(self, t):
-        with archr.arsenal.GDBServerBow(t).fire_context(port=31337) as gbf:
+        with archr.analyzers.GDBServerBow(t).fire_context(port=31337) as gbf:
             gc = pygdbmi.gdbcontroller.GdbController()
             gc.write("target remote %s:%d" % (t.ipv4_address, 31337))
             gc.write("continue")
@@ -25,7 +25,7 @@ class TestSync(unittest.TestCase):
             return gbf.process
 
     def do_qemu(self, t):
-        with archr.arsenal.QEMUTracerBow(t).fire_context() as qbf:
+        with archr.analyzers.QEMUTracerBow(t).fire_context() as qbf:
             return qbf.process
 
     @unittest.skip("broken")
@@ -53,9 +53,9 @@ class TestSync(unittest.TestCase):
         assert qemu_dct[b'STACK'] - qemu_dct[b'ENVP'] == reference_dct[b'STACK'] - reference_dct[b'ENVP']
 
         # COMMENTED OUT PENDING LIBC INIT OFFSETS
-        #dsb = archr.arsenal.DataScoutBow(t)
-        #apb = archr.arsenal.angrProjectBow(t, dsb)
-        #asb = archr.arsenal.angrStateBow(t, apb)
+        #dsb = archr.analyzers.DataScoutBow(t)
+        #apb = archr.analyzers.angrProjectBow(t, dsb)
+        #asb = archr.analyzers.angrStateBow(t, apb)
         #project = apb.fire(use_sim_procedures=False)
         #state = asb.fire(add_options={angr.sim_options.STRICT_PAGE_ACCESS}) # for now
         #simgr = project.factory.simulation_manager(state)
@@ -87,9 +87,9 @@ class TestSync(unittest.TestCase):
         t = archr.targets.DockerImageTarget('archr-test:stackprinter64').build().start()
         reference_str = t.run_command(aslr=False).stdout.read()
 
-        dsb = archr.arsenal.DataScoutBow(t)
-        apb = archr.arsenal.angrProjectBow(t, dsb)
-        asb = archr.arsenal.angrStateBow(t, apb)
+        dsb = archr.analyzers.DataScoutBow(t)
+        apb = archr.analyzers.angrProjectBow(t, dsb)
+        asb = archr.analyzers.angrStateBow(t, apb)
         project = apb.fire(use_sim_procedures=False)
         state = asb.fire(add_options={angr.sim_options.STRICT_PAGE_ACCESS}) # for now
         simgr = project.factory.simulation_manager(state)

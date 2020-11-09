@@ -9,7 +9,7 @@ import re
 import os
 
 
-l = logging.getLogger("archr.arsenal.qemu_tracer")
+l = logging.getLogger("archr.analyzers.qemu_tracer")
 
 from . import ContextBow
 from .. import _angr_available

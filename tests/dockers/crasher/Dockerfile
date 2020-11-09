@@ -1,3 +1,3 @@
-from ubuntu:bionic
+from ubuntu:focal
 copy crasher /
 entrypoint [ "/crasher" ]

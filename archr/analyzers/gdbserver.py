@@ -1,7 +1,7 @@
 import os
 import logging
 
-l = logging.getLogger("archr.arsenal.memory_map")
+l = logging.getLogger("archr.analyzers.memory_map")
 
 from . import ContextBow
 

@@ -9,10 +9,10 @@ class TestangrTracing(unittest.TestCase):
     @unittest.skipUnless(archr._angr_available, "angr required")
     def test_angr_tracing(self):
         target = archr.targets.LocalTarget(os.path.join(test_location, '../../binaries/tests/x86_64/true'))
-        dsb = archr.arsenal.DataScoutBow(target)
-        apb = archr.arsenal.angrProjectBow(target, dsb)
-        asb = archr.arsenal.angrStateBow(target, apb)
-        qtb = archr.arsenal.QEMUTracerBow(target)
+        dsb = archr.analyzers.DataScoutBow(target)
+        apb = archr.analyzers.angrProjectBow(target, dsb)
+        asb = archr.analyzers.angrStateBow(target, apb)
+        qtb = archr.analyzers.QEMUTracerBow(target)
 
         trace = qtb.fire()
         p = apb.fire()

@@ -16,7 +16,7 @@ setup(
     python_requires='>=3.5',
     packages=packages,
     package_data = {
-        'archr': ['arrows/*.sh', 'arrows/*/*']
+        'archr': ['implants/*.sh', 'implants/*/*']
     },
     install_requires=[
         'shellphish_qemu',

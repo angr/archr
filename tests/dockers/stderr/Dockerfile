@@ -1,2 +1,2 @@
-from ubuntu:bionic
+from ubuntu:focal
 cmd echo stderr 1>&2

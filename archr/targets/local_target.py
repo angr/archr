@@ -146,4 +146,4 @@ class LocalTarget(Target):
         )
 
 
-from ..arsenal import QEMUTracerBow
+from ..analyzers import QEMUTracerBow

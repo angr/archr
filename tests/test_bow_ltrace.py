@@ -17,14 +17,14 @@ class TestBowLtrace(unittest.TestCase):
         build_container("cat")
 
     def ltrace_proc(self, t, **kwargs):
-        b = archr.arsenal.LTraceBow(t)
+        b = archr.analyzers.LTraceBow(t)
         with b.fire_context(trace_args=LTRACE_ARGS, **kwargs) as flight:
             sleep(1)
             flight.process.terminate()
         return flight.result
 
     def ltrace_attach(self, t, p, **kwargs):
-        b = archr.arsenal.LTraceAttachBow(t)
+        b = archr.analyzers.LTraceAttachBow(t)
         pid = p.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')
         with b.fire_context(pid=pid, trace_args=LTRACE_ARGS, **kwargs) as flight:
             sleep(0.1)

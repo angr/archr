@@ -1,4 +1,4 @@
-from ubuntu:bionic
+from ubuntu:focal
 
 RUN apt-get update -y && apt-get install -y socat
 

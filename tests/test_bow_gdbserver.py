@@ -12,7 +12,7 @@ class TestGdbServer(unittest.TestCase):
         build_container("entrypoint-env")
 
     def gdb_do(self, t):
-        with archr.arsenal.GDBServerBow(t).fire_context(port=31337) as gbf:
+        with archr.analyzers.GDBServerBow(t).fire_context(port=31337) as gbf:
             gc = pygdbmi.gdbcontroller.GdbController()
             gc.write("target remote %s:%d" % (t.ipv4_address, 31337))
             gc.write("continue")

@@ -15,7 +15,7 @@ class TestShellcode(unittest.TestCase):
         build_container("vuln_stacksmash")
 
     def shellcode_checks(self, t):
-        b = archr.arsenal.DataScoutBow(t)
+        b = archr.analyzers.DataScoutBow(t)
         with t.shellcode_context(asm_code=b.exit_shellcode(exit_code=123)) as p:
             stdout,_ = p.communicate()
             assert p.wait() == 123
@@ -47,24 +47,24 @@ class TestDatascout(unittest.TestCase):
         build_container("entrypoint-env")
 
     def datascout_checks(self, t):
-        b = archr.arsenal.DataScoutBow(t)
+        b = archr.analyzers.DataScoutBow(t)
         argv, env, aux, maps = b.fire()
 
         assert argv == [ a.encode('utf-8') for a in t.target_args ]
         assert b"ARCHR=YES" in env
-        assert maps['/lib/x86_64-linux-gnu/ld-2.27.so'] in struct.unpack("<%dQ"%(len(aux)/8), aux)
+        assert maps['/usr/lib/x86_64-linux-gnu/ld-2.31.so'] in struct.unpack("<%dQ"%(len(aux)/8), aux)
         return argv, env, aux, maps
 
     def test_datascout(self):
         with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
             _,_,_,maps = self.datascout_checks(t)
             docker_ref = {
-                '/lib/x86_64-linux-gnu/libc-2.27.so': 0x7ffff79e4000,
-                '/lib/x86_64-linux-gnu/ld-2.27.so': 0x7ffff7dd5000,
+                '/usr/lib/x86_64-linux-gnu/libc-2.31.so': 0x7ffff7dd5000,
+                '/usr/lib/x86_64-linux-gnu/ld-2.31.so': 0x7ffff7fcf000,
                 '[stack-end]': 0x7ffffffff000,
-                '[heap]': 0x55555575d000,
-                '[vvar]': 0x7ffff7ff8000,
-                '[vdso]': 0x7ffff7ffb000,
+                '[heap]': 0x555555560000,
+                '[vvar]': 0x7ffff7fcb000,
+                '[vdso]': 0x7ffff7fce000,
                 '[vsyscall]': 0xffffffffff600000
             }
             assert all(maps[x] == docker_ref[x] for x in docker_ref)
@@ -76,14 +76,16 @@ class TestDatascout(unittest.TestCase):
         with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build().start() as t:
             _,_,_,maps = self.datascout_checks(t)
             local_ref = {
-                '/lib/x86_64-linux-gnu/libc-2.27.so': 0x7ffff79e4000,
-                '/lib/x86_64-linux-gnu/ld-2.27.so': 0x7ffff7dd5000,
+                '/usr/lib/x86_64-linux-gnu/libc-2.31.so': 0x7ffff7db9000,
+                '/usr/lib/x86_64-linux-gnu/ld-2.31.so': 0x7ffff7fcf000,
                 '[stack-end]': 0x7ffffffff000,
-                '[heap]': 0x55555575d000,
-                '[vvar]': 0x7ffff7ff8000,
-                '[vdso]': 0x7ffff7ffb000,
+                '[heap]': 0x555555560000,
+                '[vvar]': 0x7ffff7fcb000,
+                '[vdso]': 0x7ffff7fce000,
                 '[vsyscall]': 0xffffffffff600000
             }
+            print([("GOT:", k, hex(v)) for k,v in maps.items()])
+            print([("REF:", k, hex(v)) for k,v in local_ref.items()])
             assert all(maps[x] == local_ref[x] for x in local_ref)
 
         os.unlink(tf)
@@ -96,11 +98,11 @@ class TestStackSmash(unittest.TestCase):
     # 32-bit vuln_stacksmash
     def test_stacksmash(self):
         with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build().start() as t:
-            b = archr.arsenal.DataScoutBow(t)
+            b = archr.analyzers.DataScoutBow(t)
             argv, env, aux, maps = b.fire()
 
             assert b"PWD=/" in env
-            assert maps['/lib/i386-linux-gnu/ld-2.27.so'] in struct.unpack("<%dI"%(len(aux)/4), aux)
+            assert maps['/usr/lib/i386-linux-gnu/ld-2.31.so'] in struct.unpack("<%dI"%(len(aux)/4), aux)
             assert '[stack-end]' in maps
             assert '[heap]' in maps
             assert '[vvar]' in maps

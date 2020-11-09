@@ -24,10 +24,10 @@ class Bow:
         Prepare the arrow (inject it into the target).
         """
         if self.REQUIRED_ARROW:
-            with arrows.bundle(self.REQUIRED_ARROW) as b:
+            with implants.bundle(self.REQUIRED_ARROW) as b:
                 self.target.inject_path(b, os.path.join(self.target.tmpwd, self.REQUIRED_ARROW))
         if self.REQUIRED_BINARY:
-            with arrows.bundle_binary(self.REQUIRED_BINARY) as b:
+            with implants.bundle_binary(self.REQUIRED_BINARY) as b:
                 self.target.inject_path(b, os.path.join(self.target.tmpwd, os.path.basename(self.REQUIRED_BINARY)))
 
     def fire(self, *args, **kwargs):
@@ -82,4 +82,4 @@ from .strace import STraceBow, STraceAttachBow
 from .input_fd import InputFDBow
 from .rr import RRTracerBow, RRReplayBow
 from .gdb import GDBBow
-from .. import arrows
+from .. import implants

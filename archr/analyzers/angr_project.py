@@ -4,7 +4,7 @@ import angr
 import cle
 import os
 
-l = logging.getLogger("archr.arsenal.angr")
+l = logging.getLogger("archr.analyzers.angr")
 
 from . import Bow
 

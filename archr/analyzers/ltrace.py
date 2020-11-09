@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from . import ContextBow
 from .strace import super_yama
 
-l = logging.getLogger("archr.arsenal.ltrace")
+l = logging.getLogger("archr.analyzers.ltrace")
 
 
 class LTraceBow(ContextBow):

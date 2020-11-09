@@ -9,7 +9,7 @@ import shutil
 import os
 import time
 
-l = logging.getLogger("archr.arsenal.gdb")
+l = logging.getLogger("archr.analyzers.gdb")
 
 class FakeTempdir:
     def __init__(self, path):

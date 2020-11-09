@@ -16,7 +16,7 @@ class TestBowStrace(unittest.TestCase):
         build_container("socat")
 
     def check_strace_proc(self, t, **kwargs):
-        b = archr.arsenal.STraceBow(t)
+        b = archr.analyzers.STraceBow(t)
         trace = b.fire(args_suffix=["/etc/passwd"], trace_args=STRACE_ARGS, **kwargs).splitlines()
         assert any(b'open' in t and b'passwd' in t for t in trace)
         assert any(b'read' in t and b'root' in t for t in trace)
@@ -24,7 +24,7 @@ class TestBowStrace(unittest.TestCase):
 
     def check_strace_attach(self, t, **kwargs):
         target = t.run_command() # start target
-        b = archr.arsenal.STraceAttachBow(t)
+        b = archr.analyzers.STraceAttachBow(t)
         pid = target.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')
         with b.fire_context(pid=pid, trace_args=STRACE_ARGS, **kwargs) as flight:
             sleep(2)

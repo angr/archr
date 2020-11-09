@@ -4,7 +4,7 @@ import os
 
 from . import ContextBow
 
-l = logging.getLogger("archr.arsenal.strace")
+l = logging.getLogger("archr.analyzers.strace")
 
 def super_yama():
     with open("/proc/sys/kernel/yama/ptrace_scope", 'rb') as c:

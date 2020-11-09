@@ -1,2 +1,2 @@
-from ubuntu:bionic
+from ubuntu:focal
 entrypoint /usr/bin/env YEAH
