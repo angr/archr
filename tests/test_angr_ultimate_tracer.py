@@ -7,7 +7,7 @@ test_location = os.path.dirname(os.path.realpath(__file__))
 
 
 class TestangrUltimateTracer(unittest.TestCase):
-    @unittest.skipUnless(archr._angr_available, "angr required")
+    @unittest.skip("for now")#Unless(archr._angr_available, "angr required")
     def test_dir_x86_64(self):
         target = archr.targets.LocalTarget(os.path.join(test_location, '../../binaries/tests/x86_64/dir_gcc_-O0'))
         dsb = archr.arsenal.DataScoutAnalyzer(target)
