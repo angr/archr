@@ -9,6 +9,10 @@ except ImportError:
 	_angr_available = False
 
 from . import targets
-from . import arrows
+from . import implants
 from . import utils
-from . import arsenal
+from . import analyzers
+
+# backwards compatibility
+arrows = implants
+arsenal = analyzers
