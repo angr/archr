@@ -2,7 +2,7 @@ import contextlib
 import logging
 import os
 
-from . import ContextBow
+from . import ContextAnalyzer
 
 l = logging.getLogger("archr.analyzers.strace")
 
@@ -14,7 +14,7 @@ def super_yama():
 
 _super_yama_cmd = "echo 0 | docker run --rm --privileged -i ubuntu tee /proc/sys/kernel/yama/ptrace_scope"
 
-class STraceBow(ContextBow):
+class STraceAnalyzer(ContextAnalyzer):
     """
     Launches a process under strace
     """
@@ -40,7 +40,7 @@ class STraceBow(ContextBow):
             flight.result = b''
 
 
-class STraceAttachBow(ContextBow):
+class STraceAttachAnalyzer(ContextAnalyzer):
     """
     Attaches to a process with strace
     """

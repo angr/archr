@@ -14,8 +14,8 @@ class Flight:
     A flight is a running process in a running target.
     The process may be remote (i.e. was not launched by us), in which case the actual process attribute is None.
 
-    A Flight is generally the result of ContextBow.fire_context.
-    It has a result field, which is normally returned from ContexBow.fire.
+    A Flight is generally the result of ContextAnalyzer.fire_context.
+    It has a result field, which is normally returned from ContexAnalyzer.fire.
     """
     def __init__(self, target, process, result=None):
         self.target = target

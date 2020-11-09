@@ -2,13 +2,13 @@ import os
 import logging
 from contextlib import contextmanager
 
-from . import ContextBow
+from . import ContextAnalyzer
 from .strace import super_yama
 
 l = logging.getLogger("archr.analyzers.ltrace")
 
 
-class LTraceBow(ContextBow):
+class LTraceAnalyzer(ContextAnalyzer):
     """
     Returns an ltrace instance which has launched a fresh instance of the process
     """
@@ -30,7 +30,7 @@ class LTraceBow(ContextBow):
         flight.result = flight.process.stderr.read() # illegal, technically
 
 
-class LTraceAttachBow(ContextBow):
+class LTraceAttachAnalyzer(ContextAnalyzer):
     """
     Returns an ltrace instance attached to a running instance of the target.
     """

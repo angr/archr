@@ -3,9 +3,9 @@ import logging
 
 l = logging.getLogger("archr.analyzers.memory_map")
 
-from . import ContextBow
+from . import ContextAnalyzer
 
-class GDBServerBow(ContextBow):
+class GDBServerAnalyzer(ContextAnalyzer):
     """
     Launches a gdb server.
     """

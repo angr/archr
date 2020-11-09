@@ -3,16 +3,16 @@ import os
 import unittest
 
 
-class TestBowRR(unittest.TestCase):
+class TestAnalyzerRR(unittest.TestCase):
     def get_miniupnpd_trace(self,t):
         crash = b"A" * 272
-        b = archr.analyzers.RRTracerBow(t)
+        b = archr.analyzers.RRTracerAnalyzer(t)
         res = b.fire(testcase=crash)
         print("Done! You can find your trace in {} (timed out?: {})".format(res.trace_dir.name, res.timed_out))
 
     def get_ls_trace(self,t):
         crash = b"A" * 272
-        b = archr.analyzers.RRTracerBow(t)
+        b = archr.analyzers.RRTracerAnalyzer(t)
         res = b.fire(testcase=crash)
         print("Done! You can find your trace in {} (timed out?: {})".format(res.trace_dir.name, res.timed_out))
 
@@ -24,7 +24,7 @@ class TestBowRR(unittest.TestCase):
 
     @unittest.skipUnless(archr.analyzers.rr.trraces, "trraces required")
     def test_ls(self):
-        with archr.targets.DockerImageTarget('phate/archr_rr', pull=True).build().start(name='test_rr_bow') as t:
+        with archr.targets.DockerImageTarget('phate/archr_rr', pull=True).build().start(name='test_rr_analyzer') as t:
             get_ls_trace(t)
 
 

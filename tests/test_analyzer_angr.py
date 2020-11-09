@@ -8,16 +8,16 @@ import unittest
 from common import build_container
 
 
-class TestangrBow(unittest.TestCase):
+class TestangrAnalyzer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         build_container("entrypoint-env")
         # build_container("cat-flag")
 
     def angr_checks(self, t):
-        dsb = archr.analyzers.DataScoutBow(t)
-        apb = archr.analyzers.angrProjectBow(t, dsb)
-        asb = archr.analyzers.angrStateBow(t, apb)
+        dsb = archr.analyzers.DataScoutAnalyzer(t)
+        apb = archr.analyzers.angrProjectAnalyzer(t, dsb)
+        asb = archr.analyzers.angrStateAnalyzer(t, apb)
         project = apb.fire()
         assert all(obj.binary.startswith("/tmp") for obj in project.loader.all_elf_objects[1:])
         state = asb.fire()
@@ -50,9 +50,9 @@ class TestangrBow(unittest.TestCase):
     @unittest.skipUnless(archr._angr_available, "angr required")
     def test_angr_catflag(self):
         with archr.targets.DockerImageTarget('archr-test:cat-flag').build().start() as t:
-            dsb = archr.analyzers.DataScoutBow(t)
-            apb = archr.analyzers.angrProjectBow(t, dsb)
-            asb = archr.analyzers.angrStateBow(t, apb)
+            dsb = archr.analyzers.DataScoutAnalyzer(t)
+            apb = archr.analyzers.angrProjectAnalyzer(t, dsb)
+            asb = archr.analyzers.angrStateAnalyzer(t, apb)
             project = apb.fire()
             state = asb.fire()
             simgr = project.factory.simulation_manager(state)

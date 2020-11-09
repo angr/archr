@@ -5,14 +5,14 @@ import os
 
 l = logging.getLogger("archr.analyzers.core_bow")
 
-from . import ContextBow
+from . import ContextAnalyzer
 
 class CoreResults:
     local_core_path = None
     target_core_path = None
 
 _super_core_cmd = "echo core | docker run --rm --privileged -i ubuntu tee /proc/sys/kernel/core_pattern"
-class CoreBow(ContextBow):
+class CoreAnalyzer(ContextAnalyzer):
     """
     Runs the target and retrieves a core file. Assumes a /proc/sys/kernel/core_pattern is "core".
     """
@@ -24,7 +24,7 @@ class CoreBow(ContextBow):
                 os.system(_super_core_cmd)
         super().__init__(*args, **kwargs)
         if type(self.target) is not targets.DockerImageTarget:
-            l.warning("When using a LocalTarget, this Bow will chmod 777 your CWD!!! Be careful.")
+            l.warning("When using a LocalTarget, this Analyzer will chmod 777 your CWD!!! Be careful.")
 
     @contextlib.contextmanager
     def fire_context(self, **kwargs): #pylint:disable=arguments-differ

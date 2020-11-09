@@ -10,10 +10,10 @@ class TestangrUltimateTracer(unittest.TestCase):
     @unittest.skipUnless(archr._angr_available, "angr required")
     def test_dir_x86_64(self):
         target = archr.targets.LocalTarget(os.path.join(test_location, '../../binaries/tests/x86_64/dir_gcc_-O0'))
-        dsb = archr.arsenal.DataScoutBow(target)
-        apb = archr.arsenal.angrProjectBow(target, dsb)
-        asb = archr.arsenal.angrStateBow(target, apb)
-        utb = archr.arsenal.angrUltimateTracerBow(target, apb)
+        dsb = archr.arsenal.DataScoutAnalyzer(target)
+        apb = archr.arsenal.angrProjectAnalyzer(target, dsb)
+        asb = archr.arsenal.angrStateAnalyzer(target, apb)
+        utb = archr.arsenal.angrUltimateTracerAnalyzer(target, apb)
 
         import angr
         logging.getLogger("angr.bureau.bureau").setLevel(logging.DEBUG)

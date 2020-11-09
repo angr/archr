@@ -1,5 +1,5 @@
 from ..errors import ArchrError
-from . import ContextBow
+from . import ContextAnalyzer
 import contextlib
 import subprocess
 import tempfile
@@ -31,7 +31,7 @@ class GDBResult:
             self.trace_dir = FakeTempdir(trace_dir)
 
 
-class GDBBow(ContextBow):
+class GDBAnalyzer(ContextAnalyzer):
     REQUIRED_ARROW = "gdb"
 
     def __init__(self, target, local_trace_dir=None, timeout=10):

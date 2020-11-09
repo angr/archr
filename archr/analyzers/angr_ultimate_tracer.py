@@ -13,26 +13,26 @@ except ImportError:
     syscall_agent = None
 
 
-from . import Bow
+from . import Analyzer
 
 if TYPE_CHECKING:
-    from .angr_project import angrProjectBow
+    from .angr_project import angrProjectAnalyzer
 
 
 _l = logging.getLogger(__name__)
 
 
-class angrUltimateTracerBow(Bow):
+class angrUltimateTracerAnalyzer(Analyzer):
     """
     Construct an angr project with ultimate tracer enabled. All syscalls will be out-sourced to an external syscall
     agent.
     """
-    def __init__(self, target, project_bow: 'angrProjectBow'):
+    def __init__(self, target, project_bow: 'angrProjectAnalyzer'):
         if angr is None or syscall_agent is None:
             raise ImportError("Failed to import angr or syscall_agent. Make sure angr and syscall_agent are installed.")
 
         super().__init__(target)
-        self.project_bow: 'angrProjectBow' = project_bow
+        self.project_bow: 'angrProjectAnalyzer' = project_bow
 
     def _invoke_syscall_agent(self, project: 'angr.Project') -> subprocess.Popen:
         """

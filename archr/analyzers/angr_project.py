@@ -6,9 +6,9 @@ import os
 
 l = logging.getLogger("archr.analyzers.angr")
 
-from . import Bow
+from . import Analyzer
 
-class angrProjectBow(Bow):
+class angrProjectAnalyzer(Analyzer):
     """
     Constructs an angr project to match the target precisely
     """
@@ -23,7 +23,7 @@ class angrProjectBow(Bow):
         :type static_simproc:   bool
         """
 
-        super(angrProjectBow, self).__init__(target)
+        super(angrProjectAnalyzer, self).__init__(target)
         self.scout_bow = scout_bow
         self.static_simproc = static_simproc
 

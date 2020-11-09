@@ -7,7 +7,7 @@ import unittest
 from common import build_container
 
 
-class TestBowQemu(unittest.TestCase):
+class TestAnalyzerQemu(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         build_container("crasher")
@@ -17,18 +17,18 @@ class TestBowQemu(unittest.TestCase):
 
     def test_arrow_injection_docker(self):
         with archr.targets.DockerImageTarget('archr-test:crasher').build().start() as t:
-            archr.analyzers.QEMUTracerBow(t)
+            archr.analyzers.QEMUTracerAnalyzer(t)
             fire_path = os.path.join(t.tmpwd, "shellphish_qemu", "fire")
             assert t.retrieve_contents(fire_path).startswith(b"#!/bin/sh")
 
     def test_arrow_injection_local(self):
         with archr.targets.LocalTarget([os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher")]).build().start() as t:
-            archr.analyzers.QEMUTracerBow(t)
+            archr.analyzers.QEMUTracerAnalyzer(t)
             fire_path = os.path.join(t.tmpwd, "shellphish_qemu", "fire")
             assert t.retrieve_contents(fire_path).startswith(b"#!/bin/sh")
 
     def crasher_checks(self, t):
-        b = archr.analyzers.QEMUTracerBow(t)
+        b = archr.analyzers.QEMUTracerAnalyzer(t)
         r = b.fire(save_core=True)
 
         # arbitrary check
@@ -42,7 +42,7 @@ class TestBowQemu(unittest.TestCase):
 
     def crash_on_input_checks(self, t):
         crashing = b"A"*120
-        b = archr.analyzers.QEMUTracerBow(t)
+        b = archr.analyzers.QEMUTracerAnalyzer(t)
         with b.fire_context(save_core=True) as flight:
             flight.default_channel.send(crashing)
             flight.default_channel.shutdown_wr()
@@ -52,7 +52,7 @@ class TestBowQemu(unittest.TestCase):
 
     def shellcode_checks(self, t):
         crash = b"A" * 272
-        b = archr.analyzers.QEMUTracerBow(t)
+        b = archr.analyzers.QEMUTracerAnalyzer(t)
 
         with b.fire_context(save_core=True) as flight:
             flight.default_channel.send(crash)
@@ -65,7 +65,7 @@ class TestBowQemu(unittest.TestCase):
     def vuln_stacksmash_checks(self, t):
         crash = b"A" * 227
 
-        b = archr.analyzers.QEMUTracerBow(t)
+        b = archr.analyzers.QEMUTracerAnalyzer(t)
 
         with b.fire_context(save_core=True) as flight:
             flight.default_channel.send(crash)

@@ -15,7 +15,7 @@ class TestShellcode(unittest.TestCase):
         build_container("vuln_stacksmash")
 
     def shellcode_checks(self, t):
-        b = archr.analyzers.DataScoutBow(t)
+        b = archr.analyzers.DataScoutAnalyzer(t)
         with t.shellcode_context(asm_code=b.exit_shellcode(exit_code=123)) as p:
             stdout,_ = p.communicate()
             assert p.wait() == 123
@@ -47,7 +47,7 @@ class TestDatascout(unittest.TestCase):
         build_container("entrypoint-env")
 
     def datascout_checks(self, t):
-        b = archr.analyzers.DataScoutBow(t)
+        b = archr.analyzers.DataScoutAnalyzer(t)
         argv, env, aux, maps = b.fire()
 
         assert argv == [ a.encode('utf-8') for a in t.target_args ]
@@ -98,7 +98,7 @@ class TestStackSmash(unittest.TestCase):
     # 32-bit vuln_stacksmash
     def test_stacksmash(self):
         with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build().start() as t:
-            b = archr.analyzers.DataScoutBow(t)
+            b = archr.analyzers.DataScoutAnalyzer(t)
             argv, env, aux, maps = b.fire()
 
             assert b"PWD=/" in env

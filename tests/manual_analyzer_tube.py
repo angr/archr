@@ -6,14 +6,14 @@ def setup_module():
 
 def test_tube_network():
     t = archr.targets.DockerImageTarget('archr-test:nccat').build().start()
-    b = archr.analyzers.TubeBow(t)
+    b = archr.analyzers.TubeAnalyzer(t)
     r = b.fire()
     r.send("hello!")
     assert r.readuntil("hello!", timeout=5) == b"hello!"
 
 def test_tube_stdio():
     t = archr.targets.DockerImageTarget('archr-test:cat').build().start()
-    b = archr.analyzers.TubeBow(t)
+    b = archr.analyzers.TubeAnalyzer(t)
     r = b.fire()
     r.send("hello!")
     assert r.readuntil("hello!", timeout=5) == b"hello!"

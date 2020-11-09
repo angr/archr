@@ -1,5 +1,5 @@
 from ..errors import ArchrError
-from . import ContextBow
+from . import ContextAnalyzer
 import contextlib
 import subprocess
 import tempfile
@@ -62,7 +62,7 @@ class RRTraceResult:
         return trraces.replay_interfaces.angr.technique.Trracer(self.trace_dir.name, symbolic_fd=self.symbolic_fd, **kwargs)
 
 
-class RRBow(ContextBow):
+class RRAnalyzer(ContextAnalyzer):
     REQUIRED_ARROW = "rr"
     REMOTE_TRACE_DIR_PREFIX = "/tmp/rr_trace_"
 
@@ -118,7 +118,7 @@ class RRBow(ContextBow):
         return cmd_args
 
 
-class RRTracerBow(RRBow):
+class RRTracerAnalyzer(RRAnalyzer):
     @contextlib.contextmanager
     def fire_context(self, save_core=False, record_magic=False, report_bad_args=False, rr_args=None, sleep_time=0.1):
         if save_core or record_magic or report_bad_args:
@@ -176,7 +176,7 @@ class RRTracerBow(RRBow):
             assert os.path.isfile(os.path.join(r.trace_dir.name, 'version'))
 
 
-class RRReplayBow(RRBow):
+class RRReplayAnalyzer(RRAnalyzer):
     @contextlib.contextmanager
     def fire_context(self, rr_args=None, trace_dir=None, gdb_script=None, pid=None):
         """Run an rr-replay inside the target.

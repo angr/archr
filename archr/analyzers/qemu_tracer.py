@@ -11,7 +11,7 @@ import os
 
 l = logging.getLogger("archr.analyzers.qemu_tracer")
 
-from . import ContextBow
+from . import ContextAnalyzer
 from .. import _angr_available
 if _angr_available:
     import angr
@@ -36,7 +36,7 @@ class QemuTraceResult:
 _trace_old_re = re.compile(br'Trace (.*) \[(?P<addr>.*)\].*')
 _trace_new_re = re.compile(br'Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P<flags>.*)\].*')
 
-class QEMUTracerBow(ContextBow):
+class QEMUTracerAnalyzer(ContextAnalyzer):
     REQUIRED_ARROW = "shellphish_qemu"
 
     def __init__(self, target, timeout=10, ld_linux=None, library_path=None, seed=None, **kwargs):

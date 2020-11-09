@@ -3,16 +3,16 @@ import time
 
 l = logging.getLogger("archr.analyzers.input_fd")
 
-from . import Bow
+from . import Analyzer
 
 
-class InputFDBow(Bow):
+class InputFDAnalyzer(Analyzer):
     """
     Figures out what file descriptor the target uses to read input.
     """
 
     def fire(self, **kwargs): #pylint:disable=arguments-differ
-        with STraceBow(self.target).fire_context(trace_args=["-f"]) as flight:
+        with STraceAnalyzer(self.target).fire_context(trace_args=["-f"]) as flight:
             time.sleep(0.1)
             flight.default_channel.write(b'aRcHr'*0x1000)
             flight.default_channel.recv_until(b'aRcHr')
@@ -23,4 +23,4 @@ class InputFDBow(Bow):
         fd = archr_read[0].split()[0].split(b"(")[1].split(b",")[0]
         return int(fd)
 
-from .strace import STraceBow
+from .strace import STraceAnalyzer

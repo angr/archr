@@ -4,7 +4,7 @@ import logging
 
 l = logging.getLogger("archr.analyzers.angr_state")
 
-from . import Bow
+from . import Analyzer
 
 class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
     def __init__(self, target=None, **kwargs):
@@ -21,13 +21,13 @@ class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
         content = self.target.retrieve_contents(guest_path)
         return angr.SimFile(name='file://' + guest_path, content=content, size=len(content))
 
-class angrStateBow(Bow):
+class angrStateAnalyzer(Analyzer):
     """
     Constructs an angr state (full init variety) to match the target precisely
     """
 
     def __init__(self, target, project_bow):
-        super(angrStateBow, self).__init__(target)
+        super(angrStateAnalyzer, self).__init__(target)
         self.project_bow = project_bow
 
     def fire(self, **kwargs): #pylint:disable=arguments-differ

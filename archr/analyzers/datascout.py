@@ -3,14 +3,14 @@ import logging
 l = logging.getLogger("archr.analyzers.datascout")
 
 from ..errors import ArchrError
-from . import Bow
+from . import Analyzer
 
 # Keystone engine 0.9.2 (incorrectly) defaults to radix 16. so we'd better off only using 0x-prefixed integers from now.
 # See the related PR: https://github.com/keystone-engine/keystone/pull/382
 # and the related issue: https://github.com/keystone-engine/keystone/issues/436
 
 
-class DataScoutBow(Bow):
+class DataScoutAnalyzer(Analyzer):
     """
     Grabs the environment and auxiliary vector from the target.
     """

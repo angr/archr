@@ -121,7 +121,7 @@ class LocalTarget(Target):
         # if the target binary has to be executed with Qemu, we post-process the args here. This behavior is overridable
         # by specifying args_prefix
         if not args_prefix and self.use_qemu and args[0] == os.path.basename(self.target_path):
-            qemu = QEMUTracerBow.qemu_variant(self.target_os, self.target_arch, False)
+            qemu = QEMUTracerAnalyzer.qemu_variant(self.target_os, self.target_arch, False)
             qemu_path = os.path.join(self.tmpwd, "shellphish_qemu", qemu)
             args = [qemu_path] + args
 
@@ -146,4 +146,4 @@ class LocalTarget(Target):
         )
 
 
-from ..analyzers import QEMUTracerBow
+from ..analyzers import QEMUTracerAnalyzer

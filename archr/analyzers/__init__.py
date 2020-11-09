@@ -3,7 +3,7 @@ import time
 from contextlib import contextmanager
 #from typing import ContextManager
 
-class Bow:
+class Analyzer:
     REQUIRED_ARROW = None
     REQUIRED_BINARY = None
 
@@ -37,9 +37,9 @@ class Bow:
         raise NotImplementedError()
 
 
-class ContextBow(Bow):
+class ContextAnalyzer(Analyzer):
     """
-    A Bow base class for bows that implement a fire_context instead of a fire.
+    A Analyzer base class for bows that implement a fire_context instead of a fire.
     Provides a default .fire() that replays a testcase.
     """
 
@@ -70,16 +70,16 @@ class ContextBow(Bow):
 
 from .. import _angr_available
 if _angr_available:
-    from .angr_project import angrProjectBow
-    from .angr_state import angrStateBow
-    from .angr_ultimate_tracer import angrUltimateTracerBow
-from .qemu_tracer import QEMUTracerBow
-from .datascout import DataScoutBow
-from .gdbserver import GDBServerBow
-from .core import CoreBow
-from .ltrace import LTraceBow, LTraceAttachBow
-from .strace import STraceBow, STraceAttachBow
-from .input_fd import InputFDBow
-from .rr import RRTracerBow, RRReplayBow
-from .gdb import GDBBow
+    from .angr_project import angrProjectAnalyzer
+    from .angr_state import angrStateAnalyzer
+    from .angr_ultimate_tracer import angrUltimateTracerAnalyzer
+from .qemu_tracer import QEMUTracerAnalyzer
+from .datascout import DataScoutAnalyzer
+from .gdbserver import GDBServerAnalyzer
+from .core import CoreAnalyzer
+from .ltrace import LTraceAnalyzer, LTraceAttachAnalyzer
+from .strace import STraceAnalyzer, STraceAttachAnalyzer
+from .input_fd import InputFDAnalyzer
+from .rr import RRTracerAnalyzer, RRReplayAnalyzer
+from .gdb import GDBAnalyzer
 from .. import implants

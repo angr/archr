@@ -8,24 +8,24 @@ Specific library versions, values in configuration files, environment variables,
 This is specifically true for analysis that need extreme accuracy, such as automatic exploit generation.
 
 `archr` is an implementation of such a _target-centric_ analysis paradigm.
-It consists of two main concepts: `Targets`, which describe the specification of the target itself, how it is configured, how it will be launched, and how it would be interacted with, and `Bows`, which specialize targets for specific analysis actions, such as tracing, symbolic execution, and so on.
-To accomplish their tasks, Bows might inject Arrows (i.e., qemu-user, gdbserver, and so on) into the target.
+It consists of two main concepts: `Targets`, which describe the specification of the target itself, how it is configured, how it will be launched, and how it would be interacted with, and `Analyzers`, which specialize targets for specific analysis actions, such as tracing, symbolic execution, and so on.
+To accomplish their tasks, Analyzers might inject `Implants` (i.e., qemu-user, gdbserver, and so on) into the target.
 
 We have the following Targets:
 
 * DockerImageTarget, which takes a description of the target in the form of a docker image
 * LocalTarget, which just describes running the target in the local system
 
-The following Bows exist:
+The following Analyzers exist:
 
-- DataScoutBow (will grabs the memory map, environment, and auxv of the process, exactly as it is at launch)
-- AngrProjectBow (can create an angr project with the right libs at the right offsets)
-- AngrStateBow (can create a angr states with the right env, args, and fs)
-- QEMUTraceBow (does qemu tracing of the target)
-- GDBServerBow (launches the target in a gdbserver)
-- STraceBow (straces a target)
-- CoreBow (launches the target and retrieves a core)
-- InputFDBow (determines the FD number for user input (in some cases))
+- DataScoutAnalyzer (will grabs the memory map, environment, and auxv of the process, exactly as it is at launch)
+- AngrProjectAnalyzer (can create an angr project with the right libs at the right offsets)
+- AngrStateAnalyzer (can create a angr states with the right env, args, and fs)
+- QEMUTraceAnalyzer (does qemu tracing of the target)
+- GDBServerAnalyzer (launches the target in a gdbserver)
+- STraceAnalyzer (straces a target)
+- CoreAnalyzer (launches the target and retrieves a core)
+- InputFDAnalyzer (determines the FD number for user input (in some cases))
 
 ## Using archr
 

@@ -10,21 +10,21 @@ CAT_ARGS = ["/etc/passwd"]
 LTRACE_ARGS = "-f -e malloc+free+open+read+write+socket+bind+accept-@libc.so* -n 2".split()
 
 
-class TestBowLtrace(unittest.TestCase):
+class TestAnalyzerLtrace(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         build_container("socat")
         build_container("cat")
 
     def ltrace_proc(self, t, **kwargs):
-        b = archr.analyzers.LTraceBow(t)
+        b = archr.analyzers.LTraceAnalyzer(t)
         with b.fire_context(trace_args=LTRACE_ARGS, **kwargs) as flight:
             sleep(1)
             flight.process.terminate()
         return flight.result
 
     def ltrace_attach(self, t, p, **kwargs):
-        b = archr.analyzers.LTraceAttachBow(t)
+        b = archr.analyzers.LTraceAttachAnalyzer(t)
         pid = p.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')
         with b.fire_context(pid=pid, trace_args=LTRACE_ARGS, **kwargs) as flight:
             sleep(0.1)
