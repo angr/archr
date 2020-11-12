@@ -39,10 +39,11 @@ _trace_new_re = re.compile(br'Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P
 class QEMUTracerAnalyzer(ContextAnalyzer):
     REQUIRED_IMPLANT = "shellphish_qemu"
 
-    def __init__(self, target, timeout=10, ld_linux=None, library_path=None, seed=None, **kwargs):
+    def __init__(self, target, timeout=10, ld_linux=None, ld_preload=None, library_path=None, seed=None, **kwargs):
         super().__init__(target, **kwargs)
         self.timeout = timeout
         self.ld_linux = ld_linux
+        self.ld_preload = ld_preload
         self.library_path = library_path
         self.seed = seed
 
@@ -208,6 +209,10 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         if 'cgc' not in qemu_variant and "LD_BIND_NOW=1" not in self.target.target_env:
             l.warning("setting LD_BIND_NOW=1. This will have an effect on the environment.")
             cmd_args += ['-E', 'LD_BIND_NOW=1']
+
+        if self.ld_preload:
+            l.warning("setting LD_PRELOAD. This will have an effect on the environment.")
+            cmd_args += ['-E', 'LD_PRELOAD=' + self.ld_preload]
 
         if self.library_path and not self.ld_linux:
             l.warning("setting LD_LIBRARY_PATH. This will have an effect on the environment. Consider using --library-path instead")
