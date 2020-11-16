@@ -1,4 +1,5 @@
 import subprocess
+import struct
 import cle
 import io
 
@@ -38,6 +39,12 @@ def hook_entry(binary, asm_code=None, bin_code=None):
     main_bin = io.BytesIO(binary)
     b = cle.Loader(main_bin, auto_load_libs=False, perform_relocations=False, main_opts={'base_addr': 0})
     start_addr = b.main_object.addr_to_offset(b.main_object.entry)
+    if b.main_object.arch.is_thumb(start_addr): # OMG, thumb mode is a disaster
+        start_addr &= (~3)
+        main_bin.seek(start_addr)
+        padding = (4 - (start_addr + 6) % 4) % 4
+        main_bin.write(b'xF\x00\xf1' + struct.pack('<H', 6+padding) + b'\x00G' + b'A'*padding)
+        start_addr += 6 + padding
     main_bin.seek(start_addr)
     main_bin.write(b.main_object.arch.asm(asm_code) if asm_code else bin_code)
     main_bin.seek(0)
