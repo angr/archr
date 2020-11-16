@@ -33,6 +33,9 @@ class DataScoutAnalyzer(Analyzer):
         elif self.target.target_arch in ('mips', 'mipsel'):
             encoded_name = _encode_name(32)
             return "".join("li $t0, 0x%s; addi $sp, $sp, -4; sw $t0, 0($sp);" % word for word in encoded_name)
+        elif self.target.target_arch == 'arm':
+            encoded_name = _encode_name(32)
+            return "".join(f"movw r0, #0x{word} & 0xffff; movt r0, #0x{word} >> 16; push {{r0}};" for word in encoded_name)
         else:
             raise NotImplementedError()
 
@@ -58,6 +61,13 @@ class DataScoutAnalyzer(Analyzer):
                 "li $a0, 1; move $a1, $v0; xor $a2, $a2, $a2; li $a3, 0x1000000; li $v0, 0x106f; syscall;" +  # sendfile(1, n, 0, 0x1000000)
                 "li $a3, 0x1000000; li $v0, 0x106f; syscall;" * 5  # sendfile(1, n, 0, 0x1000000)
             )
+        elif self.target.target_arch == 'arm':
+            return (
+                self._encode_bytes(filename) +
+                "mov r0, sp; eor r1, r1; eor r2, r2; mov r7, #5; svc 0;" +  # n = open(path, O_RDONLY, 0)
+                "mov r1, r0; mov r0, #1; eor r2, r2; mov r3, #0x1000000; mov r7, 0xbb; svc 0;" +  # sendfile(1, n, 0, 0x1000000)
+                "mov r0, #1; mov r3, #0x1000000; svc 0;" * 5  # sendfile(1, n, 0, 0x1000000)
+            )
         else:
             raise NotImplementedError("Unknown target architecure: \"%s\"!" % self.target.target_arch)
 
@@ -70,12 +80,17 @@ class DataScoutAnalyzer(Analyzer):
         elif self.target.target_arch == 'i386':
             return (
                 self._encode_bytes(what) +
-                "mov ebx, 1; mov ecx, esp; mov edx, %#x; mov eax, 4; int 0x80;" % len(what) # n = write(1, rsp, 0x1000)
+                "mov ebx, 1; mov ecx, esp; mov edx, %#x; mov eax, 4; int 0x80;" % len(what) # n = write(1, esp, 0x1000)
             )
         elif self.target.target_arch in ('mips', 'mipsel'):
             return (
                 self._encode_bytes(what) +
-                "li $a0, 1; move $a1, $sp; li $a2, %#x; li $v0, 0xfa4; syscall;" % len(what)  # n = write(1, rsp, 0x1000)
+                "li $a0, 1; move $a1, $sp; li $a2, %#x; li $v0, 0xfa4; syscall;" % len(what)  # n = write(1, sp, 0x1000)
+            )
+        elif self.target.target_arch == 'arm':
+            return (
+                self._encode_bytes(what) +
+                "mov r0, #1; mov r1, sp; mov r2, #%#x; mov r7, #4; svc 0;" % len(what)  # n = write(1, sp, 0x1000)
             )
         else:
             raise NotImplementedError()
@@ -91,16 +106,22 @@ class DataScoutAnalyzer(Analyzer):
             # n = brk 0
             # brk n + 0x1000
             return "xor $a0, $a0, $a0; li $v0, 0xfcd; syscall; add $a0, $v0, 0x1000; li $v0, 0xfcd; syscall;"
+        elif self.target.target_arch == 'arm':
+            # n = brk 0
+            # brk n + 0x1000
+            return "eor r0, r0; mov r7, #0x2d; svc 0; add r0, #0x1000; mov r7, #0x2d; svc 0;"
         else:
             raise NotImplementedError()
 
     def exit_shellcode(self, exit_code=42):
         if self.target.target_arch == 'x86_64':
-            return "mov rdi, %#x; mov rax, 0x3c; syscall;" % exit_code # exit(42)
+            return "mov rdi, %#x; mov rax, 0x3c; syscall;" % exit_code # exit(code)
         elif self.target.target_arch == 'i386':
-            return "mov ebx, %#x; mov eax, 1; int 0x80;" % exit_code # exit(42)
+            return "mov ebx, %#x; mov eax, 1; int 0x80;" % exit_code # exit(code)
         elif self.target.target_arch in ('mips', 'mipsel'):
             return "li $a0, %#x; li $v0, 0xfa1; syscall;" % exit_code  # exit(code)
+        elif self.target.target_arch == 'arm':
+            return "mov r0, #%#x; mov r7, #1; svc 0;" % exit_code  # exit(code)
         else:
             raise NotImplementedError()
 
