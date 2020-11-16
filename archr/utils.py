@@ -40,7 +40,7 @@ def hook_entry(binary, asm_code=None, bin_code=None):
     b = cle.Loader(main_bin, auto_load_libs=False, perform_relocations=False, main_opts={'base_addr': 0})
     start_addr = b.main_object.addr_to_offset(b.main_object.entry)
     arch = b.main_object.arch
-    if arch.name == 'ARMHF' and arch.is_thumb(start_addr): # OMG, thumb mode is a disaster
+    if arch.name in ('ARMHF', 'ARMEL') and arch.is_thumb(start_addr): # OMG, thumb mode is a disaster
         start_addr &= (~3)
         main_bin.seek(start_addr)
         padding = (4 - (start_addr + 6) % 4) % 4
