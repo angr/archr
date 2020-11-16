@@ -41,11 +41,16 @@ def hook_entry(binary, asm_code=None, bin_code=None):
     start_addr = b.main_object.addr_to_offset(b.main_object.entry)
     arch = b.main_object.arch
     if arch.name in ('ARMHF', 'ARMEL') and arch.is_thumb(start_addr): # OMG, thumb mode is a disaster
-        start_addr &= (~3)
+        start_addr &= (~1) # recover the real address
         main_bin.seek(start_addr)
-        padding = (4 - (start_addr + 6) % 4) % 4
-        main_bin.write(b'xF\x00\xf1' + struct.pack('<H', 6+padding) + b'\x00G' + b'A'*padding)
-        start_addr += 6 + padding
+        padding = (4 - (start_addr + 8) % 4) % 4 # we hardcode the shellcode so that its length is 8
+
+        # we can' use arch.asm here because the shellcode THUMB, 8+padding-4 because the shellcode has length 8+padding,
+        # we also need to take into account that in arm, pc points to two instructions ahead, which is 4 bytes in thumb mode
+        main_bin.write(b'xF\x00\xf1' + struct.pack('<H', 8+padding-4) + b'\x00G' + b'A'*padding)
+
+        # now place our payload after this mini shellcode
+        start_addr += 8 + padding
     main_bin.seek(start_addr)
     main_bin.write(b.main_object.arch.asm(asm_code) if asm_code else bin_code)
     main_bin.seek(0)
