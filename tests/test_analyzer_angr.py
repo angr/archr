@@ -31,6 +31,15 @@ class TestangrAnalyzer(unittest.TestCase):
         apb._mem_mapping['[stack-end]'] = 0x1337000
         state = asb.fire()
         assert state.solver.eval_one((state.regs.sp + 0xfff) & ~claripy.BVV(0xfff, project.arch.bits) == apb._mem_mapping['[stack-end]'])
+
+        # now check the filesystem resolution
+        fd = state.posix.open('/etc/passwd', 0)
+        stat = state.posix.fstat(fd)
+        assert stat is not None
+        assert state.solver.symbolic(stat.st_size) is False
+        assert state.solver.eval(stat.st_size) != 0
+
+        # done
         project.loader.close()
 
     @unittest.skipUnless(archr._angr_available, "angr required")
