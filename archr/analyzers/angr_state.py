@@ -24,11 +24,18 @@ class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
     def _get_stat(self, guest_path):
         stat_output = self.target.run_command([
             "stat", "-c", "%n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o %B",
-            guest_path.replace("file://", "")
-        ]).communicate()[0]
+            guest_path
+        ]).communicate()[0].decode().split()
+
+        # parse output
+        # st_mode, device number, major type, minor type are in hex
+        for i in [3, 6, 9, 10]:
+            stat_output[i] = int(stat_output[i], 16)
+        stat_output[1:] = [int(x) for x in stat_output[1:]] # others are int
+
         # %n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o %C
         (
-            _, # %n file name
+            _, # %n file name is ignored
             st_size, # %s total size, in bytes
             st_blocks, # %b number of blocks allocated (see %B)
             st_mode, # %f raw mode in hex
@@ -45,7 +52,7 @@ class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
             _, # %W time of file birth, seconds since Epoch; 0 if unknown
             _, # %o optimal I/O transfer size hint
             st_blksize, # %B block size
-        ) = stat_output.split()
+        ) = stat_output
         st_mtime_ns = st_mtime * 1000000
         st_atime_ns = st_atime * 1000000
         st_ctime_ns = st_ctime * 1000000
@@ -89,4 +96,5 @@ class angrStateAnalyzer(Analyzer):
             **kwargs
         )
         s.fs.mount("/", SimArchrMount(self.target))
+        s.fs.set_state(s)
         return s
