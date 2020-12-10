@@ -21,10 +21,6 @@ class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
         content = self.target.retrieve_contents(guest_path)
         return angr.SimFile(name='file://' + guest_path, content=content, size=len(content))
 
-    def _load_file(self, guest_path):
-        content = self.target.retrieve_contents(guest_path)
-        return angr.SimFile(name='file://' + guest_path, content=content, size=len(content))
-
     def _get_stat(self, guest_path):
         stat_output = self.target.run_command([
             "stat", "-c", "%n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o %B",
