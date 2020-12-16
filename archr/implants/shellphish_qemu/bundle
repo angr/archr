@@ -6,6 +6,6 @@ BUNDLE_DIR=$1
 FIRE_SCRIPT=${0//bundle/fire}
 QEMU_PATH=$(python -c "import shellphish_qemu; print(shellphish_qemu.qemu_base())")
 QEMU_LIBS=$(ldd $QEMU_PATH/* | grep "=>" | awk '{print $3}' | sort -u)
-QEMU_LD=$(ldd $QEMU_PATH/shellphish-qemu-cgc-base | tail -n1 | awk '{print $1}')
+QEMU_LD=$(ldd $QEMU_PATH/shellphish-qemu-cgc-base | fgrep ld-linux | awk '{print $1}')
 cp -L $QEMU_PATH/* $QEMU_LIBS $QEMU_LD $BUNDLE_DIR
 cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire
