@@ -43,6 +43,6 @@ fi
 
 FIRE_SCRIPT=${0//bundle/fire}
 QEMU_LIBS=$(ldd ${QEMU_BINS[*]} | grep "=>" | awk '{print $3}' | sort -u)
-QEMU_LD=$(ldd ${QEMU_BINS[0]} | tail -n1 | awk '{print $1}')
+QEMU_LD=$(ldd ${QEMU_BINS[0]} | grep ld-linux | awk '{print $1}')
 cp -L ${QEMU_BINS[*]} $QEMU_LIBS $QEMU_LD $BUNDLE_DIR
 cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire
