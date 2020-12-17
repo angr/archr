@@ -50,9 +50,11 @@ class TestDatascout(unittest.TestCase):
         b = archr.analyzers.DataScoutAnalyzer(t)
         argv, env, aux, maps = b.fire()
 
+        ld_addr = next(addr for name, addr in maps.items() if name.startswith('/usr/lib/x86_64-linux-gnu/ld-'))
+
         assert argv == [ a.encode('utf-8') for a in t.target_args ]
         assert b"ARCHR=YES" in env
-        assert maps['/usr/lib/x86_64-linux-gnu/ld-2.31.so'] in struct.unpack("<%dQ"%(len(aux)/8), aux)
+        assert ld_addr in struct.unpack("<%dQ"%(len(aux)/8), aux)
         return argv, env, aux, maps
 
     def test_datascout(self):
