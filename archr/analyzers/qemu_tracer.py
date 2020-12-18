@@ -113,7 +113,10 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 trace_iter = iter(trace.splitlines())
 
                 # Find where qemu loaded the binary. Primarily for PIE
-                r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
+                try:
+                    r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
+                except StopIteration as e:
+                    raise ArchrError("The trace does not include any data. Did you forget to chmod +x the binary?") from e
 
                 # record the trace
                 _trace_re = _trace_old_re if self.target.target_os == 'cgc' else _trace_new_re
