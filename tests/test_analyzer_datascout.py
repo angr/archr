@@ -50,7 +50,7 @@ class TestDatascout(unittest.TestCase):
         b = archr.analyzers.DataScoutAnalyzer(t)
         argv, env, aux, maps = b.fire()
 
-        ld_addr = next(addr for name, addr in maps.items() if name.startswith('/usr/lib/x86_64-linux-gnu/ld-'))
+        ld_addr = next(addr for name, addr in maps.items() if 'linux-gnu/ld-' in name)
 
         assert argv == [ a.encode('utf-8') for a in t.target_args ]
         assert b"ARCHR=YES" in env
@@ -77,20 +77,17 @@ class TestDatascout(unittest.TestCase):
         shutil.copy("/usr/bin/env", tf)
         with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build().start() as t:
             _,_,_,maps = self.datascout_checks(t)
-            local_ref = {
-                # '/usr/lib/x86_64-linux-gnu/libc-2.31.so': 0x7ffff7dd0000,
-                # '/usr/lib/x86_64-linux-gnu/ld-2.31.so': 0x7ffff7fcf000,
-                '[stack-end]': 0x7ffffffff000,
-                '[heap]': 0x555555560000,
-                '[vvar]': 0x7ffff7fcb000,
-                '[vdso]': 0x7ffff7fce000,
-                '[vsyscall]': 0xffffffffff600000
-            }
-            print([("GOT:", k, hex(v)) for k,v in maps.items()])
-            print([("REF:", k, hex(v)) for k,v in local_ref.items()])
-            assert all(maps[x] == local_ref[x] for x in local_ref)
-            assert any(name.startswith("/usr/lib/x86_64-linux-gnu/libc-") for name in maps)
-            assert any(name.startswith("/usr/lib/x86_64-linux-gnu/ld-") for name in maps)
+            local_maps_expected = [
+                "linux-gnu/libc-",
+                "linux-gnu/ld-",
+                "[stack-end]",
+                "[heap]",
+                "[vvar]",
+                "[vdso]",
+                "[vsyscall]",
+            ]
+            for map_expected in local_maps_expected:
+                assert any(map_expected in name for name in maps)
 
         os.unlink(tf)
 
