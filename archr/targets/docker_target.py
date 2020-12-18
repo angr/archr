@@ -316,8 +316,7 @@ class DockerImageTarget(Target):
 
 
 def check_in_docker() -> bool:
-    with open("/proc/1/cgroup", "r") as f:
-        return "docker" in f.read()
+    return os.path.exists("/.dockerenv")
 
 
 def check_dockerd_running() -> bool:
