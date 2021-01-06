@@ -131,7 +131,7 @@ class LocalTarget(Target):
         self, args, env,
         aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         ): #pylint:disable=arguments-differ,no-self-use
-        if not aslr:
+        if not aslr and self.target_arch == 'x86_64':
             args = args[::]
             if not args[0].startswith('/'):
                 args[0] = "./" + args[0]
