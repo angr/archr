@@ -176,7 +176,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         # cmd_args = [ "sudo", "/tmp/shellphish_qemu/fire", qemu_variant]
         fire_path = os.path.join(self.target.tmpwd, "shellphish_qemu", "fire")
         cmd_args = [fire_path, qemu_variant]
-        cmd_args += [ "-C", coredump_dir]
+        if coredump_dir:
+            cmd_args += [ "-C", coredump_dir]
 
         #
         # Next, we build QEMU options.
