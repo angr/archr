@@ -396,7 +396,7 @@ class Target(ABC):
             flight.stop(timeout=timeout, timeout_exception=timeout_exception)
 
     @contextlib.contextmanager
-    def shellcode_context(self, *args, asm_code=None, bin_code=None, **kwargs):
+    def shellcode_context(self, *args, addr=None, asm_code=None, bin_code=None, **kwargs):
         """
         A context that runs the target with shellcode injected over the entrypoint.
         Useful for operating in the normal process context of the target.
@@ -408,7 +408,13 @@ class Target(ABC):
         """
 
         original_binary = self.retrieve_contents(self.target_path)
-        hooked_binary = hook_entry(original_binary, asm_code=asm_code, bin_code=bin_code)
+        # by default, hook the entry point.
+        # if hook address is specified, hook that specified address
+        if addr is None:
+            hooked_binary = hook_entry(original_binary, asm_code=asm_code, bin_code=bin_code)
+        else:
+            hooked_binary = hook_addr(original_binary, addr, asm_code=asm_code, bin_code=bin_code)
+
         with self.replacement_context(self.target_path, hooked_binary, saved_contents=original_binary):
             with self.run_context(*args, **kwargs) as p:
                 yield p
@@ -434,6 +440,6 @@ class Target(ABC):
 
 from .docker_target import DockerImageTarget
 from .local_target import LocalTarget
-from ..utils import hook_entry
+from ..utils import hook_entry, hook_addr
 from ..errors import ArchrError
 from .flight import Flight

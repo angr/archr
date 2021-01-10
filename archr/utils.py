@@ -55,3 +55,12 @@ def hook_entry(binary, asm_code=None, bin_code=None):
     main_bin.write(b.main_object.arch.asm(asm_code) if asm_code else bin_code)
     main_bin.seek(0)
     return main_bin.read()
+
+def hook_addr(binary, addr, asm_code=None, bin_code=b''):
+    main_bin = io.BytesIO(binary)
+    loader = cle.Loader(main_bin, auto_load_libs=False, perform_relocations=False, main_opts={'base_addr': 0})
+    offset = loader.main_object.addr_to_offset(addr)
+    main_bin.seek(offset)
+    main_bin.write(loader.main_object.arch.asm(asm_code) if asm_code else bin_code)
+    main_bin.seek(0)
+    return main_bin.read()
