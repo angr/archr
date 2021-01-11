@@ -45,19 +45,6 @@ class angrProjectAnalyzer(Analyzer):
         self.target.retrieve_into(self.target.target_path, tmpdir)
         the_binary = os.path.join(tmpdir, os.path.basename(self.target.target_path))
 
-        # if a core dump is specified, create a project based on the core dump
-        if core_path:
-            self.project = angr.Project(core_path, main_opts={"backend": "elfcore"}, rebase_granularity=0x1000,
-                                        **project_kwargs)
-            # due to this bug: https://github.com/angr/angr/issues/2468, we have to fix the project
-            # by sync up the text segment
-            bin_loader = cle.Loader(the_binary)
-            text_seg = bin_loader.main_object.segments[0] # TODO: better way to identify text segment
-            text_content = bin_loader.memory.load(text_seg.min_addr, text_seg.max_addr-text_seg.min_addr)
-            self.project.loader.memory.store(text_seg.min_addr, text_content)
-
-            return self.project if not return_loader else self.project.loader
-
         # preload the binary to decide if it supports setting library options or base addresses
         cle_args.update(cle_args.pop('load_options', {}))
         cle_args.pop('use_sim_procedures', None)  # TODO do something less hacky than this
@@ -81,6 +68,19 @@ class angrProjectAnalyzer(Analyzer):
             lib_opts = { }
             bin_opts = { }
             self._mem_mapping = { }
+
+        # if a core dump is specified, create a project based on the core dump
+        if core_path:
+            self.project = angr.Project(core_path, main_opts={"backend": "elfcore"}, rebase_granularity=0x1000,
+                                        **project_kwargs)
+            # due to this bug: https://github.com/angr/angr/issues/2468, we have to fix the project
+            # by sync up the text segment
+            bin_loader = cle.Loader(the_binary)
+            text_seg = bin_loader.main_object.segments[0] # TODO: better way to identify text segment
+            text_content = bin_loader.memory.load(text_seg.min_addr, text_seg.max_addr-text_seg.min_addr)
+            self.project.loader.memory.store(text_seg.min_addr, text_content)
+
+            return self.project if not return_loader else self.project.loader
 
         if return_loader:
             return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts,
