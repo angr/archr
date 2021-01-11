@@ -73,13 +73,6 @@ class angrProjectAnalyzer(Analyzer):
         if core_path:
             self.project = angr.Project(core_path, main_opts={"backend": "elfcore"}, rebase_granularity=0x1000,
                                         **project_kwargs)
-            # due to this bug: https://github.com/angr/angr/issues/2468, we have to fix the project
-            # by sync up the text segment
-            bin_loader = cle.Loader(the_binary)
-            text_seg = bin_loader.main_object.segments[0] # TODO: better way to identify text segment
-            text_content = bin_loader.memory.load(text_seg.min_addr, text_seg.max_addr-text_seg.min_addr)
-            self.project.loader.memory.store(text_seg.min_addr, text_content)
-
             return self.project if not return_loader else self.project.loader
 
         if return_loader:
