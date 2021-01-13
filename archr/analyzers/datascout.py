@@ -133,6 +133,14 @@ class DataScoutAnalyzer(Analyzer):
         else:
             raise NotImplementedError()
 
+    def crash_shellcode(self):
+        if self.target.target_arch == 'x86_64':
+            return b'\xcc'
+        elif self.target.target_arch == 'arm':
+            return b'\xfe\xde\xff\xe7'
+        else:
+            raise NotImplementedError()
+
     def run_shellcode(self, shellcode, aslr=False, **kwargs):
         exit_code = 42
 
