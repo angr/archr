@@ -71,7 +71,24 @@ class angrProjectAnalyzer(Analyzer):
 
         # if a core dump is specified, create a project based on the core dump
         if core_path:
-            self.project = angr.Project(core_path, main_opts={"backend": "elfcore"}, rebase_granularity=0x1000,
+
+            file_mapping = {}
+
+            # grab remote libraries to local machine and build the mapping
+            for remote_path in self._mem_mapping:
+                # use heuristic to distinguish file mappings from others
+                if not remote_path.startswith('/'):
+                    continue
+                self.target.retrieve_into(remote_path, tmpdir)
+                local_path = os.path.join(tmpdir, os.path.basename(remote_path))
+                file_mapping[remote_path] = local_path
+
+            bin_opts = {"backend": "elfcore",
+                        "executable": the_binary,
+                        "remote_file_mapping": file_mapping}
+            self.project = angr.Project(core_path,
+                                        main_opts=bin_opts,
+                                        rebase_granularity=0x1000,
                                         **project_kwargs)
             return self.project if not return_loader else self.project.loader
 
