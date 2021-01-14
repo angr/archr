@@ -67,7 +67,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 shutil.rmtree(tmpdir)
 
     @contextlib.contextmanager
-    def fire_context(self, record_trace=True, record_magic=False, save_core=False, crash_addr=None, trace_truncate=None):
+    def fire_context(self, record_trace=True, record_magic=False, save_core=False, crash_addr=None, trace_bb_addr=None):
         with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
             target_trace_filename = tmp_prefix + ".trace" if record_trace else None
@@ -125,12 +125,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 ]
 
                 # if halfway-tracing is enabled, truncate the trace to the basic block which trace_addr belongs to
-                if trace_truncate:
-                    # locate the basic block first
-                    min_addr = trace_truncate[0]
-                    trace_start_addr = trace_truncate[1]
-                    trace_bb_start_addr = max([x for x in r.trace if min_addr <= x <= trace_start_addr])
-                    r.trace = r.trace[r.trace.index(trace_bb_start_addr):]
+                if trace_bb_addr:
+                    r.trace = r.trace[r.trace.index(trace_bb_addr):]
 
                 # grab the faulting address
                 if r.crashed:
