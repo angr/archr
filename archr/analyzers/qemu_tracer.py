@@ -75,7 +75,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             local_core_filename = tmp_prefix + ".core" if save_core else None
 
             target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename,
-                                             coredump_dir=tmpdir, crash_addr=crash_addr)
+                                             coredump_dir=tmpdir, crash_addr=crash_addr, start_trace_addr=trace_bb_addr)
             r = QemuTraceResult()
 
             try:
@@ -124,10 +124,6 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     int(_trace_re.match(t).group('addr'), 16) for t in trace_iter if t.startswith(b"Trace ")
                 ]
 
-                # if halfway-tracing is enabled, truncate the trace to the basic block which trace_addr belongs to
-                if trace_bb_addr:
-                    r.trace = r.trace[r.trace.index(trace_bb_addr):]
-
                 # grab the faulting address
                 if r.crashed:
                     lastline = trace.split(b'\n')[-2]
@@ -168,7 +164,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         return qemu_variant
 
     def _build_command(self, trace_filename=None, magic_filename=None, coredump_dir=None,
-                       report_bad_args=None, crash_addr=None):
+                       report_bad_args=None, crash_addr=None, start_trace_addr=None):
         """
         Here, we build the tracing command.
         """
@@ -185,6 +181,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             cmd_args += [ "-C", coredump_dir ]
         if crash_addr:
             cmd_args += [ "-A", hex(crash_addr) ]
+        if start_trace_addr:
+            cmd_args += [ "-T", hex(start_trace_addr) ]
 
         #
         # Next, we build QEMU options.
