@@ -67,15 +67,15 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 shutil.rmtree(tmpdir)
 
     @contextlib.contextmanager
-    def fire_context(self, record_trace=True, record_magic=False, save_core=False, trace_truncate=None):
+    def fire_context(self, record_trace=True, record_magic=False, save_core=False, crash_addr=None, trace_truncate=None):
         with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
             target_trace_filename = tmp_prefix + ".trace" if record_trace else None
             target_magic_filename = tmp_prefix + ".magic" if record_magic else None
             local_core_filename = tmp_prefix + ".core" if save_core else None
 
-            target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename, coredump_dir=tmpdir)
-
+            target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename,
+                                             coredump_dir=tmpdir, crash_addr=crash_addr)
             r = QemuTraceResult()
 
             try:
@@ -171,7 +171,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
         return qemu_variant
 
-    def _build_command(self, trace_filename=None, magic_filename=None, coredump_dir=None, report_bad_args=None):
+    def _build_command(self, trace_filename=None, magic_filename=None, coredump_dir=None,
+                       report_bad_args=None, crash_addr=None):
         """
         Here, we build the tracing command.
         """
@@ -185,7 +186,9 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         fire_path = os.path.join(self.target.tmpwd, "shellphish_qemu", "fire")
         cmd_args = [fire_path, qemu_variant]
         if coredump_dir:
-            cmd_args += [ "-C", coredump_dir]
+            cmd_args += [ "-C", coredump_dir ]
+        if crash_addr:
+            cmd_args += [ "-A", hex(crash_addr) ]
 
         #
         # Next, we build QEMU options.
@@ -237,6 +240,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 cmd_args += ['--library-path', self.library_path]
 
         # Now, we add the program arguments.
+        cmd_args += ["--"] # separate QEMU arguments and target arguments
         cmd_args += self.target.target_args
 
         return cmd_args
