@@ -1,5 +1,3 @@
-from time import sleep
-
 import archr
 import qtrace
 import unittest
@@ -7,11 +5,10 @@ import unittest
 from common import build_container
 
 
-class TestAnalyzerStrace(unittest.TestCase):
+class TestAnalyzerQTrace(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         build_container("cat")
-        build_container("socat")
 
     def check_qtrace_results(self, target, **kwargs):
         analyzer = archr.analyzers.QTraceAnalyzer(target)
