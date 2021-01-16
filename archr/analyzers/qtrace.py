@@ -1,35 +1,47 @@
-import contextlib
-import logging
 import os
+import socket
+import time
+import logging
 
 import qtrace
+
+from . import Analyzer
 
 l = logging.getLogger("archr.analyzers.qtrace")
 
 
-class QtraceAnalyzer(ContextAnalyzer):
-    """
-    Launches a process under qtrace
-    """
-
+class QTraceAnalyzer(Analyzer):
     REQUIRED_IMPLANT = "qtrace"
 
-    @contextlib.contextmanager
-    def fire_context(
-        self, trace_args=None, args_prefix=None, **kwargs
-    ):  # pylint:disable=arguments-differ
-        """
-        Starts qtrace with a fresh process.
-
-        :param kwargs: Additional arguments to run_command
-        :return: Target instance returned by run_command
-        """
+    def fire(self, machine_type=None, **kwargs):
+        if machine_type is None:
+            machine_type = qtrace.TraceMachine
 
         fire_path = os.path.join(self.target.tmpwd, "qtrace", "fire")
-        args_prefix = (args_prefix or []) + [fire_path] + (trace_args or []) + ["--"]
+        args_prefix = [fire_path, "--"]
+
         with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
-            yield flight
-        try:
-            flight.result = flight.process.stderr.read()  # illegal, technically
-        except ValueError:
-            flight.result = b""
+            process = flight.process
+            argv = []
+
+            address = (self.target.ipv4_address, 4242)
+            for _ in range(10):
+                try:
+                    trace_socket = socket.create_connection(address)
+                except ConnectionRefusedError:
+                    time.sleep(1)
+                else:
+                    break
+            else:
+                raise ConnectionRefusedError(
+                    "Failed to connect to qtrace's trace socket!"
+                )
+
+            std_streams = (process.stdin, process.stdout, process.stderr)
+
+            machine = machine_type(
+                argv, trace_socket=trace_socket, std_streams=std_streams
+            )
+            machine.run()
+
+            return machine

@@ -79,15 +79,17 @@ from .gdbserver import GDBServerAnalyzer
 from .core import CoreAnalyzer
 from .ltrace import LTraceAnalyzer, LTraceAttachAnalyzer
 from .strace import STraceAnalyzer, STraceAttachAnalyzer
+from .qtrace import QTraceAnalyzer
 from .input_fd import InputFDAnalyzer
 from .rr import RRTracerAnalyzer, RRReplayAnalyzer
 from .gdb import GDBAnalyzer
 from .. import implants
 
 # backwards compatibility
-angrProjectBow = angrProjectAnalyzer
-angrStateBow = angrStateAnalyzer
-angrUltimateTracerBow = angrUltimateTracerAnalyzer
+if _angr_available:
+    angrProjectBow = angrProjectAnalyzer
+    angrStateBow = angrStateAnalyzer
+    angrUltimateTracerBow = angrUltimateTracerAnalyzer
 QEMUTracerBow = QEMUTracerAnalyzer
 DataScoutBow = DataScoutAnalyzer
 GDBServerBow = GDBServerAnalyzer
