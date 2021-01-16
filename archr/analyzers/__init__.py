@@ -68,18 +68,20 @@ class ContextAnalyzer(Analyzer):
             yield flight
 
 
-from .. import _angr_available
+from .. import _angr_available, _qtrace_available
+
 if _angr_available:
     from .angr_project import angrProjectAnalyzer
     from .angr_state import angrStateAnalyzer
     from .angr_ultimate_tracer import angrUltimateTracerAnalyzer
+if _qtrace_available:
+    from .qtrace import QTraceAnalyzer
 from .qemu_tracer import QEMUTracerAnalyzer
 from .datascout import DataScoutAnalyzer
 from .gdbserver import GDBServerAnalyzer
 from .core import CoreAnalyzer
 from .ltrace import LTraceAnalyzer, LTraceAttachAnalyzer
 from .strace import STraceAnalyzer, STraceAttachAnalyzer
-from .qtrace import QTraceAnalyzer
 from .input_fd import InputFDAnalyzer
 from .rr import RRTracerAnalyzer, RRReplayAnalyzer
 from .gdb import GDBAnalyzer

@@ -1,5 +1,4 @@
 import archr
-import qtrace
 import unittest
 
 from common import build_container
@@ -11,6 +10,8 @@ class TestAnalyzerQTrace(unittest.TestCase):
         build_container("cat")
 
     def check_qtrace_results(self, target, **kwargs):
+        import qtrace
+
         analyzer = archr.analyzers.QTraceAnalyzer(target)
         machine = analyzer.fire(args_suffix=["/etc/passwd"], **kwargs)
 
