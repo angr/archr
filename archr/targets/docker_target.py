@@ -58,6 +58,9 @@ class DockerImageTarget(Target):
                 network_dict = container_inspect["NetworkSettings"]["Networks"]
                 # Grab "first" network
                 network = list(network_dict.keys())[0]
+                if network == "host":
+                    # Don't implicitly start the target with host network
+                    network = None
             except (KeyError, IndexError, AttributeError, docker.errors.APIError):
                 l.warning("Detected archr is being run from a docker container, but couldn't retrieve network information")
 
