@@ -1,6 +1,7 @@
 import os
 import socket
 import time
+import contextlib
 import logging
 
 import qtrace
@@ -26,12 +27,10 @@ class QTraceAnalyzer(Analyzer):
 
             address = (self.target.ipv4_address, 4242)
             for _ in range(10):
-                try:
+                with contextlib.suppress(ConnectionRefusedError, OSError):
                     trace_socket = socket.create_connection(address)
-                except ConnectionRefusedError:
-                    time.sleep(1)
-                else:
                     break
+                time.sleep(1)
             else:
                 raise ConnectionRefusedError(
                     "Failed to connect to qtrace's trace socket!"
