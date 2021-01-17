@@ -51,12 +51,14 @@ class DockerImageTarget(Target):
         # If we're running in docker-by-docker, default the network to the same network
         if check_in_docker() and not check_dockerd_running() and network is None:
             try:
-                container_id = os.environ["HOSTNAME"]
+                with open("/proc/self/cgroup") as f:
+                    cgroups = dict(e.split(':', 2)[1:] for e in f.read().strip().split('\n'))
+                container_id = re.search("/([0-9a-f]{64})", cgroups["pids"]).group(1)
                 container_inspect = self._client.api.inspect_container(container_id)
                 network_dict = container_inspect["NetworkSettings"]["Networks"]
                 # Grab "first" network
                 network = list(network_dict.keys())[0]
-            except (KeyError, IndexError, docker.errors.APIError):
+            except (KeyError, IndexError, AttributeError, docker.errors.APIError):
                 l.warning("Detected archr is being run from a docker container, but couldn't retrieve network information")
 
         self.network = network
