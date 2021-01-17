@@ -68,11 +68,14 @@ class ContextAnalyzer(Analyzer):
             yield flight
 
 
-from .. import _angr_available
+from .. import _angr_available, _qtrace_available
+
 if _angr_available:
     from .angr_project import angrProjectAnalyzer
     from .angr_state import angrStateAnalyzer
     from .angr_ultimate_tracer import angrUltimateTracerAnalyzer
+if _qtrace_available:
+    from .qtrace import QTraceAnalyzer
 from .qemu_tracer import QEMUTracerAnalyzer
 from .datascout import DataScoutAnalyzer
 from .gdbserver import GDBServerAnalyzer
@@ -85,9 +88,10 @@ from .gdb import GDBAnalyzer
 from .. import implants
 
 # backwards compatibility
-angrProjectBow = angrProjectAnalyzer
-angrStateBow = angrStateAnalyzer
-angrUltimateTracerBow = angrUltimateTracerAnalyzer
+if _angr_available:
+    angrProjectBow = angrProjectAnalyzer
+    angrStateBow = angrStateAnalyzer
+    angrUltimateTracerBow = angrUltimateTracerAnalyzer
 QEMUTracerBow = QEMUTracerAnalyzer
 DataScoutBow = DataScoutAnalyzer
 GDBServerBow = GDBServerAnalyzer

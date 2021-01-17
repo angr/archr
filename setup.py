@@ -27,7 +27,8 @@ setup(
         'cle'
     ],
     extras_require = {
-        'angr':  ["angr"]
+        'angr':  ["angr"],
+        'qtrace': ["qtrace"],
     },
     description='Target-centric program analysis.',
     url='https://github.com/angr/archr',
