@@ -193,6 +193,8 @@ class DockerImageTarget(Target):
     def ipv4_address(self):
         if self.container is None:
             return None
+        if self.network == "host":
+            return "127.0.0.1"
         settings = self.container.attrs['NetworkSettings']
         if self.network:
             settings = settings['Networks'][self.network]
@@ -202,6 +204,8 @@ class DockerImageTarget(Target):
     def ipv6_address(self):
         if self.container is None:
             return None
+        if self.network == "host":
+            return "::1"
         settings = self.container.attrs['NetworkSettings']
         if self.network:
             settings = settings['Networks'][self.network]
