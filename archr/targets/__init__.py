@@ -416,7 +416,6 @@ class Target(ABC):
 
         original_binary = self.retrieve_contents(self.target_path)
         hooked_binary = hook_entry(original_binary, asm_code=asm_code, bin_code=bin_code)
-        import ipdb; ipdb.set_trace()
         with self.replacement_context(self.target_path, hooked_binary, saved_contents=original_binary):
             with self.run_context(*args, **kwargs) as p:
                 yield p
