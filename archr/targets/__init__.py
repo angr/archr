@@ -118,11 +118,18 @@ class Target(ABC):
         pass
 
     @abstractmethod
-    def retrieve_tarball(self, target_path):
+    def retrieve_tarball(self, target_path, dereference=False):
         """
         Retrieves files from the target in the form of tarball contents.
 
         :param str target_path: The path to retrieve.
+        """
+        pass
+
+    @abstractmethod
+    def realpath(self, target_path):
+        """
+        Return the fully qualified path of the file referenced by target_path, dereferencing any symlinks.
         """
         pass
 
@@ -293,7 +300,7 @@ class Target(ABC):
         :returns bytes: the contents of the file
         """
         with io.BytesIO() as f:
-            f.write(self.retrieve_tarball(target_path))
+            f.write(self.retrieve_tarball(target_path, dereference=True))
             f.seek(0)
             with tarfile.open(fileobj=f, mode='r') as t:
                 with t.extractfile(os.path.basename(target_path)) as fp:
@@ -409,6 +416,7 @@ class Target(ABC):
 
         original_binary = self.retrieve_contents(self.target_path)
         hooked_binary = hook_entry(original_binary, asm_code=asm_code, bin_code=bin_code)
+        import ipdb; ipdb.set_trace()
         with self.replacement_context(self.target_path, hooked_binary, saved_contents=original_binary):
             with self.run_context(*args, **kwargs) as p:
                 yield p

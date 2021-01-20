@@ -63,15 +63,18 @@ class LocalTarget(Target):
             os.makedirs(target_path)
         t.extractall(path=target_path)
 
-    def retrieve_tarball(self, target_path):
+    def retrieve_tarball(self, target_path, dereference=False):
         f = io.BytesIO()
-        t = tarfile.TarFile(fileobj=f, mode="w")
+        t = tarfile.TarFile(fileobj=f, mode="w", dereference=dereference)
         t.add(target_path, arcname=os.path.basename(target_path.rstrip('/'))) # stupid docker compatibility --- it just uses the basename
         f.seek(0)
         return f.read()
 
     def resolve_local_path(self, target_path):
         return target_path
+
+    def realpath(self, target_path):
+        return os.path.realpath(target_path)
 
     #
     # Info access

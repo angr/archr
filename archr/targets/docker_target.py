@@ -173,9 +173,13 @@ class DockerImageTarget(Target):
             p.wait()
             pass
 
-    def retrieve_tarball(self, target_path):
+    def retrieve_tarball(self, target_path, dereference=False):
         stream, _ = self.container.get_archive(target_path)
         return b''.join(stream)
+
+    def realpath(self, target_path):
+        l.warning("docker target realpath is not implemented. things may break.")
+        return target_path
 
     def add_volume(self, src_path, dst_path, mode="rw"):
         new_vol = {'bind': dst_path, 'mode': mode}
