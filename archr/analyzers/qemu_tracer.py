@@ -76,6 +76,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
             target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename,
                                              coredump_dir=tmpdir, crash_addr=crash_addr, start_trace_addr=trace_bb_addr)
+            l.debug("launch QEMU with command: %s", ' '.join(target_cmd))
             r = QemuTraceResult()
 
             try:

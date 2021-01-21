@@ -37,7 +37,7 @@ def lib_dependencies(filepath):
 
 def hook_entry(binary, asm_code=None, bin_code=None):
     main_bin = io.BytesIO(binary)
-    b = cle.Loader(main_bin, auto_load_libs=False, perform_relocations=False, main_opts={'base_addr': 0})
+    b = cle.Loader(main_bin, auto_load_libs=False, perform_relocations=False)
     start_addr = b.main_object.addr_to_offset(b.main_object.entry)
     arch = b.main_object.arch
     if arch.name in ('ARMHF', 'ARMEL') and arch.is_thumb(start_addr): # OMG, thumb mode is a disaster
@@ -58,7 +58,7 @@ def hook_entry(binary, asm_code=None, bin_code=None):
 
 def hook_addr(binary, addr, asm_code=None, bin_code=b''):
     main_bin = io.BytesIO(binary)
-    loader = cle.Loader(main_bin, auto_load_libs=False, perform_relocations=False, main_opts={'base_addr': 0})
+    loader = cle.Loader(main_bin, auto_load_libs=False, perform_relocations=False)
     offset = loader.main_object.addr_to_offset(addr)
     main_bin.seek(offset)
     main_bin.write(loader.main_object.arch.asm(asm_code) if asm_code else bin_code)
