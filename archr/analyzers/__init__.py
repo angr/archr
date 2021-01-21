@@ -1,7 +1,10 @@
 import os
 import time
+import logging
 from contextlib import contextmanager
 #from typing import ContextManager
+
+l = logging.getLogger(name=__name__)
 
 class Analyzer:
     REQUIRED_IMPLANT = None
@@ -43,8 +46,11 @@ class ContextAnalyzer(Analyzer):
     Provides a default .fire() that replays a testcase.
     """
 
-    def fire(self, *args, testcase=None, channel=None, **kwargs): #pylint:disable=arguments-differ
+    def fire(self, *args, testcase=None, channel=None, delay=0, **kwargs): #pylint:disable=arguments-differ
         with self.fire_context(*args, **kwargs) as flight:
+            if delay:
+                l.info("sleep for %d seconds waiting for the target to initialize", delay)
+                time.sleep(delay) # wait for the target to initialize
             r = flight.default_channel if channel is None else flight.get_channel(channel)
             if type(testcase) is bytes:
                 r.write(testcase)
