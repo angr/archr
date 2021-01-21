@@ -97,11 +97,21 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
             if local_core_filename:
                 target_cores = self.target.resolve_glob(os.path.join(tmpdir, "qemu_*.core"))
+
+                # sanity check core dumps
                 if len(target_cores) == 0:
                     raise ArchrError("the target didn't crash inside qemu! Make sure you launch it correctly!\n"+
                                      "command: %s" % ' '.join(target_cmd))
-                elif len(target_cores) > 1:
+                elif not crash_addr and len(target_cores) != 1:
                     raise ArchrError("expected 1 core file but found %d" % len(target_cores))
+                elif crash_addr and len(target_cores) != 2:
+                    raise ArchrError("expected 2 core files, 1 for coreaddr 1 for the real crash. But found %d core dumps" % len(target_cores))
+
+                if save_core and crash_addr:
+                    l.warning("Both crash_addr and save_core are enabled, only coreaddr coredump will be saved")
+
+                # choose the correct core dump to retrieve
+                # TODO: the current implementation assumes the first item in target_cores is generated first
                 with self._local_mk_tmpdir() as local_tmpdir:
                     self.target.retrieve_into(target_cores[0], local_tmpdir)
                     cores = glob.glob(os.path.join(local_tmpdir, "qemu_*.core"))
