@@ -327,6 +327,28 @@ class DockerImageTarget(Target):
         except docker.errors.ImageNotFound as err:
             l.info("Unable to pull image {}, got error {}, ignoring and continuing on".format(self.image_id, err))
 
+    #
+    # Serialization
+    #
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state["_client"] = None
+        if state["image"] is not None:
+            state["image"] = state["image"].id
+        if state["container"] is not None:
+            state["container"] = state["container"].id
+
+    def __setstate__(self, state):
+        client = docker.client.from_env()
+        state["_client"] = client
+        if state["image"] is not None:
+            state["image"] = client.images.get(state["image"])
+        if state["container"] is not None:
+            state["container"] = client.containers.get(state["container"])
+        for name, value in state.items():
+            setattr(self, name, value)
+
 
 def check_in_docker() -> bool:
     return os.path.exists("/.dockerenv")
