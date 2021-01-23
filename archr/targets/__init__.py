@@ -27,7 +27,7 @@ class Target(ABC):
     def __init__(
         self,
         target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux', target_arch='x86_64',
-        ip_version=4
+        ip_version=4, *, auto_remove=True
         ):
         """
         Create an autom
@@ -50,6 +50,8 @@ class Target(ABC):
         self.target_arch = target_arch
         self.target_args_prefix = [ ]
         self.ip_version = ip_version
+
+        self.auto_remove = auto_remove
 
         self.tmp_bind = None  # the /tmp in the target is mapped to `tmp_bind` on the host. currently only used in
                               # DockerTarget. it impacts how resolve_local_path() works.
@@ -181,7 +183,9 @@ class Target(ABC):
     def __exit__(self, *args):
         self.stop()
         self.remove()
-    def __del__(self): self.remove()
+    def __del__(self):
+        if self.auto_remove:
+            self.remove()
 
     @property
     def main_binary_args(self):

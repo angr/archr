@@ -338,6 +338,7 @@ class DockerImageTarget(Target):
             state["image"] = state["image"].id
         if state["container"] is not None:
             state["container"] = state["container"].id
+        return state
 
     def __setstate__(self, state):
         client = docker.client.from_env()
