@@ -41,6 +41,7 @@ class QTraceAnalyzer(Analyzer):
             machine = machine_type(
                 argv, trace_socket=trace_socket, std_streams=std_streams
             )
+            machine.process = process  # TODO: refactor
             machine.run()
 
             return machine
