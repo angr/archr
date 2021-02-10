@@ -62,7 +62,7 @@ class angrProjectAnalyzer(Analyzer):
                 self.target.retrieve_into(target_lib, tmpdir)
                 the_libs.append(local_lib)
             lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in self._mem_mapping.items() }
-            bin_opts = { "base_addr": self._mem_mapping[self.target.target_path] } if preloader.main_object.pic else {}
+            bin_opts = lib_opts[os.path.basename(self.target.target_path)] if preloader.main_object.pic else {}
         else:
             the_libs = { }
             lib_opts = { }
