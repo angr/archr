@@ -1,12 +1,20 @@
 import logging
+
 _LOG = logging.getLogger("archr")
 
 try:
-	import angr
-	_angr_available = True
+    import angr
+    _angr_available = True
 except ImportError:
-	_LOG.warning("angr import failed. angr support disabled")
-	_angr_available = False
+    _LOG.warning("angr import failed. angr support disabled")
+    _angr_available = False
+
+try:
+    import qtrace
+    _qtrace_available = True
+except ImportError:
+    _LOG.warning("qtrace import failed. qtrace support disabled")
+    _qtrace_available = False
 
 from . import targets
 from . import implants

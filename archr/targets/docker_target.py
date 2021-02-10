@@ -50,12 +50,17 @@ class DockerImageTarget(Target):
         # If we're running in docker-by-docker, default the network to the same network
         if check_in_docker() and not check_dockerd_running() and network is None:
             try:
-                container_id = os.environ["HOSTNAME"]
+                with open("/proc/self/cgroup") as f:
+                    cgroups = dict(e.split(':', 2)[1:] for e in f.read().strip().split('\n'))
+                container_id = re.search("/([0-9a-f]{64})", cgroups["pids"]).group(1)
                 container_inspect = self._client.api.inspect_container(container_id)
                 network_dict = container_inspect["NetworkSettings"]["Networks"]
                 # Grab "first" network
                 network = list(network_dict.keys())[0]
-            except (KeyError, IndexError, docker.errors.APIError):
+                if network == "host":
+                    # Don't implicitly start the target with host network
+                    network = None
+            except (KeyError, IndexError, AttributeError, docker.errors.APIError):
                 l.warning("Detected archr is being run from a docker container, but couldn't retrieve network information")
 
         self.network = network
@@ -170,9 +175,13 @@ class DockerImageTarget(Target):
             p = self.run_command(["chown", "-R", f"{self.user}:{self.user}", '/tmp'], user="root", stderr=subprocess.DEVNULL)
             p.wait()
 
-    def retrieve_tarball(self, target_path):
+    def retrieve_tarball(self, target_path, dereference=False):
         stream, _ = self.container.get_archive(target_path)
         return b''.join(stream)
+
+    def realpath(self, target_path):
+        l.warning("docker target realpath is not implemented. things may break.")
+        return target_path
 
     def add_volume(self, src_path, dst_path, mode="rw"):
         new_vol = {'bind': dst_path, 'mode': mode}
@@ -193,6 +202,8 @@ class DockerImageTarget(Target):
     def ipv4_address(self):
         if self.container is None:
             return None
+        if self.network == "host":
+            return "127.0.0.1"
         settings = self.container.attrs['NetworkSettings']
         if self.network:
             settings = settings['Networks'][self.network]
@@ -202,6 +213,8 @@ class DockerImageTarget(Target):
     def ipv6_address(self):
         if self.container is None:
             return None
+        if self.network == "host":
+            return "::1"
         settings = self.container.attrs['NetworkSettings']
         if self.network:
             settings = settings['Networks'][self.network]
@@ -315,6 +328,29 @@ class DockerImageTarget(Target):
             self._client.images.pull(self.image_id)
         except docker.errors.ImageNotFound as err:
             l.info("Unable to pull image %s, got error %s, ignoring and continuing on", self.image_id, err)
+
+    #
+    # Serialization
+    #
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state["_client"] = None
+        if state["image"] is not None:
+            state["image"] = state["image"].id
+        if state["container"] is not None:
+            state["container"] = state["container"].id
+        return state
+
+    def __setstate__(self, state):
+        client = docker.client.from_env()
+        state["_client"] = client
+        if state["image"] is not None:
+            state["image"] = client.images.get(state["image"])
+        if state["container"] is not None:
+            state["container"] = client.containers.get(state["container"])
+        for name, value in state.items():
+            setattr(self, name, value)
 
 
 def check_in_docker() -> bool:

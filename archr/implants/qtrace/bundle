@@ -1,0 +1,20 @@
+#!/bin/bash
+
+[ $# -ge 1 ] || { echo "Usage: $0 /path/to/bundle_dir"; exit 1; }
+BUNDLE_DIR=$1
+
+FIRE_SCRIPT=${0//bundle/fire}
+
+DEPS_PATH=$(python -c "import qtrace; print(qtrace.DEPS_PATH)")
+LD_PATH=$(python -c "import qtrace; print(qtrace.LD_PATH.relative_to(qtrace.DEPS_PATH))")
+LIBS_PATH=$(python -c "import qtrace; print(qtrace.LIBS_PATH.relative_to(qtrace.DEPS_PATH))")
+QEMU_PATH=$(python -c "import qtrace; print(qtrace.QEMU_PATH.relative_to(qtrace.DEPS_PATH))")
+QTRACE_PATH=$(python -c "import qtrace; print(qtrace.QTRACE_PATH.relative_to(qtrace.DEPS_PATH))")
+
+cp -L -r $DEPS_PATH $BUNDLE_DIR
+cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire
+
+sed -i -e "s:LD_PATH:$LD_PATH:g" $BUNDLE_DIR/fire
+sed -i -e "s:LIBS_PATH:$LIBS_PATH:g" $BUNDLE_DIR/fire
+sed -i -e "s:QEMU_PATH:$QEMU_PATH:g" $BUNDLE_DIR/fire
+sed -i -e "s:QTRACE_PATH:$QTRACE_PATH:g" $BUNDLE_DIR/fire

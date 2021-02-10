@@ -12,8 +12,8 @@ if bytes is str:
 
 setup(
     name='archr',
-    version='8.20.9.2',
-    python_requires='>=3.5',
+    version='9.0.gitrolling',
+    python_requires='>=3.6',
     packages=packages,
     package_data = {
         'archr': ['implants/*.sh', 'implants/*/*']
@@ -24,11 +24,13 @@ setup(
         'docker',
         'nclib>=1.0.0rc3',
         'patchelf-wrapper',
-        'cle'
+        'cle==9.0.gitrolling'
     ],
     extras_require = {
-        'angr':  ["angr"]
+        'angr':  ["angr==9.0.gitrolling"],
+        'qtrace': ["qtrace"],
     },
     description='Target-centric program analysis.',
     url='https://github.com/angr/archr',
+    classifiers=["Operating System :: POSIX :: Linux"],
 )
