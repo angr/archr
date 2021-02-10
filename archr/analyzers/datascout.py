@@ -169,7 +169,7 @@ class DataScoutAnalyzer(Analyzer):
             self.auxv = output
 
         if not self.map:
-            output = self.run_shellcode(self.sendfile_shellcode("/proc/self/maps"), aslr=aslr, **kwargs)
+            output = self.run_shellcode(self.brk_shellcode()+self.sendfile_shellcode("/proc/self/maps"), aslr=aslr, **kwargs)
             self.map = parse_proc_maps(output)
 
         return self.argv, self.env, self.auxv, self.map
