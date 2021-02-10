@@ -24,7 +24,7 @@ def parse_proc_maps(proc_str):
         start,end = addr_range.split(b"-")
         if what in parsed:
             continue
-        elif what.startswith("/"):
+        if what.startswith("/"):
             parsed[what] = int(start, 16)
         elif what.startswith("["):
             parsed[what] = int(start, 16)
