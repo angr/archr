@@ -26,10 +26,10 @@ class DataScoutAnalyzer(Analyzer):
         self.analyzer = analyzer
 
     def _encode_bytes(self, s):
-
-        def _encode_name(bits):
+        def _encode_name(bits, little=True):
             w = bits // 8  # word size
-            n = ["0"] + [s[i:i + w].ljust(w, "\0")[::-1].encode('utf-8').hex() for i in range(0, len(s), w)][::-1]
+            byte_order = -1 if little else 1
+            n = ["0"] + [s[i:i + w].ljust(w, "\0")[::byte_order].encode('utf-8').hex() for i in range(0, len(s), w)][::-1]
             return n
 
         if self.target.target_arch == 'x86_64':
@@ -39,7 +39,7 @@ class DataScoutAnalyzer(Analyzer):
             encoded_name = _encode_name(32)
             return "".join("mov eax, 0x%s; push eax; " % word for word in encoded_name)
         elif self.target.target_arch in ('mips', 'mipsel'):
-            encoded_name = _encode_name(32)
+            encoded_name = _encode_name(32, little=self.target.target_arch != 'mips')
             return "".join("li $t0, 0x%s; addi $sp, $sp, -4; sw $t0, 0($sp);" % word for word in encoded_name)
         elif self.target.target_arch == 'arm':
             encoded_name = _encode_name(32)
