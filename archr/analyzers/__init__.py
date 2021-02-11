@@ -46,24 +46,30 @@ class ContextAnalyzer(Analyzer):
     Provides a default .fire() that replays a testcase.
     """
 
-    def fire(self, *args, testcase=None, channel=None, delay=0, **kwargs): #pylint:disable=arguments-differ
+    def fire(self, *args, testcase=None, pre_fire_hook=None, channel=None, delay=0, **kwargs): #pylint:disable=arguments-differ
         with self.fire_context(*args, **kwargs) as flight:
             if delay:
                 l.info("sleep for %d seconds waiting for the target to initialize", delay)
-                time.sleep(delay) # wait for the target to initialize
-            r = flight.default_channel if channel is None else flight.get_channel(channel)
-            if type(testcase) is bytes:
-                r.write(testcase)
-            elif type(testcase) in (list, tuple):
-                for s in testcase:
-                    r.write(s)
-                    time.sleep(0.1)
-            elif testcase is None:
-                pass
-            else:
-                raise ValueError("invalid testcase type %s" % type(testcase))
+                time.sleep(delay)  # wait for the target to initialize
+            if pre_fire_hook is not None:
+                pre_fire_hook(self, flight, channel=channel, testcase=testcase)
+            self._fire_testcase(flight, testcase=testcase, channel=channel)
 
         return flight.result
+
+    def _fire_testcase(self, flight, testcase=None, channel=None):
+        r = flight.default_channel if channel is None else flight.get_channel(channel)
+        if type(testcase) is bytes:
+            r.write(testcase)
+        elif type(testcase) in (list, tuple):
+            for s in testcase:
+                r.write(s)
+                time.sleep(0.1)
+        elif testcase is None:
+            pass
+        else:
+            raise ValueError("invalid testcase type %s" % type(testcase))
+        return r
 
     @contextmanager
     def fire_context(self, *args, **kwargs):  # -> ContextManager[Flight]:
