@@ -191,9 +191,9 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         if coredump_dir:
             cmd_args += [ "-C", coredump_dir ]
         if crash_addr:
-            cmd_args += [ "-A", hex(crash_addr) ]
+            cmd_args += [ "-A", '0x{:x}:{}'.format(*crash_addr) ]
         if start_trace_addr:
-            cmd_args += [ "-T", hex(start_trace_addr) ]
+            cmd_args += [ "-T", '0x{:x}:{}'.format(*start_trace_addr) ]
 
         #
         # Next, we build QEMU options.
