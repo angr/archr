@@ -57,7 +57,7 @@ class ContextAnalyzer(Analyzer):
 
         return flight.result
 
-    def _fire_testcase(self, flight, testcase=None, channel=None):
+    def _fire_testcase(self, flight, testcase=None, channel=None): #pylint:disable=no-self-use
         r = flight.default_channel if channel is None else flight.get_channel(channel)
         if type(testcase) is bytes:
             r.write(testcase)
