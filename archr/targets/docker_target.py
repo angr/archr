@@ -151,6 +151,7 @@ class DockerImageTarget(Target):
             except docker.errors.NotFound:
                 # the container is already gone before we attempt to remove it
                 pass
+        self._client.close()
         super().remove()
         return self
 
@@ -169,11 +170,19 @@ class DockerImageTarget(Target):
         p = self.run_command(["mkdir", "-p", target_path])
         if p.wait() != 0:
             raise ArchrError("Unexpected error when making target_path in container: " + p.stdout.read().decode() + " " + p.stderr.read().decode())
+        p.stdin.close()
+        p.stdout.close()
+        if p.stderr:
+            p.stderr.close()
         self.container.put_archive(target_path, tarball_contents)
         if self.user != 'root':
             # TODO: this is probably important, but as implemented (path resolves to /), it is way to slow. If someone wants this, implement it correctly.
             p = self.run_command(["chown", "-R", f"{self.user}:{self.user}", '/tmp'], user="root", stderr=subprocess.DEVNULL)
             p.wait()
+            p.stdin.close()
+            p.stdout.close()
+            if p.stderr:
+                p.stderr.close()
 
     def retrieve_tarball(self, target_path, dereference=False):
         stream, _ = self.container.get_archive(target_path)
