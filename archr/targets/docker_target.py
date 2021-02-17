@@ -312,7 +312,7 @@ class DockerImageTarget(Target):
         if self.container is None:
             raise ArchrError("target.start() must be called before target.run_command()")
 
-        if not aslr and self.target_arch == 'x86_64':
+        if not aslr and self.target_arch in ['x86_64', 'i386']:
             args = ['setarch', 'x86_64', '-R'] + args
 
         docker_args = [ "docker", "exec", "-i" ]
