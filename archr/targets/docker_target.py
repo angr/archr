@@ -70,7 +70,7 @@ class DockerImageTarget(Target):
     # Lifecycle
     #
 
-    def build(self, pull=False):
+    def build(self, pull=False):# pylint:disable=arguments-differ
         if pull and not self._client.images.list(self.image_id):
             self._pull()
         self.image = self._client.images.get(self.image_id)
@@ -89,7 +89,7 @@ class DockerImageTarget(Target):
         if "qemu-" in self.target_args[0]:
             self.target_args_prefix = self.target_args[:1]
             self.target_args = self.target_args[1:]
-            self.target_arch = self.target_args_prefix[0].split('qemu-', 1)[1]
+            self.target_arch = re.search(r"qemu-(\w+)(-\w+)?", self.target_args_prefix[0]).group(1)
 
         if re.match(r"ld[0-9A-Za-z\-]*\.so.*", os.path.basename(self.target_args[0])) is not None:
             self.target_args = self.target_args[1:]
