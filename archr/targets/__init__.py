@@ -100,7 +100,7 @@ class Target(ABC):
         """
         return self
 
-    def save(self, tag="latest"):
+    def save(self, tag):
         """
         Saves a snapshot of the current image using the tag
         :return:
