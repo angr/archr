@@ -105,10 +105,7 @@ class DockerImageTarget(Target):
         super().build()
         return self
 
-    def save(self, tag="latest"):
-        self.container.commit(f"{self.image_id}:{tag}")
-
-    def start(self, user=None, name=None, working_dir=None, labels=None, entry_point=None):  # pylint:disable=arguments-differ
+    def start(self, user=None, name=None, working_dir=None, labels=None, entry_point=None): #pylint:disable=arguments-differ
         if labels is None:
             labels = []
         if entry_point is None:
@@ -131,6 +128,9 @@ class DockerImageTarget(Target):
         )
         self.container.reload()  # update self.container.attrs
         return self
+
+    def save(self, tag="latest"):
+        self.container.commit(f"{self.image_id}:{tag}")
 
     def restart(self):
         self.container.restart()
