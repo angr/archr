@@ -70,7 +70,7 @@ class DockerImageTarget(Target):
     # Lifecycle
     #
 
-    def build(self, pull=False):# pylint:disable=arguments-differ
+    def build(self, pull=False):
         if pull and not self._client.images.list(self.image_id):
             self._pull()
         self.image = self._client.images.get(self.image_id)
@@ -89,7 +89,7 @@ class DockerImageTarget(Target):
         if "qemu-" in self.target_args[0]:
             self.target_args_prefix = self.target_args[:1]
             self.target_args = self.target_args[1:]
-            self.target_arch = re.search(r"qemu-(\w+)(-\w+)?", self.target_args_prefix[0]).group(1)
+            self.target_arch = self.target_args_prefix[0].split('qemu-', 1)[1]
 
         if re.match(r"ld[0-9A-Za-z\-]*\.so.*", os.path.basename(self.target_args[0])) is not None:
             self.target_args = self.target_args[1:]
@@ -105,11 +105,10 @@ class DockerImageTarget(Target):
         super().build()
         return self
 
-    def start(self, user=None, name=None, working_dir=None, labels=None, entry_point=None): #pylint:disable=arguments-differ
-        if labels is None:
-            labels = []
-        if entry_point is None:
-            entry_point = ["/bin/sh"]
+    def save(self, tag="latest"):
+        self.container.commit(f"{self.image_id}:{tag}")
+
+    def start(self, user=None, name=None, working_dir=None, labels=[], entry_point=['/bin/sh'], cpuset_cpus=None): #pylint:disable=arguments-differ
         if self.tmp_bind:
             self.volumes[self.tmp_bind] = {'bind': '/tmp/', 'mode': 'rw'}
 
