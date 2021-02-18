@@ -3,7 +3,6 @@ import tempfile
 import logging
 import docker
 import shlex
-import json
 import os
 import re
 
@@ -28,7 +27,7 @@ class DockerImageTarget(Target):
         network=None,
         **kwargs
         ):
-        super(DockerImageTarget, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self._client = docker.client.from_env()
         self.image_id = image_name
@@ -71,7 +70,7 @@ class DockerImageTarget(Target):
     # Lifecycle
     #
 
-    def build(self, pull=False):
+    def build(self, pull=False):# pylint:disable=arguments-differ
         if pull and not self._client.images.list(self.image_id):
             self._pull()
         self.image = self._client.images.get(self.image_id)
@@ -90,7 +89,7 @@ class DockerImageTarget(Target):
         if "qemu-" in self.target_args[0]:
             self.target_args_prefix = self.target_args[:1]
             self.target_args = self.target_args[1:]
-            self.target_arch = self.target_args_prefix[0].split('qemu-', 1)[1]
+            self.target_arch = re.search(r"qemu-(\w+)(-\w+)?", self.target_args_prefix[0]).group(1)
 
         if re.match(r"ld[0-9A-Za-z\-]*\.so.*", os.path.basename(self.target_args[0])) is not None:
             self.target_args = self.target_args[1:]
@@ -106,7 +105,11 @@ class DockerImageTarget(Target):
         super().build()
         return self
 
-    def start(self, user=None, name=None, working_dir=None, labels=[], entry_point=['/bin/sh']): #pylint:disable=arguments-differ
+    def start(self, user=None, name=None, working_dir=None, labels=None, entry_point=None): #pylint:disable=arguments-differ
+        if labels is None:
+            labels = []
+        if entry_point is None:
+            entry_point = ["/bin/sh"]
         if self.tmp_bind:
             self.volumes[self.tmp_bind] = {'bind': '/tmp/', 'mode': 'rw'}
 
@@ -148,6 +151,7 @@ class DockerImageTarget(Target):
             except docker.errors.NotFound:
                 # the container is already gone before we attempt to remove it
                 pass
+        self._client.close()
         super().remove()
         return self
 
@@ -166,12 +170,19 @@ class DockerImageTarget(Target):
         p = self.run_command(["mkdir", "-p", target_path])
         if p.wait() != 0:
             raise ArchrError("Unexpected error when making target_path in container: " + p.stdout.read().decode() + " " + p.stderr.read().decode())
+        p.stdin.close()
+        p.stdout.close()
+        if p.stderr:
+            p.stderr.close()
         self.container.put_archive(target_path, tarball_contents)
         if self.user != 'root':
             # TODO: this is probably important, but as implemented (path resolves to /), it is way to slow. If someone wants this, implement it correctly.
             p = self.run_command(["chown", "-R", f"{self.user}:{self.user}", '/tmp'], user="root", stderr=subprocess.DEVNULL)
             p.wait()
-            pass
+            p.stdin.close()
+            p.stdout.close()
+            if p.stderr:
+                p.stderr.close()
 
     def retrieve_tarball(self, target_path, dereference=False):
         stream, _ = self.container.get_archive(target_path)
@@ -301,7 +312,7 @@ class DockerImageTarget(Target):
         if self.container is None:
             raise ArchrError("target.start() must be called before target.run_command()")
 
-        if not aslr:
+        if not aslr and self.target_arch in ['x86_64', 'i386']:
             args = ['setarch', 'x86_64', '-R'] + args
 
         docker_args = [ "docker", "exec", "-i" ]
@@ -311,7 +322,7 @@ class DockerImageTarget(Target):
             docker_args += [ "-u", user ]
         docker_args.append(self.container.id)
 
-        l.debug("running command: {}".format(docker_args + args))
+        l.debug("running command: %s", docker_args + args)
 
         return subprocess.Popen(
             docker_args + args,
@@ -325,7 +336,7 @@ class DockerImageTarget(Target):
         try:
             self._client.images.pull(self.image_id)
         except docker.errors.ImageNotFound as err:
-            l.info("Unable to pull image {}, got error {}, ignoring and continuing on".format(self.image_id, err))
+            l.info("Unable to pull image %s, got error %s, ignoring and continuing on", self.image_id, err)
 
     #
     # Serialization
@@ -356,7 +367,7 @@ def check_in_docker() -> bool:
 
 
 def check_dockerd_running() -> bool:
-    ps = subprocess.run(["ps", "-aux"], stdout=subprocess.PIPE)
+    ps = subprocess.run(["ps", "-aux"], stdout=subprocess.PIPE, check=True)
     return b"dockerd" in ps.stdout
 
 

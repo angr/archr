@@ -69,7 +69,7 @@ class TestDatascout(unittest.TestCase):
                 '[vdso]': 0x7ffff7fce000,
                 '[vsyscall]': 0xffffffffff600000
             }
-            assert all(maps[x] == docker_ref[x] for x in docker_ref)
+            assert all(maps[x] == docker_ref[x] for x in docker_ref), maps
 
     def test_datascout_local(self):
         # copy to a writable location

@@ -67,15 +67,16 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 shutil.rmtree(tmpdir)
 
     @contextlib.contextmanager
-    def fire_context(self, record_trace=True, record_magic=False, save_core=False):
+    def fire_context(self, record_trace=True, record_magic=False, save_core=False, crash_addr=None, trace_bb_addr=None):
         with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
             target_trace_filename = tmp_prefix + ".trace" if record_trace else None
             target_magic_filename = tmp_prefix + ".magic" if record_magic else None
             local_core_filename = tmp_prefix + ".core" if save_core else None
 
-            target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename, coredump_dir=tmpdir)
-
+            target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename,
+                                             coredump_dir=tmpdir, crash_addr=crash_addr, start_trace_addr=trace_bb_addr)
+            l.debug("launch QEMU with command: %s", ' '.join(target_cmd))
             r = QemuTraceResult()
 
             try:
@@ -97,11 +98,21 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
             if local_core_filename:
                 target_cores = self.target.resolve_glob(os.path.join(tmpdir, "qemu_*.core"))
+
+                # sanity check core dumps
                 if len(target_cores) == 0:
                     raise ArchrError("the target didn't crash inside qemu! Make sure you launch it correctly!\n"+
                                      "command: %s" % ' '.join(target_cmd))
-                elif len(target_cores) > 1:
+                elif not crash_addr and len(target_cores) != 1:
                     raise ArchrError("expected 1 core file but found %d" % len(target_cores))
+                elif crash_addr and len(target_cores) != 2:
+                    raise ArchrError("expected 2 core files, 1 for coreaddr 1 for the real crash. But found %d core dumps" % len(target_cores))
+
+                if save_core and crash_addr:
+                    l.warning("Both crash_addr and save_core are enabled, only coreaddr coredump will be saved")
+
+                # choose the correct core dump to retrieve
+                # TODO: the current implementation assumes the first item in target_cores is generated first
                 with self._local_mk_tmpdir() as local_tmpdir:
                     self.target.retrieve_into(target_cores[0], local_tmpdir)
                     cores = glob.glob(os.path.join(local_tmpdir, "qemu_*.core"))
@@ -163,7 +174,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
         return qemu_variant
 
-    def _build_command(self, trace_filename=None, magic_filename=None, coredump_dir=None, report_bad_args=None):
+    def _build_command(self, trace_filename=None, magic_filename=None, coredump_dir=None,
+                       report_bad_args=None, crash_addr=None, start_trace_addr=None):
         """
         Here, we build the tracing command.
         """
@@ -176,7 +188,12 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         # cmd_args = [ "sudo", "/tmp/shellphish_qemu/fire", qemu_variant]
         fire_path = os.path.join(self.target.tmpwd, "shellphish_qemu", "fire")
         cmd_args = [fire_path, qemu_variant]
-        cmd_args += [ "-C", coredump_dir]
+        if coredump_dir:
+            cmd_args += [ "-C", coredump_dir ]
+        if crash_addr:
+            cmd_args += [ "-A", '0x{:x}:{}'.format(*crash_addr) ]
+        if start_trace_addr:
+            cmd_args += [ "-T", '0x{:x}:{}'.format(*start_trace_addr) ]
 
         #
         # Next, we build QEMU options.
@@ -228,6 +245,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 cmd_args += ['--library-path', self.library_path]
 
         # Now, we add the program arguments.
+        cmd_args += ["--"] # separate QEMU arguments and target arguments
         cmd_args += self.target.target_args
 
         return cmd_args

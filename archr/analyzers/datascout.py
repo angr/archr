@@ -17,11 +17,19 @@ class DataScoutAnalyzer(Analyzer):
 
     REQUIRED_IMPLANT = "shellphish_qemu"
 
-    def _encode_bytes(self, s):
+    def __init__(self, target, analyzer=None):
+        super().__init__(target)
+        self.env = None
+        self.argv = None
+        self.auxv = None
+        self.map = None
+        self.analyzer = analyzer
 
-        def _encode_name(bits):
+    def _encode_bytes(self, s):
+        def _encode_name(bits, little=True):
             w = bits // 8  # word size
-            n = ["0"] + [s[i:i + w].ljust(w, "\0")[::-1].encode('utf-8').hex() for i in range(0, len(s), w)][::-1]
+            byte_order = -1 if little else 1
+            n = ["0"] + [s[i:i + w].ljust(w, "\0")[::byte_order].encode('utf-8').hex() for i in range(0, len(s), w)][::-1]
             return n
 
         if self.target.target_arch == 'x86_64':
@@ -31,7 +39,7 @@ class DataScoutAnalyzer(Analyzer):
             encoded_name = _encode_name(32)
             return "".join("mov eax, 0x%s; push eax; " % word for word in encoded_name)
         elif self.target.target_arch in ('mips', 'mipsel'):
-            encoded_name = _encode_name(32)
+            encoded_name = _encode_name(32, little=self.target.target_arch != 'mips')
             return "".join("li $t0, 0x%s; addi $sp, $sp, -4; sw $t0, 0($sp);" % word for word in encoded_name)
         elif self.target.target_arch == 'arm':
             encoded_name = _encode_name(32)
@@ -125,61 +133,44 @@ class DataScoutAnalyzer(Analyzer):
         else:
             raise NotImplementedError()
 
-    def __init__(self, target):
-        super().__init__(target)
-        self.env = None
-        self.argv = None
-        self.auxv = None
-        self.map = None
+    def run_shellcode(self, shellcode, aslr=False, **kwargs):
+        exit_code = 42
+
+        # build the args
+        if self.analyzer:
+            args = self.analyzer._build_command()
+        else:
+            args = self.target.target_args
+
+        # run command within the shellcode context
+        with self.target.shellcode_context(args, asm_code=shellcode+self.exit_shellcode(exit_code=exit_code), aslr=aslr, **kwargs) as p:
+            output, stderr = p.communicate()
+            if p.returncode != exit_code:
+                raise ArchrError("DataScout failed to get info from the target process.\n"
+                                 "stdout: %s\nstderr: %s" % (output, stderr))
+
+        return output
 
     def fire(self, aslr=False, **kwargs): #pylint:disable=arguments-differ
         if self.target.target_os == 'cgc':
             return [], [], b'', {}
 
-        exit_code = 42
 
         if not self.argv:
-            with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/cmdline") +
-                                                        self.exit_shellcode(exit_code=exit_code),
-                                               aslr=aslr, **kwargs) as p:
-                arg_str, stderr = p.communicate()
-
-            if p.returncode != exit_code:
-                raise ArchrError("DataScout failed to get argv from the target process.\n"
-                                 "stdout: %s\nstderr: %s" % (arg_str, stderr))
-            self.argv = arg_str.split(b'\0')[:-1]
+            output = self.run_shellcode(self.sendfile_shellcode("/proc/self/cmdline"), aslr=aslr, **kwargs)
+            self.argv = output.split(b'\0')[:-1]
 
         if not self.env:
-            with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/environ") +
-                                                        self.exit_shellcode(exit_code=exit_code),
-                                               aslr=aslr, **kwargs) as p:
-                env_str, stderr = p.communicate()
-
-            if p.returncode != exit_code:
-                raise ArchrError("DataScout failed to get env from the target process.\n"
-                                 "stdout: %s\nstderr: %s" % (env_str, stderr))
-            self.env = env_str.split(b'\0')[:-1]
+            output = self.run_shellcode(self.sendfile_shellcode("/proc/self/environ"), aslr=aslr, **kwargs)
+            self.env = output.split(b'\0')[:-1]
 
         if not self.auxv:
-            with self.target.shellcode_context(asm_code=self.sendfile_shellcode("/proc/self/auxv") +
-                                                        self.exit_shellcode(exit_code=exit_code),
-                                               aslr=aslr, **kwargs) as p:
-                aux_str, stderr = p.communicate()
-            if p.returncode != exit_code:
-                raise ArchrError("DataScout failed to get auxv from the target process.\n"
-                                 "stdout: %s\nstderr: %s" % (aux_str, stderr))
-            self.auxv = aux_str
+            output = self.run_shellcode(self.sendfile_shellcode("/proc/self/auxv"), aslr=aslr, **kwargs)
+            self.auxv = output
 
         if not self.map:
-            with self.target.shellcode_context(asm_code=self.brk_shellcode() +
-                                                        self.sendfile_shellcode("/proc/self/maps") +
-                                                        self.exit_shellcode(exit_code=exit_code),
-                                               aslr=aslr, **kwargs) as p:
-                map_str, stderr = p.communicate()
-            if p.returncode != exit_code:
-                raise ArchrError("DataScout failed to get memory map from the target process.\n"
-                                 "stdout: %s\nstderr: %s" % (map_str, stderr))
-            self.map = parse_proc_maps(map_str)
+            output = self.run_shellcode(self.brk_shellcode()+self.sendfile_shellcode("/proc/self/maps"), aslr=aslr, **kwargs)
+            self.map = parse_proc_maps(output)
 
         return self.argv, self.env, self.auxv, self.map
 

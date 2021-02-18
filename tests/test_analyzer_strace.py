@@ -15,14 +15,14 @@ class TestAnalyzerStrace(unittest.TestCase):
         build_container("cat")
         build_container("socat")
 
-    def check_strace_proc(self, t, **kwargs):
+    def check_strace_proc(self, t, **kwargs):# pylint:disable=no-self-use
         b = archr.analyzers.STraceAnalyzer(t)
         trace = b.fire(args_suffix=["/etc/passwd"], trace_args=STRACE_ARGS, **kwargs).splitlines()
         assert any(b'open' in t and b'passwd' in t for t in trace)
         assert any(b'read' in t and b'root' in t for t in trace)
         assert any(b'write' in t and b'root' in t for t in trace)
 
-    def check_strace_attach(self, t, **kwargs):
+    def check_strace_attach(self, t, **kwargs):# pylint:disable=no-self-use
         target = t.run_command() # start target
         b = archr.analyzers.STraceAttachAnalyzer(t)
         pid = target.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')

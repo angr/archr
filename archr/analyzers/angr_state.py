@@ -2,6 +2,8 @@ import os
 import angr
 import logging
 
+from docker.errors import NotFound
+
 l = logging.getLogger("archr.analyzers.angr_state")
 
 from . import Analyzer
@@ -18,8 +20,12 @@ class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
         return o
 
     def _load_file(self, guest_path):
-        content = self.target.retrieve_contents(guest_path)
-        return angr.SimFile(name='file://' + self.target.realpath(guest_path), content=content, size=len(content))
+        try:
+            target_path = self.target.realpath(guest_path)
+            content = self.target.retrieve_contents(target_path)
+            return angr.SimFile(name='file://' + target_path, content=content, size=len(content))
+        except NotFound:
+            return None
 
     def _get_stat(self, guest_path, dereference=False):
         if dereference:
@@ -65,6 +71,21 @@ class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
             st_atime, st_atime_ns, st_mtime, st_mtime_ns, st_ctime, st_ctime_ns
         )
         return st
+
+class SimArchrProcMount(SimArchrMount):
+    def _load_file(self, guest_path):
+        '''
+        For some reason the procfs files cannot be fetched with the docker API, so here we just `cat` instead
+        :param guest_path:
+        :return:
+        '''
+        target_path = self.target.realpath(os.path.join('/proc', guest_path.lstrip(os.path.sep)))
+        content, error = self.target.run_command(["cat", target_path]).communicate()
+        if not error:
+            return angr.SimFile(name='file://' + target_path, content=content, size=len(content))
+        else:
+            assert ': No such file or directory' in error
+            return None
 
 class angrStateAnalyzer(Analyzer):
     """
