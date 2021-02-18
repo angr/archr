@@ -100,6 +100,13 @@ class Target(ABC):
         """
         return self
 
+    def save(self, repository=None, tag=None, **kwargs):
+        """
+        Saves a snapshot of the current image using the tag
+        :return:
+        """
+        return self
+
     @abstractmethod
     def _run_command(self, args, env, **kwargs):
         """
@@ -174,6 +181,7 @@ class Target(ABC):
         Temporary working directory in the target.
         """
         pass
+
 
     #
     # Convenience methods
