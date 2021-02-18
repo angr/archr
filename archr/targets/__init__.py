@@ -100,7 +100,7 @@ class Target(ABC):
         """
         return self
 
-    def save(self, tag):
+    def save(self, repository=None, tag=None, **kwargs):
         """
         Saves a snapshot of the current image using the tag
         :return:

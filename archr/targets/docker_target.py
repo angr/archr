@@ -129,8 +129,8 @@ class DockerImageTarget(Target):
         self.container.reload()  # update self.container.attrs
         return self
 
-    def save(self, tag):
-        self.container.commit(f"{self.image_id}:{tag}")
+    def save(self, repository=None, tag=None, **kwargs):
+        return self.container.commit(repository, tag, **kwargs)
 
     def restart(self):
         self.container.restart()
