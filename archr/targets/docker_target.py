@@ -108,7 +108,11 @@ class DockerImageTarget(Target):
     def save(self, tag="latest"):
         self.container.commit(f"{self.image_id}:{tag}")
 
-    def start(self, user=None, name=None, working_dir=None, labels=[], entry_point=['/bin/sh'], cpuset_cpus=None): #pylint:disable=arguments-differ
+    def start(self, user=None, name=None, working_dir=None, labels=None, entry_point=None):  # pylint:disable=arguments-differ
+        if labels is None:
+            labels = []
+        if entry_point is None:
+            entry_point = ["/bin/sh"]
         if self.tmp_bind:
             self.volumes[self.tmp_bind] = {'bind': '/tmp/', 'mode': 'rw'}
 
