@@ -91,7 +91,6 @@ class angrProjectAnalyzer(Analyzer):
 
         self._mem_mapping = None
 
-        import ipdb; ipdb.set_trace()
         if core_path is not None:
             self._mem_mapping = self._extract_mapping_from_core_file(core_path)
 
