@@ -14,6 +14,8 @@ class QEMUSystemTarget(Target):
     Describes a target in the form of a QEMU system image.
     """
 
+    SUPPORTS_RETURNCODES = False
+
     def __init__(
         self, kernel_path, initrd_path=None, disk_path=None,
         qemu_base="/usr/bin/qemu-system-",

@@ -25,6 +25,8 @@ class Target(ABC):
     An autom defines a packetized unit of vulnerable software
     """
 
+    SUPPORTS_RETURNCODES = True
+
     #
     # Abstract methods
     #

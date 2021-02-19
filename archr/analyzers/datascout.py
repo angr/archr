@@ -145,7 +145,7 @@ class DataScoutAnalyzer(Analyzer):
         # run command within the shellcode context
         with self.target.shellcode_context(args, asm_code=shellcode+self.exit_shellcode(exit_code=exit_code), aslr=aslr, **kwargs) as p:
             output, stderr = p.communicate()
-            if p.returncode != exit_code:
+            if self.target.SUPPORTS_RETURNCODES and p.returncode != exit_code:
                 raise ArchrError("DataScout failed to get info from the target process.\n"
                                  "stdout: %s\nstderr: %s" % (output, stderr))
 
