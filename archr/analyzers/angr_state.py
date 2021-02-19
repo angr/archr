@@ -39,6 +39,11 @@ class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
         # st_mode, device number, major type, minor type are in hex
         for i in [3, 6, 9, 10]:
             stat_output[i] = int(stat_output[i], 16)
+
+        # unsupported on (some?) busybox
+        if stat_output[-3] == "W":
+            stat_output[-3] = 0
+
         stat_output[1:] = [int(x) for x in stat_output[1:]] # others are int
 
         # %n %s %b %f %u %g %D %i %h %t %T %X %Y %Z %W %o %C
