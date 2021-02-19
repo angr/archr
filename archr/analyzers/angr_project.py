@@ -4,7 +4,10 @@ import angr
 import cle
 import os
 
+import elftools
 from angr.simos import SimUserland
+from elftools.elf.elffile import ELFFile
+from elftools.elf.segments import NoteSegment
 
 l = logging.getLogger("archr.analyzers.angr")
 
@@ -15,7 +18,7 @@ class angrProjectAnalyzer(Analyzer):
     Constructs an angr project to match the target precisely
     """
 
-    def __init__(self, target, scout_analyzer, custom_hooks=None, custom_systemcalls=None, static_simproc=False):
+    def __init__(self, target, scout_analyzer=None, custom_hooks=None, custom_systemcalls=None, static_simproc=False):
         """
 
         :param target:          The target to work on.
@@ -34,6 +37,35 @@ class angrProjectAnalyzer(Analyzer):
 
         self.project = None
         self._mem_mapping = None
+
+    def _extract_mapping_from_core_file(self, core_path):
+        with open(core_path, 'rb') as core_file:
+            core_elf = ELFFile(core_file)
+            for segment in core_elf.iter_segments():
+                if isinstance(segment, NoteSegment):
+                    notes = list(segment.iter_notes())
+                    break
+            else:
+                l.warning(f"The core file @ {core_path} does not contain a NOTE segment, you should fix that. We "
+                          f"will attempt to get the mapped addresses from the scout_analyzer instead I guess.")
+                return None
+        for note in notes:
+            if note['n_type'] == 'NT_FILE':
+                file_note = note
+                break
+        else:
+            l.warning(f"Could not find an NT_FILE note in the core file @ {core_path}. This is bad, and you should fix "
+                      f"it. We will fall back to trying to extract the mappings from the scout_analyzer.")
+            return None
+
+        mappings = file_note['n_desc']['Elf_Nt_File_Entry']
+        paths = [p.decode() for p in file_note['n_desc']['filename']]
+        assert len(paths) == len(mappings)
+        mem_map = {}
+        for fpath, mapping in zip(paths, mappings):
+            mem_map[fpath] = min(mem_map.get(fpath, mapping['vm_start']), mapping['vm_start'])
+
+        return mem_map
 
     def fire(self, core_path=None, return_loader=False, project_kwargs=None, **cle_args): #pylint:disable=arguments-differ
 
@@ -57,22 +89,27 @@ class angrProjectAnalyzer(Analyzer):
         preload_kwargs['auto_load_libs'] = False
         preloader = cle.Loader(the_binary, **preload_kwargs)
 
-        if self.scout_analyzer is not None:
+        self._mem_mapping = None
+
+        import ipdb; ipdb.set_trace()
+        if core_path is not None:
+            self._mem_mapping = self._extract_mapping_from_core_file(core_path)
+
+        if self._mem_mapping is None and self.scout_analyzer is not None:
             _,_,_,self._mem_mapping = self.scout_analyzer.fire()
 
-            target_libs = [ lib for lib in self._mem_mapping if lib.startswith("/") ]
-            the_libs = [ ]
-            for target_lib in target_libs:
-                local_lib = os.path.join(tmpdir, os.path.basename(target_lib))
-                self.target.retrieve_into(target_lib, tmpdir)
-                the_libs.append(local_lib)
-            lib_opts = { os.path.basename(lib) : {'base_addr' : libaddr} for lib, libaddr in self._mem_mapping.items() }
-            bin_opts = lib_opts[os.path.basename(self.target.target_path)] if preloader.main_object.pic else {}
-        else:
-            the_libs = { }
-            lib_opts = { }
-            bin_opts = { }
-            self._mem_mapping = { }
+        target_libs = [lib for lib in self._mem_mapping if lib.startswith("/")]
+        the_libs = []
+        for target_lib in target_libs:
+            local_lib = os.path.join(tmpdir, os.path.basename(target_lib))
+            self.target.retrieve_into(target_lib, tmpdir)
+            the_libs.append(local_lib)
+        lib_opts = {os.path.basename(lib): {'base_addr': libaddr} for lib, libaddr in self._mem_mapping.items()}
+        bin_opts = {}
+        if preloader.main_object.pic:
+            bin_opts = lib_opts.get(os.path.basename(self.target.target_path), {})
+
+        self._mem_mapping = self._mem_mapping or {}
 
         # if a core dump is specified, create a project based on the core dump
         if core_path:
