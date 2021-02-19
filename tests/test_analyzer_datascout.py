@@ -5,7 +5,7 @@ import archr
 import os
 import unittest
 
-from common import build_container
+from common import build_container, qemu_test_path
 
 
 class TestShellcode(unittest.TestCase):
@@ -41,6 +41,12 @@ class TestShellcode(unittest.TestCase):
     def test_shellcode_i386(self):
         with archr.targets.DockerImageTarget('archr-test:vuln_stacksmash', target_arch='i386').build().start() as t:
             self.shellcode_checks(t)
+    def test_shellcode_qemu(self):
+        with archr.targets.QEMUSystemTarget(
+            qemu_test_path("pwnkernel-bzImage"), initrd_path=qemu_test_path("pwnkernel-initramfs.cpio.gz"),
+            target_path="/hello", target_args=["/hello"]
+        ).start() as t:
+            self.shellcode_checks(t)
 
 
 class TestDatascout(unittest.TestCase):
@@ -48,16 +54,38 @@ class TestDatascout(unittest.TestCase):
     def setUpClass(cls):
         build_container("entrypoint-env")
 
-    def datascout_checks(self, t):
+    def datascout_checks(self, t, static=False):
         b = archr.analyzers.DataScoutAnalyzer(t)
         argv, env, aux, maps = b.fire()
 
-        ld_addr = next(addr for name, addr in maps.items() if 'linux-gnu/ld-' in name)
-
         assert argv == [ a.encode('utf-8') for a in t.target_args ]
         assert b"ARCHR=YES" in env
-        assert ld_addr in struct.unpack("<%dQ"%(len(aux)/8), aux)
+
+        if not static:
+            ld_addr = next(addr for name, addr in maps.items() if 'linux-gnu/ld-' in name)
+            assert ld_addr in struct.unpack("<%dQ"%(len(aux)/8), aux)
         return argv, env, aux, maps
+
+    def test_qemu(self):
+        with archr.targets.QEMUSystemTarget(
+            qemu_test_path("pwnkernel-bzImage"), initrd_path=qemu_test_path("pwnkernel-initramfs.cpio.gz"),
+            target_path="/hello", target_args=["/hello"], target_env={"ARCHR":"YES"}
+        ).start() as t:
+            _,_,_,maps = self.datascout_checks(t, static=True)
+            qemu_ref = {
+                '/hello': 0x400000,
+                '[heap]': 0x4c3000,
+                '[heap-end]': 0x4c5000,
+                '[vvar]': 0x7ffff7ffb000,
+                '[vvar-end]': 0x7ffff7ffe000,
+                '[vdso]': 0x7ffff7ffe000,
+                '[vdso-end]': 0x7ffff7fff000,
+                '[stack]': 0x7ffffffde000,
+                '[stack-end]': 0x7ffffffff000,
+                '[vsyscall]': 0xffffffffff600000,
+                '[vsyscall-end]': 0xffffffffff601000
+            }
+            assert all(maps[x] == qemu_ref[x] for x in qemu_ref), maps
 
     def test_datascout(self):
         with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:

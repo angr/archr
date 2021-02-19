@@ -5,7 +5,7 @@ import archr
 import os
 import unittest
 
-from common import build_container
+from common import build_container, qemu_test_path
 
 
 class TestangrAnalyzer(unittest.TestCase):
@@ -56,6 +56,14 @@ class TestangrAnalyzer(unittest.TestCase):
         with archr.targets.LocalTarget([tf], target_env=["ARCHR=YES"]).build().start() as t:
             self.angr_checks(t)
         os.unlink(tf)
+
+    @unittest.skipUnless(archr._angr_available, "angr required")
+    def test_env_angr_qemu(self):
+        with archr.targets.QEMUSystemTarget(
+            qemu_test_path("pwnkernel-bzImage"), initrd_path=qemu_test_path("pwnkernel-initramfs.cpio.gz"),
+            target_path="/hello", target_args=["/hello"], target_env={"ARCHR":"YES"}
+        ).start() as t:
+            self.angr_checks(t)
 
     @unittest.skipUnless(archr._angr_available, "angr required")
     def test_angr_catflag(self):
