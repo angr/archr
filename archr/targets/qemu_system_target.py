@@ -219,7 +219,7 @@ class QEMUSystemTarget(Target):
         cmd = "\n"*5
         cmd += "".join(f"""{e}="{v}" """ for e,v in env.items()) if env else ""
         cmd += f"nc -v -l -p {aux_port} -e "
-        cmd += " ".join(args)
+        cmd += " ".join(f'"{a}"' for a in args)
         cmd += " &"
         self.qemu_stdio.sendline(cmd.encode("latin1"))
         self.qemu_stdio.readuntil(b"listening on")
