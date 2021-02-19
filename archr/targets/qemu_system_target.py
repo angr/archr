@@ -212,6 +212,9 @@ class QEMUSystemTarget(Target):
         self, args, env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE,
         **kwargs
     ): #pylint:disable=arguments-differ
+        if "aslr" in kwargs:
+            l.warning("QEMU system target doesn't yet support disabling ASLR (though it should be easy).")
+            kwargs.pop("aslr")
         aux_port = self.get_aux_port()
         cmd = "\n"*5
         cmd += "".join(f"""{e}="{v}" """ for e,v in env.items()) if env else ""
