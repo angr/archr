@@ -4,6 +4,8 @@ import angr
 import cle
 import os
 
+from angr.simos import SimUserland
+
 l = logging.getLogger("archr.analyzers.angr")
 
 from . import Analyzer
@@ -13,7 +15,7 @@ class angrProjectAnalyzer(Analyzer):
     Constructs an angr project to match the target precisely
     """
 
-    def __init__(self, target, scout_analyzer, static_simproc=False):
+    def __init__(self, target, scout_analyzer, custom_hooks=None, custom_systemcalls=None, static_simproc=False):
         """
 
         :param target:          The target to work on.
@@ -26,6 +28,9 @@ class angrProjectAnalyzer(Analyzer):
         super(angrProjectAnalyzer, self).__init__(target)
         self.scout_analyzer = scout_analyzer
         self.static_simproc = static_simproc
+
+        self.custom_hooks = {} if custom_hooks is None else dict(custom_hooks)
+        self.custom_syscalls = {} if custom_systemcalls is None else dict(custom_systemcalls)
 
         self.project = None
         self._mem_mapping = None
@@ -90,6 +95,9 @@ class angrProjectAnalyzer(Analyzer):
                                         main_opts=bin_opts,
                                         rebase_granularity=0x1000,
                                         **project_kwargs)
+            if not return_loader:
+                self._apply_all_hooks()
+            self.project.loader.main_object = self.project.loader.elfcore_object._main_object
             return self.project if not return_loader else self.project.loader
 
         if return_loader:
@@ -98,12 +106,31 @@ class angrProjectAnalyzer(Analyzer):
         self.project = angr.Project(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts,
                                     **project_kwargs)
 
-        if self.static_simproc:
-            self._apply_simprocedures()
+        self._apply_all_hooks()
 
         if return_loader:
             return self.project.loader
         return self.project
+
+    def _apply_all_hooks(self):
+        if self.static_simproc:
+            self._apply_simprocedures()
+
+        for location, hook in self.custom_hooks.items():
+            if type(location) is str:
+                self.project.hook_symbol(location, hook)
+                l.debug(f"Hooking symbol {location} -> {hook.display_name}...")
+            else:
+                self.project.hook(location, hook)
+                l.debug(f"Hooking {hex(location)} -> {hook.display_name}...")
+
+        if self.custom_syscalls:
+            assert isinstance(self.project.simos, SimUserland)
+
+            for name, sys_sim in self.custom_syscalls.items():
+                l.debug(f'Hooking system call {name} with {sys_sim}')
+                self.project.simos.syscall_library.procedures[name] = sys_sim
+
 
     def _apply_simprocedures(self):
         """
