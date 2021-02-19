@@ -16,9 +16,10 @@ class TestShellcode(unittest.TestCase):
 
     def shellcode_checks(self, t):
         b = archr.analyzers.DataScoutAnalyzer(t)
-        with t.shellcode_context(asm_code=b.exit_shellcode(exit_code=123)) as p:
-            stdout,_ = p.communicate()
-            assert p.wait() == 123
+        if t.SUPPORTS_RETURNCODES:
+            with t.shellcode_context(asm_code=b.exit_shellcode(exit_code=123)) as p:
+                stdout,_ = p.communicate()
+                assert p.wait() == 123
 
         with t.shellcode_context(asm_code=b.echo_shellcode("TESTING THIS THING!")) as p:
             stdout,_ = p.communicate()
@@ -27,7 +28,8 @@ class TestShellcode(unittest.TestCase):
         with t.shellcode_context(asm_code=b.echo_shellcode("TESTING THIS THING!") + b.exit_shellcode()) as p:
             stdout,_ = p.communicate()
             assert stdout == b"TESTING THIS THING!"
-            assert p.wait() == 42
+            if t.SUPPORTS_RETURNCODES:
+                assert p.wait() == 42
 
         with t.shellcode_context(asm_code=b.sendfile_shellcode("/proc/self/cmdline")) as p:
             stdout,_ = p.communicate()
