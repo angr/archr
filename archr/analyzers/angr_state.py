@@ -93,7 +93,7 @@ class SimArchrProcMount(SimArchrMount):
             return None
 
     def _get_stat(self, guest_path, dereference=False):
-        return super()._get_stat(os.path.join('/proc', guest_path), dereference=dereference)
+        return super()._get_stat(os.path.join('/proc', guest_path.lstrip(os.path.sep)), dereference=dereference)
 
 
 class angrStateAnalyzer(Analyzer):
