@@ -1,5 +1,6 @@
 import contextlib
 import subprocess
+import datetime
 import tempfile
 import logging
 import signal
@@ -108,6 +109,11 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 elif crash_addr and len(target_cores) != 2:
                     raise ArchrError("expected 2 core files, 1 for coreaddr 1 for the real crash. But found %d core dumps" % len(target_cores))
 
+                # sort the coredumps to identify which is which
+                def get_timestamp(s):
+                    ts = re.match(r".*_(\d+-\d+)_.*", os.path.basename(s)).group(1)
+                    return datetime.datetime.strptime(ts, '%Y%m%d-%H%M%S')
+                target_cores = sorted(target_cores, key=get_timestamp)
                 if save_core and crash_addr:
                     l.warning("Both crash_addr and save_core are enabled, only coreaddr coredump will be saved")
 
