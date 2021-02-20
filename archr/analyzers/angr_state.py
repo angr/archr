@@ -79,6 +79,11 @@ class SimArchrProcMount(SimArchrMount):
         :param guest_path:
         :return:
         '''
+        # attempt normal loading first
+        file = super()._load_file(os.path.join('/proc', guest_path))
+        if file is not None:
+            return file
+
         target_path = self.target.realpath(os.path.join('/proc', guest_path.lstrip(os.path.sep)))
         content, error = self.target.run_command(["cat", target_path]).communicate()
         if not error:
@@ -86,6 +91,10 @@ class SimArchrProcMount(SimArchrMount):
         else:
             assert ': No such file or directory' in error
             return None
+
+    def _get_stat(self, guest_path, dereference=False):
+        return super()._get_stat(os.path.join('/proc', guest_path), dereference=dereference)
+
 
 class angrStateAnalyzer(Analyzer):
     """
