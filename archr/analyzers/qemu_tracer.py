@@ -48,6 +48,15 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         self.library_path = library_path
         self.seed = seed
 
+    def pickup_env(self):
+        for e in self.target.target_env:
+            key, value = e.split('=', 1)
+            if key == 'LD_PRELOAD' and self.ld_preload is None:
+                self.ld_preload = value
+                print("pickup LD_PRELOAD!!", value)
+            if key == 'LD_LIBRARY_PATH' and self.library_path is None:
+                self.library_path = value
+
     @contextlib.contextmanager
     def _target_mk_tmpdir(self):
         tmpdir = tempfile.mktemp(prefix="/tmp/tracer_target_")
@@ -163,8 +172,6 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                 # remove the magic file on the target
                 self.target.remove_path(target_magic_filename)
-
-
 
     @staticmethod
     def qemu_variant(target_os, target_arch, record_trace):
