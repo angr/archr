@@ -67,6 +67,7 @@ class angrProjectAnalyzer(Analyzer):
 
         self.project = None
         self._mem_mapping = None
+        self._lib_folder = None
 
     def fire(self, core_path=None, return_loader=False, project_kwargs=None, **cle_args):  # pylint:disable=arguments-differ
 
@@ -80,6 +81,7 @@ class angrProjectAnalyzer(Analyzer):
 
         # TODO: this introduce file leak. However, we probably need some redesign to fix it
         tmpdir = tempfile.mkdtemp(prefix="archr_angr_project_analyzer")
+        self._lib_folder = tmpdir
         self.target.retrieve_into(self.target.target_path, tmpdir)
         the_binary = os.path.join(tmpdir, os.path.basename(self.target.target_path))
 
