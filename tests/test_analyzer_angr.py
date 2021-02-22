@@ -69,6 +69,162 @@ class TestangrAnalyzer(unittest.TestCase):
             assert len(simgr.deadended) == 1
             assert simgr.one_deadended.posix.dumps(1) == b"archr-flag\n"
 
+    def _default_fauxware_checks(self, simgr):
+        num_authed, num_rejected, num_bypassed = 0, 0, 0
+        for s in simgr.deadended:
+            if b'Go away' in s.posix.dumps(1):
+                num_rejected += 1
+            if b'Welcome to the admin console, trusted user!' in s.posix.dumps(1):
+                num_authed += 1
+                if b'SOSNEAKY' in s.posix.dumps(0):
+                    num_bypassed += 1
+
+        self.assertEqual(num_authed, 2)
+        self.assertEqual(num_bypassed, 1)
+        self.assertEqual(num_rejected, 1)
+
+    @unittest.skipUnless(archr._angr_available, "angr required")
+    def test_angr_fauxware(self):
+        with archr.targets.DockerImageTarget('archr-test:fauxware').build().start() as t:
+            dsb = archr.analyzers.DataScoutAnalyzer(t)
+            apb = archr.analyzers.angrProjectAnalyzer(t, dsb)
+            asb = archr.analyzers.angrStateAnalyzer(t, apb)
+            project = apb.fire()
+            state = asb.fire()
+            simgr = project.factory.simulation_manager(state)
+            simgr.run()
+            self._default_fauxware_checks(simgr)
+
+    @unittest.skipUnless(archr._angr_available, "angr required")
+    def test_angr_fauxware_custom_plt_hooks(self):
+        import angr
+        original_puts = angr.SIM_PROCEDURES['libc']['puts']
+        original_read = angr.SIM_PROCEDURES['posix']['read']
+        class new_puts(angr.SimProcedure):
+            def run(self, s):
+                self.state.globals['num_puts'] = self.state.globals.get('num_puts', 0) + 1
+                return self.inline_call(original_puts, s).ret_expr
+
+        class new_read(angr.SimProcedure):
+            def run(self, fd, buf, len):
+                self.state.globals['num_read'] = self.state.globals.get('num_read', 0) + 1
+                return self.inline_call(original_read, fd, buf, len).ret_expr
+
+        hooks = {'puts': new_puts(), 'read': new_read()}
+
+        with archr.targets.DockerImageTarget('archr-test:fauxware').build().start() as t:
+            dsb = archr.analyzers.DataScoutAnalyzer(t)
+            apb = archr.analyzers.angrProjectAnalyzer(t, dsb, custom_hooks=hooks)
+            asb = archr.analyzers.angrStateAnalyzer(t, apb)
+            project = apb.fire()
+            state = asb.fire()
+            simgr = project.factory.simulation_manager(state)
+            simgr.run()
+
+            num_authed, num_rejected, num_bypassed = 0, 0, 0
+            for s in simgr.deadended:
+                if b'Go away' in s.posix.dumps(1):
+                    num_rejected += 1
+                    self.assertEqual(s.globals['num_puts'], 2)
+                    self.assertEqual(s.globals['num_read'], 5)
+                if b'Welcome to the admin console, trusted user!' in s.posix.dumps(1):
+                    num_authed += 1
+                    if b'SOSNEAKY' in s.posix.dumps(0):
+                        num_bypassed += 1
+                        self.assertEqual(s.globals['num_puts'], 3)
+                        self.assertEqual(s.globals['num_read'], 4)
+                    else:
+                        self.assertEqual(s.globals['num_puts'], 3)
+                        self.assertEqual(s.globals['num_read'], 5)
+
+            self.assertEqual(num_authed, 2)
+            self.assertEqual(num_bypassed, 1)
+            self.assertEqual(num_rejected, 1)
+
+    @unittest.skipUnless(archr._angr_available, "angr required")
+    def test_angr_fauxware_custom_binary_function_hooks(self):
+        import angr
+
+        class rejected(angr.SimProcedure):
+            def run(self):
+                self.state.posix.stdout.write(None, b"Get outta here!")
+                self.exit(1)
+
+        class authorized(angr.SimProcedure):
+            def run(self):
+                self.state.posix.stdout.write(None, b"Good on ya, mate! Get in 'ere, ya bloody admin.")
+
+        hooks = {'accepted': authorized(), 'rejected': rejected()}
+
+        with archr.targets.DockerImageTarget('archr-test:fauxware').build().start() as t:
+            dsb = archr.analyzers.DataScoutAnalyzer(t)
+            apb = archr.analyzers.angrProjectAnalyzer(t, dsb, custom_hooks=hooks)
+            asb = archr.analyzers.angrStateAnalyzer(t, apb)
+            project = apb.fire()
+            state = asb.fire()
+            simgr = project.factory.simulation_manager(state)
+            simgr.run()
+            num_authed, num_rejected, num_bypassed = 0, 0, 0
+            for s in simgr.deadended:
+                if b"Get outta here!" in s.posix.dumps(1):
+                    num_rejected += 1
+                if b"Good on ya, mate! Get in 'ere, ya bloody admin." in s.posix.dumps(1):
+                    num_authed += 1
+                    if b'SOSNEAKY' in s.posix.dumps(0):
+                        num_bypassed += 1
+
+            self.assertEqual(num_authed, 2)
+            self.assertEqual(num_bypassed, 1)
+            self.assertEqual(num_rejected, 1)
+
+    @unittest.skipUnless(archr._angr_available, "angr required")
+    def test_angr_syscall_test(self):
+        with archr.targets.DockerImageTarget('archr-test:syscall_test').build().start() as t:
+            dsb = archr.analyzers.DataScoutAnalyzer(t)
+            apb = archr.analyzers.angrProjectAnalyzer(t, dsb)
+            asb = archr.analyzers.angrStateAnalyzer(t, apb)
+            project = apb.fire()
+            state = asb.fire()
+            simgr = project.factory.simulation_manager(state)
+            simgr.run()
+
+            self.assertEqual(len(simgr.deadended), 1)
+            exit_code, = [e.objects['exit_code'] for e in simgr.one_deadended.history.events if e.type == 'terminate']
+            self.assertEqual(simgr.one_deadended.posix.dumps(1), b'Hello, world!\n')
+            self.assertEqual(simgr.one_deadended.solver.eval_one(exit_code), 42)
+
+    @unittest.skipUnless(archr._angr_available, "angr required")
+    def test_angr_syscall_test_hooks(self):
+        import angr
+        original_write = angr.SIM_PROCEDURES['posix']['write']
+        class new_puts(angr.SimProcedure):
+            def run(self, code):
+                new_exit = self.state.solver.eval_one(code) + 27
+                self.exit(new_exit)
+
+        class new_write(angr.SimProcedure):
+            def run(self, fd, buf, len):
+                self.state.globals['num_write'] = self.state.globals.get('num_read', 0) + 1
+                return self.inline_call(original_write, fd, buf, 5).ret_expr
+
+        syscalls =dict(exit=new_puts(), write=new_write())
+
+        with archr.targets.DockerImageTarget('archr-test:syscall_test').build().start() as t:
+            dsb = archr.analyzers.DataScoutAnalyzer(t)
+            apb = archr.analyzers.angrProjectAnalyzer(t, dsb, custom_systemcalls=syscalls)
+            asb = archr.analyzers.angrStateAnalyzer(t, apb)
+            project = apb.fire()
+            state = asb.fire()
+            simgr = project.factory.simulation_manager(state)
+            simgr.run()
+
+            self.assertEqual(len(simgr.deadended), 1)
+            exit_code, = [e.objects['exit_code'] for e in simgr.one_deadended.history.events if e.type == 'terminate']
+            self.assertEqual(simgr.one_deadended.posix.dumps(1), b'Hello')
+            self.assertEqual(simgr.one_deadended.solver.eval_one(exit_code), 69)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
