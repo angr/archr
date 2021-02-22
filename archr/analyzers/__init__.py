@@ -49,7 +49,6 @@ class ContextAnalyzer(Analyzer):
 
     def fire(self, *args, testcase=None, pre_fire_hook=None, channel=None, delay=0, actions=None, **kwargs): #pylint:disable=arguments-differ
         # TODO: if the testcase is a list of inputs, do open->send->wait->send->...
-        assert testcase is None or type(testcase) in [bytes, str]
         if actions is None:
             open_act = OpenChannelAction(channel_name=channel)
             send_act = SendAction(testcase, channel_name=channel)

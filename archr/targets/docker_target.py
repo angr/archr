@@ -295,7 +295,6 @@ class DockerImageTarget(Target):
         # get guest_pid
         p = self._run_command(args="ps -A -o comm,pid".split(), env=[])
         output = p.stdout.read().decode('utf-8')
-        print(re.findall(proc, output))
         regex = r"{}\s+(\d+)".format(proc)
         matches = re.findall(regex, output)
         if not matches:
