@@ -99,7 +99,7 @@ class TestangrAnalyzer(unittest.TestCase):
 
     @unittest.skipUnless(archr._angr_available, "angr required")
     def test_angr_fauxware_custom_plt_hooks(self):
-        import angr
+        import angr  # pylint:disable=import-outside-toplevel
         original_puts = angr.SIM_PROCEDURES['libc']['puts']
         original_read = angr.SIM_PROCEDURES['posix']['read']
         class new_puts(angr.SimProcedure):
@@ -108,15 +108,13 @@ class TestangrAnalyzer(unittest.TestCase):
                 return self.inline_call(original_puts, s).ret_expr
 
         class new_read(angr.SimProcedure):
-            def run(self, fd, buf, len):
+            def run(self, fd, buf, _len):
                 self.state.globals['num_read'] = self.state.globals.get('num_read', 0) + 1
-                return self.inline_call(original_read, fd, buf, len).ret_expr
-
-        hooks = {'puts': new_puts(), 'read': new_read()}
+                return self.inline_call(original_read, fd, buf, _len).ret_expr
 
         with archr.targets.DockerImageTarget('archr-test:fauxware').build().start() as t:
             dsb = archr.analyzers.DataScoutAnalyzer(t)
-            apb = archr.analyzers.angrProjectAnalyzer(t, dsb, custom_hooks=hooks)
+            apb = archr.analyzers.angrProjectAnalyzer(t, dsb, custom_hooks={'puts': new_puts(), 'read': new_read()})
             asb = archr.analyzers.angrStateAnalyzer(t, apb)
             project = apb.fire()
             state = asb.fire()
@@ -145,7 +143,7 @@ class TestangrAnalyzer(unittest.TestCase):
 
     @unittest.skipUnless(archr._angr_available, "angr required")
     def test_angr_fauxware_custom_binary_function_hooks(self):
-        import angr
+        import angr  # pylint:disable=import-outside-toplevel
 
         class rejected(angr.SimProcedure):
             def run(self):
@@ -197,15 +195,16 @@ class TestangrAnalyzer(unittest.TestCase):
 
     @unittest.skipUnless(archr._angr_available, "angr required")
     def test_angr_syscall_test_hooks(self):
-        import angr
+        import angr  # pylint:disable=import-outside-toplevel
         original_write = angr.SIM_PROCEDURES['posix']['write']
+
         class new_puts(angr.SimProcedure):
             def run(self, code):
                 new_exit = self.state.solver.eval_one(code) + 27
                 self.exit(new_exit)
 
         class new_write(angr.SimProcedure):
-            def run(self, fd, buf, len):
+            def run(self, fd, buf, _):
                 self.state.globals['num_write'] = self.state.globals.get('num_read', 0) + 1
                 return self.inline_call(original_write, fd, buf, 5).ret_expr
 
