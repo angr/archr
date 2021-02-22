@@ -2,6 +2,7 @@ import os
 import time
 import logging
 from contextlib import contextmanager
+from ..targets.actions import OpenChannelAction, SendAction, CloseChannelAction
 #from typing import ContextManager
 
 l = logging.getLogger(name=__name__)
@@ -46,7 +47,15 @@ class ContextAnalyzer(Analyzer):
     Provides a default .fire() that replays a testcase.
     """
 
-    def fire(self, *args, testcase=None, pre_fire_hook=None, channel=None, delay=0, **kwargs): #pylint:disable=arguments-differ
+    def fire(self, *args, testcase=None, pre_fire_hook=None, channel=None, delay=0, actions=None, **kwargs): #pylint:disable=arguments-differ
+        # TODO: if the testcase is a list of inputs, do open->send->wait->send->...
+        assert testcase is None or type(testcase) in [bytes, str]
+        if actions is None:
+            open_act = OpenChannelAction(channel_name=channel)
+            send_act = SendAction(testcase, channel_name=channel)
+            actions = [open_act, send_act]
+        kwargs['actions'] = actions
+
         with self.fire_context(*args, **kwargs) as flight:
             if delay:
                 l.info("sleep for %d seconds waiting for the target to initialize", delay)
@@ -58,18 +67,8 @@ class ContextAnalyzer(Analyzer):
         return flight.result
 
     def _fire_testcase(self, flight, testcase=None, channel=None): #pylint:disable=no-self-use
-        r = flight.default_channel if channel is None else flight.get_channel(channel)
-        if type(testcase) is bytes:
-            r.write(testcase)
-        elif type(testcase) in (list, tuple):
-            for s in testcase:
-                r.write(s)
-                time.sleep(0.1)
-        elif testcase is None:
-            pass
-        else:
-            raise ValueError("invalid testcase type %s" % type(testcase))
-        return r
+        flight.start()
+        return flight.get_channel(channel)
 
     @contextmanager
     def fire_context(self, *args, **kwargs):  # -> ContextManager[Flight]:

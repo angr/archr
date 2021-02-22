@@ -404,7 +404,8 @@ class Target(ABC):
             p.terminate()
 
     def flight(self, *args, result=None, **kwargs):
-        return Flight(self, self.run_command(*args, **kwargs), result=result)
+        actions = kwargs.pop("actions", None)
+        return Flight(self, self.run_command(*args, **kwargs), result=result, actions=actions)
 
     @contextlib.contextmanager
     def flight_context(self, *args, timeout=1, timeout_exception=True, **kwargs):
