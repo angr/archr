@@ -77,7 +77,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 shutil.rmtree(tmpdir)
 
     @contextlib.contextmanager
-    def fire_context(self, record_trace=True, record_magic=False, save_core=False, crash_addr=None, trace_bb_addr=None):
+    def fire_context(self, record_trace=True, record_magic=False, save_core=False, crash_addr=None, trace_bb_addr=None, **kwargs):
         with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
             target_trace_filename = tmp_prefix + ".trace" if record_trace else None
@@ -90,7 +90,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             r = QemuTraceResult()
 
             try:
-                with self.target.flight_context(target_cmd, timeout=self.timeout, result=r) as flight:
+                with self.target.flight_context(target_cmd, timeout=self.timeout, result=r, **kwargs) as flight:
                     yield flight
             except subprocess.TimeoutExpired:
                 r.timed_out = True
