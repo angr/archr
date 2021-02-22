@@ -4,7 +4,6 @@ import angr
 import cle
 import os
 
-import elftools
 from angr.simos import SimUserland
 from elftools.elf.elffile import ELFFile
 from elftools.elf.segments import NoteSegment
@@ -13,12 +12,43 @@ l = logging.getLogger("archr.analyzers.angr")
 
 from . import Analyzer
 
+
+def _extract_mapping_from_core_file(core_path):
+    with open(core_path, 'rb') as core_file:
+        core_elf = ELFFile(core_file)
+        for segment in core_elf.iter_segments():
+            if isinstance(segment, NoteSegment):
+                notes = list(segment.iter_notes())
+                break
+        else:
+            l.warning("The core file @ %s does not contain a NOTE segment, you should fix that. We "
+                      "will attempt to get the mapped addresses from the scout_analyzer instead I guess.", core_path)
+            return None
+    for note in notes:
+        if note['n_type'] == 'NT_FILE':
+            file_note = note
+            break
+    else:
+        l.warning("Could not find an NT_FILE note in the core file @ %s. This is bad, and you should fix "
+                  "it. We will fall back to trying to extract the mappings from the scout_analyzer.", core_path)
+        return None
+
+    mappings = file_note['n_desc']['Elf_Nt_File_Entry']
+    paths = [p.decode() for p in file_note['n_desc']['filename']]
+    assert len(paths) == len(mappings)
+    mem_map = {}
+    for fpath, mapping in zip(paths, mappings):
+        mem_map[fpath] = min(mem_map.get(fpath, mapping['vm_start']), mapping['vm_start'])
+
+    return mem_map
+
 class angrProjectAnalyzer(Analyzer):
     """
     Constructs an angr project to match the target precisely
     """
 
     def __init__(self, target, scout_analyzer=None, custom_hooks=None, custom_systemcalls=None, static_simproc=False):
+        # pylint:disable=too-many-arguments
         """
 
         :param target:          The target to work on.
@@ -28,7 +58,7 @@ class angrProjectAnalyzer(Analyzer):
         :type static_simproc:   bool
         """
 
-        super(angrProjectAnalyzer, self).__init__(target)
+        super().__init__(target)
         self.scout_analyzer = scout_analyzer
         self.static_simproc = static_simproc
 
@@ -38,36 +68,7 @@ class angrProjectAnalyzer(Analyzer):
         self.project = None
         self._mem_mapping = None
 
-    def _extract_mapping_from_core_file(self, core_path):
-        with open(core_path, 'rb') as core_file:
-            core_elf = ELFFile(core_file)
-            for segment in core_elf.iter_segments():
-                if isinstance(segment, NoteSegment):
-                    notes = list(segment.iter_notes())
-                    break
-            else:
-                l.warning(f"The core file @ {core_path} does not contain a NOTE segment, you should fix that. We "
-                          f"will attempt to get the mapped addresses from the scout_analyzer instead I guess.")
-                return None
-        for note in notes:
-            if note['n_type'] == 'NT_FILE':
-                file_note = note
-                break
-        else:
-            l.warning(f"Could not find an NT_FILE note in the core file @ {core_path}. This is bad, and you should fix "
-                      f"it. We will fall back to trying to extract the mappings from the scout_analyzer.")
-            return None
-
-        mappings = file_note['n_desc']['Elf_Nt_File_Entry']
-        paths = [p.decode() for p in file_note['n_desc']['filename']]
-        assert len(paths) == len(mappings)
-        mem_map = {}
-        for fpath, mapping in zip(paths, mappings):
-            mem_map[fpath] = min(mem_map.get(fpath, mapping['vm_start']), mapping['vm_start'])
-
-        return mem_map
-
-    def fire(self, core_path=None, return_loader=False, project_kwargs=None, **cle_args): #pylint:disable=arguments-differ
+    def fire(self, core_path=None, return_loader=False, project_kwargs=None, **cle_args):  # pylint:disable=arguments-differ
 
         # if the the project is already created, return what the user wants
         if self.project is not None:
@@ -92,7 +93,7 @@ class angrProjectAnalyzer(Analyzer):
         self._mem_mapping = None
 
         if core_path is not None:
-            self._mem_mapping = self._extract_mapping_from_core_file(core_path)
+            self._mem_mapping = _extract_mapping_from_core_file(core_path)
 
         if self._mem_mapping is None and self.scout_analyzer is not None:
             _,_,_,self._mem_mapping = self.scout_analyzer.fire()
@@ -155,16 +156,16 @@ class angrProjectAnalyzer(Analyzer):
         for location, hook in self.custom_hooks.items():
             if type(location) is str:
                 self.project.hook_symbol(location, hook)
-                l.debug(f"Hooking symbol {location} -> {hook.display_name}...")
+                l.debug("Hooking symbol %s -> %s...", location, hook.display_name)
             else:
                 self.project.hook(location, hook)
-                l.debug(f"Hooking {hex(location)} -> {hook.display_name}...")
+                l.debug("Hooking %s -> %s...", location, hook.display_name)
 
         if self.custom_syscalls:
             assert isinstance(self.project.simos, SimUserland)
 
             for name, sys_sim in self.custom_syscalls.items():
-                l.debug(f'Hooking system call {name} with {sys_sim}')
+                l.debug('Hooking system call %s with %s', name, sys_sim)
                 self.project.simos.syscall_library.procedures[name] = sys_sim
 
 
