@@ -13,6 +13,8 @@ class TestangrAnalyzer(unittest.TestCase):
     def setUpClass(cls):
         build_container("entrypoint-env")
         build_container("cat-flag")
+        build_container("fauxware")
+        build_container("syscall_test")
 
     def angr_checks(self, t):
         dsb = archr.analyzers.DataScoutAnalyzer(t)
