@@ -53,7 +53,6 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             key, value = e.split('=', 1)
             if key == 'LD_PRELOAD' and self.ld_preload is None:
                 self.ld_preload = value
-                print("pickup LD_PRELOAD!!", value)
             if key == 'LD_LIBRARY_PATH' and self.library_path is None:
                 self.library_path = value
 

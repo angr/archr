@@ -73,7 +73,7 @@ class angrUltimateTracerAnalyzer(Analyzer):
         sim_manager = project.factory.simulation_manager(state)
         results = sim_manager.explore()
 
-        print(results.deadended[0].posix.dumps(1).decode("ascii"))
+        #print(results.deadended[0].posix.dumps(1).decode("ascii"))
 
         # terminate the agent
         proc.terminate()
