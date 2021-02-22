@@ -21,25 +21,25 @@ class TestangrAnalyzer(unittest.TestCase):
         apb = archr.analyzers.angrProjectAnalyzer(t, dsb)
         asb = archr.analyzers.angrStateAnalyzer(t, apb)
         project = apb.fire()
-        assert all(obj.binary.startswith("/tmp") for obj in project.loader.all_elf_objects[1:])
+        self.assertTrue(all(obj.binary.startswith("/tmp") for obj in project.loader.all_elf_objects[1:]))
         state = asb.fire()
         initial_stack = state.solver.eval(state.memory.load(state.regs.rsp, 200), cast_to=bytes)
-        assert b"ARCHR=YES" in initial_stack
+        self.assertIn(b"ARCHR=YES", initial_stack)
 
-        assert state.solver.eval_one(state.posix.brk == apb._mem_mapping['[heap]'])
-        assert state.solver.eval_one((state.regs.sp + 0xfff) & ~claripy.BVV(0xfff, project.arch.bits) == apb._mem_mapping['[stack-end]'])
+        self.assertTrue(state.solver.eval_one(state.posix.brk == apb._mem_mapping['[heap]']))
+        self.assertTrue(state.solver.eval_one((state.regs.sp + 0xfff) & ~claripy.BVV(0xfff, project.arch.bits) == apb._mem_mapping['[stack-end]']))
 
         # now screw with the memory map
         apb._mem_mapping['[stack-end]'] = 0x1337000
         state = asb.fire()
-        assert state.solver.eval_one((state.regs.sp + 0xfff) & ~claripy.BVV(0xfff, project.arch.bits) == apb._mem_mapping['[stack-end]'])
+        self.assertTrue(state.solver.eval_one((state.regs.sp + 0xfff) & ~claripy.BVV(0xfff, project.arch.bits) == apb._mem_mapping['[stack-end]']))
 
         # now check the filesystem resolution
         fd = state.posix.open('/etc/passwd', 0)
         stat = state.posix.fstat(fd)
-        assert stat is not None
-        assert state.solver.symbolic(stat.st_size) is False
-        assert state.solver.eval(stat.st_size) != 0
+        self.assertIsNotNone(stat)
+        self.assertFalse(state.solver.symbolic(stat.st_size))
+        self.assertNotEqual(state.solver.eval(stat.st_size), 0)
 
         # done
         project.loader.close()
@@ -67,9 +67,9 @@ class TestangrAnalyzer(unittest.TestCase):
             state = asb.fire()
             simgr = project.factory.simulation_manager(state)
             simgr.run()
-            assert len(simgr.errored) == 0
-            assert len(simgr.deadended) == 1
-            assert simgr.one_deadended.posix.dumps(1) == b"archr-flag\n"
+            self.assertEqual(len(simgr.errored), 0)
+            self.assertEqual(len(simgr.deadended), 1)
+            self.assertEqual(simgr.one_deadended.posix.dumps(1), b"archr-flag\n")
 
     def _default_fauxware_checks(self, simgr):
         num_authed, num_rejected, num_bypassed = 0, 0, 0
@@ -103,12 +103,12 @@ class TestangrAnalyzer(unittest.TestCase):
         original_puts = angr.SIM_PROCEDURES['libc']['puts']
         original_read = angr.SIM_PROCEDURES['posix']['read']
         class new_puts(angr.SimProcedure):
-            def run(self, s):
+            def run(self, s):  # pylint:disable=arguments-differ
                 self.state.globals['num_puts'] = self.state.globals.get('num_puts', 0) + 1
                 return self.inline_call(original_puts, s).ret_expr
 
         class new_read(angr.SimProcedure):
-            def run(self, fd, buf, _len):
+            def run(self, fd, buf, _len):  # pylint:disable=arguments-differ
                 self.state.globals['num_read'] = self.state.globals.get('num_read', 0) + 1
                 return self.inline_call(original_read, fd, buf, _len).ret_expr
 
@@ -146,12 +146,12 @@ class TestangrAnalyzer(unittest.TestCase):
         import angr  # pylint:disable=import-outside-toplevel
 
         class rejected(angr.SimProcedure):
-            def run(self):
+            def run(self):  # pylint:disable=arguments-differ
                 self.state.posix.stdout.write(None, b"Get outta here!")
                 self.exit(1)
 
         class authorized(angr.SimProcedure):
-            def run(self):
+            def run(self):  # pylint:disable=arguments-differ
                 self.state.posix.stdout.write(None, b"Good on ya, mate! Get in 'ere, ya bloody admin.")
 
         hooks = {'accepted': authorized(), 'rejected': rejected()}
@@ -199,12 +199,12 @@ class TestangrAnalyzer(unittest.TestCase):
         original_write = angr.SIM_PROCEDURES['posix']['write']
 
         class new_puts(angr.SimProcedure):
-            def run(self, code):
+            def run(self, code):  # pylint:disable=arguments-differ
                 new_exit = self.state.solver.eval_one(code) + 27
                 self.exit(new_exit)
 
         class new_write(angr.SimProcedure):
-            def run(self, fd, buf, _):
+            def run(self, fd, buf, _):  # pylint:disable=arguments-differ
                 self.state.globals['num_write'] = self.state.globals.get('num_read', 0) + 1
                 return self.inline_call(original_write, fd, buf, 5).ret_expr
 
