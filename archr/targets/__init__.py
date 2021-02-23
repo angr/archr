@@ -461,7 +461,7 @@ class Target(ABC):
 
 from .docker_target import DockerImageTarget
 from .local_target import LocalTarget
-from .qemu_system_target import QEMUSystemTarget
+from .qemu_system_target import QEMUSystemTarget, QEMUSystemTracerAnalyzer
 from ..utils import hook_entry, hook_addr
 from ..errors import ArchrError
 from .flight import Flight
