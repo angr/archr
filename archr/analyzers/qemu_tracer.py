@@ -9,6 +9,8 @@ import glob
 import re
 import os
 
+from io import BytesIO
+
 
 l = logging.getLogger("archr.analyzers.qemu_tracer")
 
@@ -30,6 +32,7 @@ class QemuTraceResult:
     base_address = None
     magic_contents = None
     core_path = None
+    taint_fd = None
 
     def tracer_technique(self, **kwargs):
         return angr.exploration_techniques.Tracer(self.trace, crash_addr=self.crash_address, **kwargs)
@@ -75,8 +78,15 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             with contextlib.suppress(FileNotFoundError):
                 shutil.rmtree(tmpdir)
 
+    @staticmethod
+    def line_iter(content):
+        io = BytesIO(content)
+        for line in io:
+            yield line.strip()
+
     @contextlib.contextmanager
-    def fire_context(self, record_trace=True, record_magic=False, save_core=False, crash_addr=None, trace_bb_addr=None, **kwargs):
+    def fire_context(self, record_trace=True, record_magic=False, save_core=False,
+                     crash_addr=None, trace_bb_addr=None, taint=None, **kwargs):
         with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
             target_trace_filename = tmp_prefix + ".trace" if record_trace else None
@@ -84,7 +94,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             local_core_filename = tmp_prefix + ".core" if save_core else None
 
             target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename,
-                                             coredump_dir=tmpdir, crash_addr=crash_addr, start_trace_addr=trace_bb_addr)
+                                             coredump_dir=tmpdir, crash_addr=crash_addr, start_trace_addr=trace_bb_addr,
+                                             taint=None)
             l.debug("launch QEMU with command: %s", ' '.join(target_cmd))
             r = QemuTraceResult()
 
@@ -126,7 +137,6 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     l.warning("Both crash_addr and save_core are enabled, only coreaddr coredump will be saved")
 
                 # choose the correct core dump to retrieve
-                # TODO: the current implementation assumes the first item in target_cores is generated first
                 with self._local_mk_tmpdir() as local_tmpdir:
                     self.target.retrieve_into(target_cores[0], local_tmpdir)
                     cores = glob.glob(os.path.join(local_tmpdir, "qemu_*.core"))
@@ -135,7 +145,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
             if target_trace_filename:
                 trace = self.target.retrieve_contents(target_trace_filename)
-                trace_iter = iter(trace.splitlines())
+                trace_iter = self.line_iter(trace)
 
                 # Find where qemu loaded the binary. Primarily for PIE
                 try:
@@ -149,9 +159,14 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     int(_trace_re.match(t).group('addr'), 16) for t in trace_iter if t.startswith(b"Trace ")
                 ]
 
+                endings = trace.rsplit(b'\n', 3)[1:3]
+
+                # grab the taint_fd
+                r.taint_fd = int(re.search(b'\[(\d+)\]', endings[0]).group(1))
+
                 # grab the faulting address
                 if r.crashed:
-                    lastline = trace.split(b'\n')[-2]
+                    lastline = endings[-1]
                     if lastline.startswith(b"Trace") or lastline.find(b"Segmentation") == -1:
                         l.warning("Trace return code was less than zero, but the last line of the trace does not"
                                   "contain the uncaught exception error from qemu."
@@ -187,7 +202,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         return qemu_variant
 
     def _build_command(self, trace_filename=None, magic_filename=None, coredump_dir=None,
-                       report_bad_args=None, crash_addr=None, start_trace_addr=None):
+                       report_bad_args=None, crash_addr=None, start_trace_addr=None, taint=None):
         """
         Here, we build the tracing command.
         """
@@ -206,6 +221,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             cmd_args += [ "-A", '0x{:x}:{}'.format(*crash_addr) ]
         if start_trace_addr:
             cmd_args += [ "-T", '0x{:x}:{}'.format(*start_trace_addr) ]
+        if taint:
+            cmd_args += [ "-M", self.taint.hex()]
 
         #
         # Next, we build QEMU options.
