@@ -161,11 +161,11 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                 endings = trace.rsplit(b'\n', 3)[1:3]
 
-                # grab the taint_fd
-                r.taint_fd = int(re.search(b'\[(\d+)\]', endings[0]).group(1))
-
-                # grab the faulting address
                 if r.crashed:
+                    # grab the taint_fd
+                    r.taint_fd = int(re.search(b'\[(-?\d+)\]', endings[0]).group(1))
+
+                    # grab the faulting address
                     lastline = endings[-1]
                     if lastline.startswith(b"Trace") or lastline.find(b"Segmentation") == -1:
                         l.warning("Trace return code was less than zero, but the last line of the trace does not"
