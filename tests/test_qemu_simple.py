@@ -58,12 +58,13 @@ with archr.targets.QEMUSystemTarget(
     dtb=qemu_test_path('images/vexpress-v2p-ca9.dtb'),
     kargs='root=/dev/mmcblk0 console=ttyAMA0,115200',
     plugins=qemu_plugin_str,
-    forwarded_ports=[8080],
+    forwarded_ports=[1234, 8080], # GDB, HTTP
     target_path="crashing-http-server", target_args=["/root/crashing-http-server", "-p", "8080"],
     login_user=b'root'
     ).start() as t:
         # assert q.run_command("echo hey".split()).stdout.read(3) == b"hey"
         b = archr.targets.QEMUSystemTracerAnalyzer(t)
-        r = b.fire(save_core=True)
+        r = b.fire(channel='stdio', save_core=True)
         print(r.trace)
-        embed()
+        print(('core path:' + r.core_path) if r.core_path else 'core not dumped')
+        # embed()

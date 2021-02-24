@@ -6,11 +6,28 @@ import shutil
 import nclib
 import os
 import struct
+from time import sleep
+import re
+
+
+from archr.analyzers import ContextAnalyzer
+from contextlib import contextmanager
+import contextlib
+import os.path
+import sys
+
+gdb_path = '../../../../buildroot-2020.02.9/output/build/host-gdb-8.2.1/gdb/gdb'
+import os
 
 from pwn import ELF
 
 l = logging.getLogger("archr.target.qemu_system_target")
 
+
+#
+# This block tracer depends on QEMU being patched and run with the associated
+# plugin. See below for launch args.
+#
 MESSAGE_TYPE_START = 0
 MESSAGE_TYPE_TRACE = 1
 
@@ -68,6 +85,61 @@ class BlockTracer(Thread):
         self.join()
         return self.trace
 
+#
+# FIXME: This simply spawns GDB using Popen and shoves in a script to trigger
+# core dumps. This could be done better, probably using the GDB Python API. For
+# now, keep it hacky and simple.
+#
+class GdbInteraction(Thread):
+    def __init__(self, target, pid, bp_addr=None):
+        super().__init__()
+        self.target = target
+        self.pid = pid
+        self.bp_addr = bp_addr
+        self.should_stop = False
+        self.core_path = 'output.core'
+
+        if os.path.exists(self.core_path):
+            os.unlink(self.core_path)
+
+    def run(self):
+        # target_process_name = os.path.basename(self.target.target_args[0])
+
+        script_src = f'''set pagination off
+target extended-remote 127.0.0.1:1234
+attach {self.pid}
+'''
+        if self.bp_addr is not None:
+            script_src += f'''break *{hex(self.bp_addr)}
+commands
+generate-core-file {self.core_path}
+continue
+end
+'''
+        script_src += 'continue\n'
+
+        self.script_fd = tempfile.NamedTemporaryFile('w')
+        self.script_fd.write(script_src)
+        self.script_fd.flush()
+
+        print(script_src)
+
+        self.process = subprocess.Popen([gdb_path, '-x', self.script_fd.name], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+        m = nclib.merge([self.process.stdout, self.process.stderr])
+        while not self.should_stop:
+            l = m.readline(timeout=1)
+            if l:
+                print(l)
+            # FIXME: Could grab signal here, etc when target crashes
+        self.process.kill()
+
+    def has_core_dump(self):
+        return os.path.exists(self.core_path)
+
+    def stop(self):
+        self.should_stop = True
+        self.join()
+
 class QemuTraceResult:
     # results
     returncode = None
@@ -85,11 +157,9 @@ class QemuTraceResult:
     def tracer_technique(self, **kwargs):
         return angr.exploration_techniques.Tracer(self.trace, crash_addr=self.crash_address, **kwargs)
 
+import urllib
 
-from archr.analyzers import ContextAnalyzer
-from contextlib import contextmanager
-import contextlib
-
+# FIXME: Move to analyzers
 class QEMUSystemTracerAnalyzer(ContextAnalyzer):
 
     def __init__(self, target, timeout=10, ld_linux=None, ld_preload=None, library_path=None, seed=None, **kwargs):
@@ -100,64 +170,73 @@ class QEMUSystemTracerAnalyzer(ContextAnalyzer):
         self.library_path = library_path
         self.seed = seed
 
-    # @contextlib.contextmanager
-    # def _target_mk_tmpdir(self):
-    #     tmpdir = tempfile.mktemp(prefix="/tmp/tracer_target_")
-    #     self.target.run_command(["mkdir", tmpdir]).wait()
-    #     try:
-    #         yield tmpdir
-    #     finally:
-    #         self.target.run_command(["rm", "-rf", tmpdir])
-
-    # @staticmethod
-    # @contextlib.contextmanager
-    # def _local_mk_tmpdir():
-    #     tmpdir = tempfile.mkdtemp(prefix="/tmp/tracer_local_")
-    #     try:
-    #         yield tmpdir
-    #     finally:
-    #         with contextlib.suppress(FileNotFoundError):
-    #             shutil.rmtree(tmpdir)
-
     @contextlib.contextmanager
     def fire_context(self, record_trace=True, record_magic=False, save_core=False, crash_addr=None, trace_bb_addr=None):
-        if True:
-        # with self._target_mk_tmpdir() as tmpdir:
-            # tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
-            # target_trace_filename = tmp_prefix + ".trace" if record_trace else None
-            # target_magic_filename = tmp_prefix + ".magic" if record_magic else None
-            # local_core_filename = tmp_prefix + ".core" if save_core else None
+        local_target_path = self.target.target_path
+        remote_target_launch_cmd = self.target.target_args
+        target_process_name = os.path.basename(self.target.target_args[0])
 
-            # target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename,
-            #                                  coredump_dir=tmpdir, crash_addr=crash_addr, start_trace_addr=trace_bb_addr)
-            target_cmd = './crashing-http-server -p 8080'.split()
-            l.debug("launch QEMU with command: %s", ' '.join(target_cmd))
+        self.tracer = BlockTracer(('127.0.0.1',4242), local_target_path)
+        self.tracer.start()
+        self.gdb = None
 
-            self.tracer = BlockTracer(('127.0.0.1',4242), self.target.target_path)
-            self.tracer.start()
+        r = QemuTraceResult()
 
-            r = QemuTraceResult()
+        try:
+            # Before launching, ensure process is not running
+            self.target.run_command(['killall', target_process_name]).communicate(b'\n')
 
-            try:
-                with self.target.flight_context(target_cmd, timeout=self.timeout, result=r) as flight:
-                    yield flight
-            except subprocess.TimeoutExpired:
-                r.timed_out = True
-                # Kill?
-            else:
-                r.timed_out = False
-                r.returncode = flight.process.returncode
+            # self.target.run_command(['killall', 'gdbserver'])
+            self.target.run_command(['gdbserver', '--multi', '0.0.0.0:1234'])
 
-                # did a crash occur?
-                if r.returncode in [ 139, -11 ]:
-                    r.crashed = True
-                    r.signal = signal.SIGSEGV
-                elif r.returncode == [ 132, -9 ]:
-                    r.crashed = True
-                    r.signal = signal.SIGILL
+            with self.target.flight_context(remote_target_launch_cmd, timeout=self.timeout, result=r) as flight:
 
-            self.tracer.stop()
-            r.trace = self.tracer.trace
+                print('Waiting for service to come up')
+                sleep(5)
+
+                pid = self.target.find_process_id('gdbserver')
+                if pid is None:
+                    raise Exception("No gdbserver!")
+
+                pid = self.target.find_process_id(target_process_name)
+                if pid is None:
+                    raise Exception("Target process failed to launch!")
+
+                print('Launching GDB')
+                self.gdb = GdbInteraction(self.target, pid, ELF(local_target_path).symbols['handle_connection'])
+                self.gdb.start()
+
+                # TEMP: Make request to exercise test case and trigger core dump
+                sleep(1)
+                urllib.request.urlopen('http://127.0.0.1:8080')
+
+                yield flight
+        except subprocess.TimeoutExpired:
+            r.timed_out = True
+            self.target.run_command(['killall', target_process_name])
+        except Exception as e:
+            print("Unexpected error:", sys.exc_info()[0])
+            print(e)
+            exit(1)
+            raise
+        else:
+            r.timed_out = False
+            # FIXME: We have no way to get this information yet
+            r.returncode = 0
+            # # did a crash occur?
+            # if r.returncode in [ 139, -11 ]:
+            #     r.crashed = True
+            #     r.signal = signal.SIGSEGV
+            # elif r.returncode == [ 132, -9 ]:
+            #     r.crashed = True
+            #     r.signal = signal.SIGILL
+
+        self.tracer.stop()
+        if self.gdb:
+            self.gdb.stop()
+            if self.gdb.has_core_dump():
+                r.core_path = self.gdb.core_path
+        r.trace = self.tracer.trace
 
 from . import Target
 class QEMUSystemTarget(Target):
@@ -402,8 +481,20 @@ class QEMUSystemTarget(Target):
         self.qemu_stdio.readuntil(str(aux_port).encode('latin1'))
         p = subprocess.Popen(f"nc localhost {self.forwarded_ports[aux_port]}".split(), stdout=stdout, stderr=stderr, stdin=stdin, **kwargs)
         import shlex
-        inj = 'exec /bin/sh -c ' + shlex.quote(" ".join(f'"{a}"' for a in args)) + '\n'
-        # print('sending:' + inj)
+        inj = 'exec /bin/sh -c ' + shlex.quote(" ".join(f'{a}' for a in args)) + '\n'
+        print('sending:' + inj)
         p.stdin.write(inj.encode('latin1'))
         p.stdin.flush() # IMPORTANT
         return p
+
+    def find_process_id(self, process_name):
+        p = self.run_command(["ps", "|", "grep", process_name])
+        output, _ = p.communicate()
+        for l in output.decode('utf8').splitlines():
+            m = re.findall(r'\s*(\d+)\s*(\w+)\s*(.+)', l)
+            if len(m) == 0: continue
+            p,u,c = m[0]
+            if re.findall('grep', c): continue
+            return int(p)
+        return None
+
