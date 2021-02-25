@@ -256,13 +256,13 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             cmd_args += ["-m", "8G"]
 
         if 'cgc' not in qemu_variant and "LD_BIND_NOW=1" not in self.target.target_env:
-            cmd_args += ['-E', '"LD_BIND_NOW=1"']
+            cmd_args += ['-E', 'LD_BIND_NOW=1']
 
         if self.ld_preload:
-            cmd_args += ['-E', '"'+'LD_PRELOAD=' + self.ld_preload+'"']
+            cmd_args += ['-E', 'LD_PRELOAD=' + self.ld_preload]
 
         if self.library_path and not self.ld_linux:
-            cmd_args += ['-E', '"'+'LD_LIBRARY_PATH=' + self.library_path+'"']
+            cmd_args += ['-E', 'LD_LIBRARY_PATH=' + self.library_path]
 
         # now set up the loader
         if self.ld_linux:
