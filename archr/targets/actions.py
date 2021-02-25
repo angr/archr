@@ -1,7 +1,10 @@
 import time
+import logging
 from abc import abstractmethod
 
 import nclib
+
+l = logging.getLogger("archr.target.actions")
 
 class ActionError(BaseException):
     pass
@@ -67,6 +70,7 @@ class OpenChannelAction(Action):
             raise ActionError("No interaction context to perform %s" % self.__class__)
         if self.channel_name is None:
             self.channel_name = self.interaction.default_channel_name
+        l.debug("[OpenChannelAction] openning channel: %s", self.channel_name)
         channel = self._open_channel(self.channel_name)
         self.interaction._channels[self.channel_name] = channel
         return channel
@@ -83,6 +87,7 @@ class SendAction(Action):
             raise ActionError("No interaction context to perform %s" % self.__class__)
         if self.channel_name is None:
             self.channel_name = self.interaction.default_channel_name
+        l.debug("[SendAction] sending data to channel %s: %s", self.channel_name, self.data)
         channel = self.interaction.get_channel(self.channel_name)
         channel.write(self.data)
 
@@ -94,6 +99,7 @@ class WaitAction(Action):
     def perform(self):
         if not self.interaction:
             raise ActionError("No interaction context to perform %s" % self.__class__)
+        l.debug("[WaitAction] waiting for %d seconds", self.seconds)
         time.sleep(self.seconds)
 
 class CloseChannelAction(Action):
@@ -106,6 +112,7 @@ class CloseChannelAction(Action):
             raise ActionError("No interaction context to perform %s" % self.__class__)
         if self.channel_name is None:
             self.channel_name = self.interaction.default_channel_name
+        l.debug("[CloseChannelAction] closing channel: %s", self.channel_name)
         channel = self.interaction.get_channel(self.channel_name)
         channel.shutdown_wr()
         channel.close()
