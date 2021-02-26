@@ -154,6 +154,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 # Find where qemu loaded the binary. Primarily for PIE
                 try:
                     r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
+                    l.debug("Detected the base address of the target at %s", hex(r.base_address))
                 except StopIteration as e:
                     raise ArchrError("The trace does not include any data. Did you forget to chmod +x the binary?") from e
 
@@ -173,7 +174,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                             "Please make sure you are using the latest shellphish-qemu.")
                     else:
                         r.taint_fd = int(re.search(br'\[(\d+)\]', endings[0]).group(1))
-
+                        l.debug("Detected the tainted fd to be %s", r.taint_fd)
                     # grab the faulting address
                     lastline = endings[-1]
                     if lastline.startswith(b"Trace") or lastline.find(b"Segmentation") == -1:
@@ -182,6 +183,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                                   "If using an older version of shellphish_qemu try using 'ulimit -Sc 0' or "
                                   "updating to a newer version of shellphish_qemu.")
                     r.crash_address = int(lastline.split(b'[')[1].split(b']')[0], 16)
+                    l.debug("Detected the crashing address at %s", hex(r.crash_address))
 
                 l.debug("Trace consists of %d basic blocks", len(r.trace))
 
