@@ -9,6 +9,11 @@ import os
 import io
 import re
 
+try:
+    import snapshot
+except ImportError:
+    snapshot = None
+
 l = logging.getLogger("archr.targets")
 
 from abc import ABC
@@ -75,6 +80,8 @@ class Target(ABC):
         The opposite of build().
         :return:
         """
+        if snapshot is not None and snapshot.is_in_snapshot():
+            return
         with contextlib.suppress(OSError):
             shutil.rmtree(self.local_workdir)
         return self
