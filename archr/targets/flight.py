@@ -20,6 +20,9 @@ class Interaction:
         self._channels = {}
         self.result = result
 
+        if actions is None:
+            l.warning("No actions specified, make sure this is what you want!")
+            actions = ()
         self.actions = actions
         assert type(actions) in (list, tuple), "actions must be a list or a tuple"
         for act in self.actions:
