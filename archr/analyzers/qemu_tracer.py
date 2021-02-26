@@ -167,7 +167,12 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                 if r.crashed:
                     # grab the taint_fd
-                    r.taint_fd = int(re.search(b'\[(-?\d+)\]', endings[0]).group(1))
+                    if not endings[0].startswith(b"qemu: last read marker was read through fd:"):
+                        l.error(
+                            "Unexpected status line from qemu tracer. Cannot get the last read marker to set taint_fd. "
+                            "Please make sure you are using the latest shellphish-qemu.")
+                    else:
+                        r.taint_fd = int(re.search(br'\[(\d+)\]', endings[0]).group(1))
 
                     # grab the faulting address
                     lastline = endings[-1]
