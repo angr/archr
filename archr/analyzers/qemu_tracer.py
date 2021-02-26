@@ -121,7 +121,6 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             if local_core_filename or crash_addr:
                 # choose the correct core dump to retrieve
                 with self._local_mk_tmpdir() as local_tmpdir:
-                    import ipdb; ipdb.set_trace()
                     self.target.retrieve_into(tmpdir, local_tmpdir)
                     target_cores = glob.glob(os.path.join(local_tmpdir, '*', 'qemu_*.core'))
                     # sort the coredumps to identify which is which
