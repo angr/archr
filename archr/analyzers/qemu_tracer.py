@@ -31,6 +31,7 @@ class QemuTraceResult:
     crash_address = None
     base_address = None
     magic_contents = None
+    halfway_core_path = None
     core_path = None
     taint_fd = None
 
@@ -92,6 +93,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             target_trace_filename = tmp_prefix + ".trace" if record_trace else None
             target_magic_filename = tmp_prefix + ".magic" if record_magic else None
             local_core_filename = tmp_prefix + ".core" if save_core else None
+            local_halfway_core_filename = tmp_prefix + f'.halfway_{hex(crash_addr[0])}_{crash_addr[1]}.core' if crash_addr else None
 
             target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename,
                                              coredump_dir=tmpdir, crash_addr=crash_addr, start_trace_addr=trace_bb_addr,
@@ -116,32 +118,35 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     r.crashed = True
                     r.signal = signal.SIGILL
 
-            if local_core_filename:
-                target_cores = self.target.resolve_glob(os.path.join(tmpdir, "qemu_*.core"))
-
-                # sanity check core dumps
-                if len(target_cores) == 0:
-                    raise ArchrError("the target didn't crash inside qemu! Make sure you launch it correctly!\n"+
-                                     "command: %s" % ' '.join(target_cmd))
-                elif not crash_addr and len(target_cores) != 1:
-                    raise ArchrError("expected 1 core file but found %d" % len(target_cores))
-                elif crash_addr and len(target_cores) != 2:
-                    raise ArchrError("expected 2 core files, 1 for coreaddr 1 for the real crash. But found %d core dumps" % len(target_cores))
-
-                # sort the coredumps to identify which is which
-                def get_timestamp(s):
-                    ts = re.match(r".*_(\d+-\d+)_.*", os.path.basename(s)).group(1)
-                    return datetime.datetime.strptime(ts, '%Y%m%d-%H%M%S')
-                target_cores = sorted(target_cores, key=get_timestamp)
-                if save_core and crash_addr:
-                    l.warning("Both crash_addr and save_core are enabled, only coreaddr coredump will be saved")
-
+            if local_core_filename or crash_addr:
                 # choose the correct core dump to retrieve
                 with self._local_mk_tmpdir() as local_tmpdir:
-                    self.target.retrieve_into(target_cores[0], local_tmpdir)
-                    cores = glob.glob(os.path.join(local_tmpdir, "qemu_*.core"))
-                    shutil.move(cores[0], local_core_filename)
+                    import ipdb; ipdb.set_trace()
+                    self.target.retrieve_into(tmpdir, local_tmpdir)
+                    target_cores = glob.glob(os.path.join(local_tmpdir, '*', 'qemu_*.core'))
+                    # sort the coredumps to identify which is which
+                    def get_timestamp(s):
+                        ts = re.match(r".*_(\d+-\d+)_.*", os.path.basename(s)).group(1)
+                        return datetime.datetime.strptime(ts, '%Y%m%d-%H%M%S')
+                    target_cores = sorted(target_cores, key=get_timestamp)
+
+                    # sanity check core dumps
+                    if len(target_cores) == 0:
+                        raise ArchrError("the target didn't crash inside qemu! Make sure you launch it correctly!\n" +
+                                         "command: %s" % ' '.join(target_cmd))
+                    elif not crash_addr and len(target_cores) != 1:
+                        raise ArchrError("expected 1 core file but found %d" % len(target_cores))
+                    elif crash_addr and len(target_cores) != 2:
+                        raise ArchrError(
+                            "expected 2 core files, 1 for coreaddr 1 for the real crash. But found %d core dumps" % len(
+                                target_cores))
+
+                    if crash_addr is not None:
+                        shutil.move(target_cores[0], local_halfway_core_filename)
+                    if local_core_filename is not None:
+                        shutil.move(target_cores[-1], local_core_filename)
                     r.core_path = local_core_filename
+                    r.halfway_core_path = local_halfway_core_filename
 
             if target_trace_filename:
                 trace = self.target.retrieve_contents(target_trace_filename)
