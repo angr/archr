@@ -6,6 +6,11 @@ import shlex
 import os
 import re
 
+try:
+    import snapshot
+except ImportError:
+    snapshot = None
+
 l = logging.getLogger("archr.target.docker_target")
 
 from . import Target
@@ -137,6 +142,8 @@ class DockerImageTarget(Target):
         return self
 
     def stop(self):
+        if snapshot is not None and snapshot.is_in_snapshot():
+            return self
         if self.container:
             self.container.kill()
             self.container = None
@@ -146,6 +153,8 @@ class DockerImageTarget(Target):
         return self
 
     def remove(self):
+        if snapshot is not None and snapshot.is_in_snapshot():
+            return
         if self.container:
             l.warning("Force removing container %r. If this is not intended, please ensure variable %r "
                       "is still alive and in scope.", self.container, self)
