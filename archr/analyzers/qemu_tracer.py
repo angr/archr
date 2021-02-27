@@ -19,6 +19,9 @@ from .. import _angr_available
 if _angr_available:
     import angr
 
+class QEMUTracerError(BaseException):
+    pass
+
 class QemuTraceResult:
     # results
     returncode = None
@@ -134,10 +137,10 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                     # sanity check core dumps
                     if save_core and not tmp_crash_core_path:
-                        raise ArchrError("the target didn't crash inside qemu! Make sure you launch it correctly!\n" +
+                        raise QEMUTracerError("the target didn't crash inside qemu! Make sure you launch it correctly!\n" +
                                          "command: %s" % ' '.join(target_cmd))
                     if crash_addr and not tmp_halfway_core_path:
-                        raise ArchrError("the target didn't generate a halfway core file!" +
+                        raise QEMUTracerError("the target didn't generate a halfway core file!" +
                                          "command: %s" % ' '.join(target_cmd))
 
                     if local_core_filename and tmp_crash_core_path:
@@ -156,7 +159,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
                     l.debug("Detected the base address of the target at %s", hex(r.base_address))
                 except StopIteration as e:
-                    raise ArchrError("The trace does not include any data. Did you forget to chmod +x the binary?") from e
+                    raise QEMUTracerError("The trace does not include any data. Did you forget to chmod +x the binary?") from e
 
                 # record the trace
                 _trace_re = _trace_old_re if self.target.target_os == 'cgc' else _trace_new_re
@@ -193,7 +196,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             if target_magic_filename:
                 r.magic_contents = self.target.retrieve_contents(target_magic_filename)
                 if len(r.magic_contents) != 0x1000:
-                    raise ArchrError("Magic content read from QEMU improper size, should be a page in length")
+                    raise QEMUTracerError("Magic content read from QEMU improper size, should be a page in length")
 
                 # remove the magic file on the target
                 self.target.remove_path(target_magic_filename)
@@ -252,7 +255,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         # save CGC magic page
         if magic_filename:
             if 'cgc' not in qemu_variant:
-                raise ArchrError("Specified magic page dump on non-cgc architecture")
+                raise QEMUTracerError("Specified magic page dump on non-cgc architecture")
             cmd_args += ["-magicdump", magic_filename]
 
         if self.seed is not None:
