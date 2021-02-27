@@ -28,6 +28,7 @@ class QemuTraceResult:
 
     # introspection
     trace = None
+    qemu_log_contents = None
     crash_address = None
     base_address = None
     magic_contents = None
@@ -163,6 +164,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 r.trace = [
                     int(_trace_re.match(t).group('addr'), 16) for t in trace_iter if t.startswith(b"Trace ")
                 ]
+                r.qemu_log_contents = trace.split(b'\n')
 
                 endings = trace.rsplit(b'\n', 3)[1:3]
 
