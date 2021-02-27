@@ -57,7 +57,7 @@ class OpenChannelAction(Action):
             except LookupError as e:
                 raise ValueError("No mapping for channel number", kind, idx) from e
 
-            channel = nclib.Netcat((address, port), udp=udp, ipv6=ipv6, retry=30, verbose=True)
+            channel = nclib.Netcat((address, port), udp=udp, ipv6=ipv6, retry=30)
         else:
             raise ValueError("Bad channel", channel_name)
 

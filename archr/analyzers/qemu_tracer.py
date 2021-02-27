@@ -123,27 +123,27 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 with self._local_mk_tmpdir() as local_tmpdir:
                     self.target.retrieve_into(tmpdir, local_tmpdir)
                     target_cores = glob.glob(os.path.join(local_tmpdir, '*', 'qemu_*.core'))
-                    # sort the coredumps to identify which is which
-                    def get_timestamp(s):
-                        ts = re.match(r".*_(\d+-\d+)_.*", os.path.basename(s)).group(1)
-                        return datetime.datetime.strptime(ts, '%Y%m%d-%H%M%S')
-                    target_cores = sorted(target_cores, key=get_timestamp)
+                    tmp_crash_core_path = None
+                    tmp_halfway_core_path = None
+
+                    for x in target_cores:
+                        if 'crash' in x.rsplit("_")[-1]:
+                            tmp_crash_core_path = x
+                        if 'coreaddr' in x.rsplit("_")[-1]:
+                            tmp_halfway_core_path = x
 
                     # sanity check core dumps
-                    if len(target_cores) == 0:
+                    if save_core and not tmp_crash_core_path:
                         raise ArchrError("the target didn't crash inside qemu! Make sure you launch it correctly!\n" +
                                          "command: %s" % ' '.join(target_cmd))
-                    elif not crash_addr and len(target_cores) != 1:
-                        raise ArchrError("expected 1 core file but found %d" % len(target_cores))
-                    elif crash_addr and len(target_cores) != 2:
-                        raise ArchrError(
-                            "expected 2 core files, 1 for coreaddr 1 for the real crash. But found %d core dumps" % len(
-                                target_cores))
+                    if crash_addr and not tmp_halfway_core_path:
+                        raise ArchrError("the target didn't generate a halfway core file!" +
+                                         "command: %s" % ' '.join(target_cmd))
 
-                    if crash_addr is not None:
-                        shutil.move(target_cores[0], local_halfway_core_filename)
-                    if local_core_filename is not None:
-                        shutil.move(target_cores[-1], local_core_filename)
+                    if local_core_filename and tmp_crash_core_path:
+                        shutil.move(tmp_crash_core_path, local_core_filename)
+                    if local_halfway_core_filename and tmp_halfway_core_path:
+                        shutil.move(tmp_halfway_core_path, local_halfway_core_filename)
                     r.core_path = local_core_filename
                     r.halfway_core_path = local_halfway_core_filename
 
