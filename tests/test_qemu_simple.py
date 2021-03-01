@@ -4,67 +4,73 @@ import archr
 import time
 import os
 import pathlib
+import logging
 
 from common import qemu_test_path
-
-# class TestQEMUSystemTargetSimple(unittest.TestCase):
-#     def test_pwncollege_minimal(self):
-#         with archr.targets.QEMUSystemTarget(
-#             qemu_test_path("pwnkernel-bzImage"), initrd_path=qemu_test_path("pwnkernel-initramfs.cpio.gz"),
-#             target_path="/hello", target_args=["/hello"]
-#         ).start() as q:
-#             assert q._share_mounted
-#             assert b"root" in q.retrieve_contents("/etc/passwd")
-#             q.inject_contents({"/root/foo": b"ARCHR_TEST_A"})
-#             assert b"ARCHR_TEST_A" in q.retrieve_contents("/root/foo")
-#             assert q.run_command("echo hey".split()).stdout.read(3) == b"hey"
-#             assert q.run_command("echo hi".split()).stdout.read(2) == b"hi"
-#             assert q.run_command().communicate()[0] == b"HELLO PWN COLLEGE!\n"
-
-# class TestQEMUSystemTargetSimple(unittest.TestCase):
-#     def test_pwncollege_minimal(self):
-#         with archr.targets.QEMUSystemTarget(
-#             qemu_test_path("pwnkernel-bzImage"), initrd_path=qemu_test_path("pwnkernel-initramfs.cpio.gz"),
-#             target_path="/hello", target_args=["/hello"]
-#         ).start() as q:
-#             assert q._share_mounted
-#             assert b"root" in q.retrieve_contents("/etc/passwd")
-#             q.inject_contents({"/root/foo": b"ARCHR_TEST_A"})
-#             assert b"ARCHR_TEST_A" in q.retrieve_contents("/root/foo")
-#             assert q.run_command("echo hey".split()).stdout.read(3) == b"hey"
-#             assert q.run_command("echo hi".split()).stdout.read(2) == b"hi"
-#             assert q.run_command().communicate()[0] == b"HELLO PWN COLLEGE!\n"
-
-# if __name__ == '__main__':
-#     unittest.main()
 
 
 qemu_base = pathlib.Path(__file__).absolute()
 qemu_base = qemu_base.parent.parent.parent.absolute()
-qemu_base = qemu_base / 'qtrace'
+qemu_base = qemu_base / "qtrace"
 
-qemu_plugin_str = [f"-plugin", f"file={qemu_base / 'qemu_system_plugin' / 'libqtrace.so'}"]
+qemu_plugin_str = [
+    f"-plugin",
+    f"file={qemu_base / 'qemu_system_plugin' / 'libqtrace.so'}",
+]
 
-qemu_base = qemu_base / 'qemu' / 'build' / 'arm-softmmu'
-qemu_base = str(qemu_base) + '/qemu-system-'
+qemu_base = qemu_base / "qemu" / "build" / "arm-softmmu"
+qemu_base = str(qemu_base) + "/qemu-system-"
 
-from IPython import embed
+logging.getLogger("archr.target.actions").setLevel(logging.DEBUG)
+logging.getLogger("archr.target.qemu_system_target").setLevel(logging.DEBUG)
+
+with open("/data/tenda_cn_ac9_v15/new_pre_fire_input", "rb") as f:
+    pre_fire_input = f.read()
+
+with open("/data/tenda_cn_ac9_v15/crash_input", "rb") as f:
+    crash_input = f.read()
+
 
 with archr.targets.QEMUSystemTarget(
-    qemu_test_path('images/zImage'),
-    disk_path=qemu_test_path('images/rootfs.qcow2') + ',if=sd,cache=writeback',
+    qemu_test_path("images/zImage"),
+    disk_path=qemu_test_path("images/rootfs.qcow2") + ",if=sd,cache=writeback",
     qemu_base=qemu_base,
-    arch='arm', machine='vexpress-a9',
-    dtb=qemu_test_path('images/vexpress-v2p-ca9.dtb'),
-    kargs='root=/dev/mmcblk0 console=ttyAMA0,115200',
+    arch="arm",
+    machine="vexpress-a9",
+    dtb=qemu_test_path("images/vexpress-v2p-ca9.dtb"),
+    kargs="root=/dev/mmcblk0 console=ttyAMA0,115200",
     plugins=qemu_plugin_str,
-    forwarded_ports=[1234, 8080], # GDB, HTTP
-    target_path="crashing-http-server", target_args=["/root/crashing-http-server", "-p", "8080"],
-    login_user=b'root'
-    ).start() as t:
-        # assert q.run_command("echo hey".split()).stdout.read(3) == b"hey"
-        b = archr.targets.QEMUSystemTracerAnalyzer(t)
-        r = b.fire(channel='stdio', save_core=True)
-        print(r.trace)
-        print(('core path:' + r.core_path) if r.core_path else 'core not dumped')
-        # embed()
+    forwarded_ports=[80, 1234],  # HTTP, GDB
+    target_path="/bin/httpd",
+    target_args=["/bin/httpd"],
+    target_env={
+        "LD_PRELOAD": "/lib/libnvram-faker.so:/lib/libdl.so.0:/lib/custbind.so"
+    },
+    login_user=b"root",
+).start() as target:
+
+    actions = [
+        archr.targets.actions.WaitAction(1),
+        archr.targets.actions.OpenChannelAction("tcp:80"),
+        archr.targets.actions.SendAction(pre_fire_input, "tcp:80"),
+        archr.targets.actions.WaitAction(10),
+        archr.targets.actions.CloseChannelAction("tcp:80"),
+        archr.targets.actions.WaitAction(1),
+        archr.targets.actions.OpenChannelAction("tcp:80"),
+        archr.targets.actions.SendAction(crash_input, "tcp:80"),
+        archr.targets.actions.WaitAction(10),
+    ]
+
+    for _ in range(2):
+        tracer = archr.targets.QEMUSystemTracerAnalyzer(target)
+        result = tracer.fire(
+            actions=actions,
+            save_core=True,
+            crash_addr=(0x7CD6C, 1),
+        )
+
+        print(f"Trace length: {len(result.trace)}")
+        print(f"Core Path: {result.core_path}")
+        print(f"Timed Out: {result.timed_out}")
+        print(f"Crashed: {result.crashed}")
+        print(f"Trace End: {[hex(e) for e in result.trace[-3:]]}")

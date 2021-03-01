@@ -67,7 +67,8 @@ class ContextAnalyzer(Analyzer):
 
     def _fire_testcase(self, flight, testcase=None, channel=None): #pylint:disable=no-self-use
         flight.start()
-        return flight.get_channel(channel)
+        if channel:
+            return flight.get_channel(channel)
 
     @contextmanager
     def fire_context(self, *args, **kwargs):  # -> ContextManager[Flight]:
