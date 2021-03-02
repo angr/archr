@@ -98,6 +98,7 @@ class angrProjectAnalyzer(Analyzer):
         if self._mem_mapping is None and self.scout_analyzer is not None:
             _,_,_,self._mem_mapping = self.scout_analyzer.fire()
 
+        self._mem_mapping = self._mem_mapping or {}
         target_libs = [lib for lib in self._mem_mapping if lib.startswith("/")]
         the_libs = []
         for target_lib in target_libs:
@@ -108,8 +109,6 @@ class angrProjectAnalyzer(Analyzer):
         bin_opts = {}
         if preloader.main_object.pic:
             bin_opts = lib_opts.get(os.path.basename(self.target.target_path), {})
-
-        self._mem_mapping = self._mem_mapping or {}
 
         # if a core dump is specified, create a project based on the core dump
         if core_path:
