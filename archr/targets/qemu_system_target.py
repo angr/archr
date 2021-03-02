@@ -462,6 +462,10 @@ class QEMUSystemTarget(Target):
         original_send = self.qemu_stdio._send
 
         def send(self, data):
+            global RECVBUF
+            if RECVBUF:
+                l.debug("[qemu_stdio] recv: %s", repr(RECVBUF))
+                RECVBUF = b''
             l.debug("[qemu_stdio] send: %s", repr(data))
             return original_send(data)
 
@@ -474,7 +478,7 @@ class QEMUSystemTarget(Target):
             data = original_recv(size, timeout=timeout)
             RECVBUF += data
             if b'\n' in RECVBUF:
-                l.debug("[qemu_stdio] recv: %s", repr(data))
+                l.debug("[qemu_stdio] recv: %s", repr(RECVBUF))
                 RECVBUF = b''
             return data
 
