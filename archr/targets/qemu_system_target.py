@@ -306,6 +306,7 @@ class QEMUSystemTracerAnalyzer(ContextAnalyzer):
 
 from . import Target
 
+RECVBUF = b''
 
 class QEMUSystemTarget(Target):
     """
@@ -469,8 +470,12 @@ class QEMUSystemTarget(Target):
         original_recv = self.qemu_stdio._recv
 
         def recv(self, size, timeout=None):
+            global RECVBUF
             data = original_recv(size, timeout=timeout)
-            l.debug("[qemu_stdio] recv: %s", repr(data))
+            RECVBUF += data
+            if b'\n' in RECVBUF:
+                l.debug("[qemu_stdio] recv: %s", repr(data))
+                RECVBUF = b''
             return data
 
         self.qemu_stdio._recv = recv.__get__(self.qemu_stdio)
