@@ -27,8 +27,8 @@ class LocalTarget(Target):
             target_path = os.path.abspath(target_args[0])
         if type(target_path) is str:
             target_path = os.path.abspath(target_path)
-        if target_cwd is None and not os.path.isabs(target_args[0]):
-            target_cwd = os.path.dirname(os.path.abspath(target_args[0]))
+        if target_cwd is None:
+            target_cwd = os.getcwd()
         super().__init__(
             target_args=target_args,
             target_path=target_path,
