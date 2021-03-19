@@ -147,7 +147,7 @@ class DockerImageTarget(Target):
 
     def remove(self):
         if self.container:
-            l.warning("Force removing container %r. If this is not intended, please ensure variable %r "
+            l.debug("Force removing container %r. If this is not intended, please ensure variable %r "
                       "is still alive and in scope.", self.container, self)
             try:
                 self.container.remove(force=True)
