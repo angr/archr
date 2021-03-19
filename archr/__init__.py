@@ -6,14 +6,14 @@ try:
     import angr
     _angr_available = True
 except ImportError:
-    _LOG.warning("angr import failed. angr support disabled")
+    _LOG.debug("angr import failed. angr support disabled")
     _angr_available = False
 
 try:
     import qtrace
     _qtrace_available = True
 except ImportError:
-    _LOG.warning("qtrace import failed. qtrace support disabled")
+    _LOG.debug("qtrace import failed. qtrace support disabled")
     _qtrace_available = False
 
 from . import targets
