@@ -34,20 +34,21 @@ class DockerImageTarget(Target):
         ):
         super().__init__(**kwargs)
 
-        self._client = docker.client.from_env()
-        self.image_id = image_name
-
         if bind_tmp:
             self.tmp_bind = tempfile.mkdtemp(dir="/tmp/archr_mounts", prefix="tmp_")
         else:
             self.tmp_bind = None
 
+        self.image_id = image_name
         self.network = None
         self.network_mode = None
         self.image = None
         self.container = None
         self.volumes = { }
         self.rm = rm
+        self._client = None
+
+        self._client = docker.client.from_env()
 
         if pull:
             self._pull()
@@ -163,7 +164,8 @@ class DockerImageTarget(Target):
             except docker.errors.NotFound:
                 # the container is already gone before we attempt to remove it
                 pass
-        self._client.close()
+        if self._client:
+            self._client.close()
         super().remove()
         return self
 
