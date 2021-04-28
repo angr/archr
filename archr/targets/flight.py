@@ -34,6 +34,14 @@ class Interaction:
         channel = self._channels.get(channel_name, None)
         if channel is not None:
             return channel
+
+        # for backward compatibility where the code interact with the flight object directly
+        act = OpenChannelAction(channel_name=channel_name)
+        act.interaction = self
+        channel = act.perform()
+        if channel:
+            return channel
+
         raise InteractionError(f"channel {channel_name} is not open")
 
     @property
