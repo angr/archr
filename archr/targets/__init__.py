@@ -81,7 +81,7 @@ class Target(ABC):
         :return:
         """
         if snapshot is not None and snapshot.is_in_snapshot():
-            return
+            return self
         with contextlib.suppress(OSError):
             shutil.rmtree(self.local_workdir)
         return self
@@ -107,7 +107,7 @@ class Target(ABC):
         """
         return self
 
-    def save(self, repository=None, tag=None, **kwargs):
+    def save(self, repository=None, tag=None, **kwargs):#pylint:disable=unused-argument
         """
         Saves a snapshot of the current image using the tag
         :return:
@@ -120,7 +120,6 @@ class Target(ABC):
         Run a command inside the target.
         :return:
         """
-        pass
 
     @abstractmethod
     def inject_tarball(self, target_path, tarball_path=None, tarball_contents=None):
@@ -131,7 +130,6 @@ class Target(ABC):
         :param str tarball_path: The path to the tarball.
         :param str tarball_contents: Alternatively, the content of the tarball.
         """
-        pass
 
     @abstractmethod
     def retrieve_tarball(self, target_path, dereference=False):
@@ -140,14 +138,12 @@ class Target(ABC):
 
         :param str target_path: The path to retrieve.
         """
-        pass
 
     @abstractmethod
     def realpath(self, target_path):
         """
         Return the fully qualified path of the file referenced by target_path, dereferencing any symlinks.
         """
-        pass
 
     @property
     @abstractmethod
@@ -155,7 +151,6 @@ class Target(ABC):
         """
         The ipv4 address that this target receives traffic on.
         """
-        pass
 
     @property
     @abstractmethod
@@ -163,7 +158,6 @@ class Target(ABC):
         """
         The ipv6 address that this target receives traffic on.
         """
-        pass
 
     @property
     @abstractmethod
@@ -171,7 +165,6 @@ class Target(ABC):
         """
         The TCP ports that this target listens on.
         """
-        pass
 
     @property
     @abstractmethod
@@ -179,7 +172,6 @@ class Target(ABC):
         """
         The UDP ports that this target listens on.
         """
-        pass
 
     @property
     @abstractmethod
@@ -187,7 +179,6 @@ class Target(ABC):
         """
         Temporary working directory in the target.
         """
-        pass
 
 
     #
@@ -233,7 +224,6 @@ class Target(ABC):
         :param proc: Process name
         :return: Process pid
         """
-        pass
 
     def remove_path(self, path):
         """
@@ -260,11 +250,9 @@ class Target(ABC):
         :param dict files: A dict of { dst_path: src_path }
         :return:
         """
-        with io.BytesIO() as f:
-            t = tarfile.open(fileobj=f, mode='w')
+        with io.BytesIO() as f, tarfile.open(fileobj=f, mode="w") as t:
             for dst,src in files.items():
                 t.add(src, arcname=dst)
-            t.close()
             f.seek(0)
             self.inject_tarball("/", tarball_contents=f.read())
 

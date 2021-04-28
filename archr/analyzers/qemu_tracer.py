@@ -1,6 +1,5 @@
 import contextlib
 import subprocess
-import datetime
 import tempfile
 import logging
 import signal
@@ -89,8 +88,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             yield line.strip()
 
     @contextlib.contextmanager
-    def fire_context(self, record_trace=True, record_magic=False, save_core=False,
-                     crash_addr=None, trace_bb_addr=None, taint=None, **kwargs):
+    def fire_context(self, record_trace=True, record_magic=False, save_core=False, # pylint: disable=arguments-differ
+                     crash_addr=None, trace_bb_addr=None, taint=None, **kwargs): # pylint:disable=arguments-differ
         with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
             target_trace_filename = tmp_prefix + ".trace" if record_trace else None
@@ -100,7 +99,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
             target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename,
                                              coredump_dir=tmpdir, crash_addr=crash_addr, start_trace_addr=trace_bb_addr,
-                                             taint=None)
+                                             taint=taint)
             l.debug("launch QEMU with command: %s", ' '.join(target_cmd))
             r = QemuTraceResult()
 
@@ -239,7 +238,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         if start_trace_addr:
             cmd_args += [ "-T", '0x{:x}:{}'.format(*start_trace_addr) ]
         if taint:
-            cmd_args += [ "-M", self.taint.hex()]
+            cmd_args += [ "-M", taint.hex()]
 
         #
         # Next, we build QEMU options.
@@ -292,5 +291,3 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         cmd_args += self.target.target_args
 
         return cmd_args
-
-from ..errors import ArchrError

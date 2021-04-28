@@ -61,11 +61,11 @@ class ContextAnalyzer(Analyzer):
                 time.sleep(delay)  # wait for the target to initialize
             if pre_fire_hook is not None:
                 pre_fire_hook(self, flight, channel=channel, testcase=testcase)
-            self._fire_testcase(flight, testcase=testcase, channel=channel)
+            self._fire_testcase(flight, channel=channel)
 
         return flight.result
 
-    def _fire_testcase(self, flight, testcase=None, channel=None): #pylint:disable=no-self-use
+    def _fire_testcase(self, flight, channel=None): #pylint:disable=no-self-use
         flight.start()
         return flight.get_channel(channel)
 

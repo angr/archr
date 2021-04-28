@@ -88,10 +88,10 @@ class Interaction:
         # sanity check
         ret = self.process.poll()
         if ret is not None:
-            l.error("The target process crashed with return value: %d" % ret)
+            l.error("The target process crashed with return value: %d", ret)
             stdout, stderr = self.process.communicate()
-            l.debug("stdout:\n"+stdout.decode())
-            l.debug("stderr:\n"+stderr.decode())
+            l.debug("stdout:\n%s", stdout.decode())
+            l.debug("stderr:\n%s", stderr.decode())
             raise ValueError("The target process crashed before communication")
 
         for act in self.actions:

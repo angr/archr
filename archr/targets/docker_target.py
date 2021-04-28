@@ -155,7 +155,7 @@ class DockerImageTarget(Target):
 
     def remove(self):
         if snapshot is not None and snapshot.is_in_snapshot():
-            return
+            return self
         if self.container:
             l.debug("Force removing container %r. If this is not intended, please ensure variable %r "
                       "is still alive and in scope.", self.container, self)
@@ -337,10 +337,8 @@ class DockerImageTarget(Target):
 
         l.debug("running command: %s", docker_args + args)
 
-        return subprocess.Popen(
-            docker_args + args,
-            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
-        )
+        return subprocess.Popen(docker_args + args, \
+            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0) #pylint:disable=consider-using-with
 
     #
     # Docker wrappers
