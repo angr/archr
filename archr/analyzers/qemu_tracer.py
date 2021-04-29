@@ -229,7 +229,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
         qemu_variant = self.qemu_variant(self.target.target_os, self.target.target_arch, trace_filename is not None)
         qemu_path = os.path.join(self.target.tmpwd, "shellphish_qemu", qemu_variant)
-        cmd_args = [qemu_path]
+        fire_path = os.path.join(self.target.tmpwd, "shellphish_qemu", "fire")
+        cmd_args = [fire_path, qemu_path]
         if coredump_dir:
             cmd_args += [ "-C", coredump_dir ]
         if crash_addr:
