@@ -5,9 +5,9 @@ BUNDLE_DIR=$1
 
 FIRE_SCRIPT=${0//bundle/fire}
 QEMU_PATH=$(python -c "import shellphish_qemu; print(shellphish_qemu.qemu_base())")
-QEMU_LDD=$(ldd $QEMU_PATH/*)
+QEMU_LDD=$(ldd $QEMU_PATH/* 2>/dev/null)
 (echo "$QEMU_LDD" | grep -E '=>\snot found') && (echo "!!!!!!!!!!!!!!!!!!!!!! Missing dependencies") && exit 1
 QEMU_LIBS=$(echo "$QEMU_LDD" | grep "=>" | awk '{print $3}' | sort -u)
-QEMU_LD=$(ldd $QEMU_PATH/shellphish-qemu-cgc-base | fgrep ld-linux | awk '{print $1}')
+QEMU_LD=$(ldd $QEMU_PATH/shellphish-qemu-cgc-base 2>/dev/null | fgrep ld-linux | awk '{print $1}')
 cp -L $QEMU_PATH/* $QEMU_LIBS $QEMU_LD $BUNDLE_DIR
 cp -L $FIRE_SCRIPT $BUNDLE_DIR/fire
