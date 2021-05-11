@@ -29,20 +29,21 @@ class DockerImageTarget(Target):
         ):
         super().__init__(**kwargs)
 
-        self._client = docker.client.from_env()
-        self.image_id = image_name
-
         if bind_tmp:
             self.tmp_bind = tempfile.mkdtemp(dir="/tmp/archr_mounts", prefix="tmp_")
         else:
             self.tmp_bind = None
 
+        self.image_id = image_name
         self.network = None
         self.network_mode = None
         self.image = None
         self.container = None
         self.volumes = { }
         self.rm = rm
+        self._client = None
+
+        self._client = docker.client.from_env()
 
         if pull:
             self._pull()
@@ -154,7 +155,8 @@ class DockerImageTarget(Target):
             except docker.errors.NotFound:
                 # the container is already gone before we attempt to remove it
                 pass
-        self._client.close()
+        if self._client:
+            self._client.close()
         super().remove()
         return self
 
@@ -295,7 +297,6 @@ class DockerImageTarget(Target):
         # get guest_pid
         p = self._run_command(args="ps -A -o comm,pid".split(), env=[])
         output = p.stdout.read().decode('utf-8')
-        print(re.findall(proc, output))
         regex = r"{}\s+(\d+)".format(proc)
         matches = re.findall(regex, output)
         if not matches:
@@ -327,10 +328,8 @@ class DockerImageTarget(Target):
 
         l.debug("running command: %s", docker_args + args)
 
-        return subprocess.Popen(
-            docker_args + args,
-            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
-        )
+        return subprocess.Popen(docker_args + args, \
+            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0) #pylint:disable=consider-using-with
 
     #
     # Docker wrappers

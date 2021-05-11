@@ -28,7 +28,7 @@ class TestAnalyzerStrace(unittest.TestCase):
         pid = target.pid if isinstance(t, archr.targets.LocalTarget) else t.get_proc_pid('socat')
         with b.fire_context(pid=pid, trace_args=STRACE_ARGS, **kwargs) as flight:
             sleep(2)
-            nc = flight.open_channel('tcp:0') # misuse of flight
+            nc = flight.get_channel('tcp:0')
             nc.send(b'ahoi!')
             assert nc.readuntil(b'ahoi!', timeout=5) == b'ahoi!'
             nc.close()

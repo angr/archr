@@ -34,7 +34,8 @@ class angrUltimateTracerAnalyzer(Analyzer):
         super().__init__(target)
         self.project_analyzer: 'angrProjectAnalyzer' = project_analyzer
 
-    def _invoke_syscall_agent(self, project: 'angr.Project') -> subprocess.Popen:
+    @staticmethod
+    def _invoke_syscall_agent(project: 'angr.Project') -> subprocess.Popen:
         """
         Invoke the expected syscall agent.
         """
@@ -63,7 +64,7 @@ class angrUltimateTracerAnalyzer(Analyzer):
 
         return project
 
-    def fire(self, *args, state: 'angr.SimState'=None, **kwargs):
+    def fire(self, *args, state: 'angr.SimState'=None, **kwargs):#pylint:disable=arguments-differ
         project = self.make_project()
         proc = self._invoke_syscall_agent(project)
 
@@ -71,9 +72,7 @@ class angrUltimateTracerAnalyzer(Analyzer):
             raise ValueError('"state" must be specified')
 
         sim_manager = project.factory.simulation_manager(state)
-        results = sim_manager.explore()
-
-        print(results.deadended[0].posix.dumps(1).decode("ascii"))
+        sim_manager.explore()
 
         # terminate the agent
         proc.terminate()

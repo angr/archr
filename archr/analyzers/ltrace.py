@@ -16,7 +16,7 @@ class LTraceAnalyzer(ContextAnalyzer):
     REQUIRED_IMPLANT = "ltrace"
 
     @contextmanager
-    def fire_context(self, args_prefix=None, trace_args=None, **kwargs):
+    def fire_context(self, args_prefix=None, trace_args=None, **kwargs): #pylint:disable=arguments-differ
         """
         Starts ltrace with a fresh process.
         :param trace_args: Options for ltrace
@@ -38,7 +38,7 @@ class LTraceAttachAnalyzer(ContextAnalyzer):
     REQUIRED_IMPLANT = "ltrace"
 
     @contextmanager
-    def fire_context(self, pid=None, trace_args=None, **kwargs):
+    def fire_context(self, pid=None, trace_args=None, **kwargs): #pylint:disable=arguments-differ
         """
         Attaches ltrace to an already existing process.
         :param pid: PID of target process

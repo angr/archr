@@ -12,6 +12,6 @@ class GDBServerAnalyzer(ContextAnalyzer):
 
     REQUIRED_IMPLANT = "gdbserver"
 
-    def fire_context(self, port=31337, aslr=False, **kwargs):
+    def fire_context(self, port=31337, aslr=False, **kwargs): #pylint:disable=arguments-differ
         fire_path = os.path.join(self.target.tmpwd, "gdbserver", "fire")
         return self.target.flight_context(args_prefix=[fire_path, "0.0.0.0:%d"%port], aslr=aslr, **kwargs)
