@@ -23,25 +23,24 @@ class QTraceAnalyzer(Analyzer):
 
         with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
             process = flight.process
-            argv = []
+            argv = self.target.target_args
 
-            address = (self.target.ipv4_address, 4242)
-            for _ in range(10):
-                with contextlib.suppress(ConnectionRefusedError, OSError):
-                    trace_socket = socket.create_connection(address)
-                    break
-                time.sleep(1)
-            else:
-                raise ConnectionRefusedError(
-                    "Failed to connect to qtrace's trace socket!"
+            def start(machine):
+                host = self.target.ipv4_address
+                machine.trace_socket = qtrace.create_connection(
+                    (host, 4242), sleep_time=0.1
+                )
+                machine.gdb = machine.gdb_client((host, 1234), machine)
+                machine.std_streams = (
+                    process.stdin,
+                    process.stdout,
+                    process.stderr,
                 )
 
-            std_streams = (process.stdin, process.stdout, process.stderr)
+            machine = machine_type(argv)
 
-            machine = machine_type(
-                argv, trace_socket=trace_socket, std_streams=std_streams
-            )
-            machine.process = process  # TODO: refactor
+            machine.start = start.__get__(machine)
+
             machine.run()
 
             return machine
