@@ -47,11 +47,19 @@ class ContextAnalyzer(Analyzer):
     """
 
     def fire(self, *args, testcase=None, pre_fire_hook=None, channel=None, delay=0, actions=None, **kwargs): #pylint:disable=arguments-differ
-        # TODO: if the testcase is a list of inputs, do open->send->wait->send->...
         if actions is None and testcase is not None:
-            open_act = OpenChannelAction(channel_name=channel)
-            send_act = SendAction(testcase, channel_name=channel)
-            actions = [open_act, send_act]
+            if type(testcase) is bytes:
+                open_act = OpenChannelAction(channel_name=channel)
+                send_act = SendAction(testcase, channel_name=channel)
+                actions = [open_act, send_act]
+            elif type(testcase) is list:
+                open_act = OpenChannelAction(channel_name=channel)
+                actions = [open_act]
+                for write in testcase:
+                    actions.append(SendAction(write, channel_name=channel))
+            else:
+                raise TypeError("Unsupported type for testcase")
+
         kwargs['actions'] = actions
 
         with self.fire_context(*args, **kwargs) as flight:
