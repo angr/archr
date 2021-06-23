@@ -25,6 +25,7 @@ class DockerImageTarget(Target):
         bind_tmp=False,
         network_mode='bridge',
         network=None,
+        use_init=False,
         **kwargs
         ):
         super().__init__(**kwargs)
@@ -42,6 +43,7 @@ class DockerImageTarget(Target):
         self.volumes = { }
         self.rm = rm
         self._client = None
+        self.use_init = use_init
 
         self._client = docker.client.from_env()
 
@@ -124,7 +126,8 @@ class DockerImageTarget(Target):
             stdin_open=True, stdout=True, stderr=True,
             privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
             network_mode=self.network_mode,
-            network=self.network
+            network=self.network,
+            init=self.use_init
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
         )
         self.container.reload()  # update self.container.attrs
