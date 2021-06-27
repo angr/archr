@@ -26,6 +26,7 @@ class DockerImageTarget(Target):
         network_mode='bridge',
         network=None,
         use_init=False,
+        companion=False,
         **kwargs
         ):
         super().__init__(**kwargs)
@@ -44,6 +45,8 @@ class DockerImageTarget(Target):
         self.rm = rm
         self._client = None
         self.use_init = use_init
+        self.companion = companion
+        self.companion_container = None
 
         self._client = docker.client.from_env()
 
@@ -131,6 +134,20 @@ class DockerImageTarget(Target):
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
         )
         self.container.reload()  # update self.container.attrs
+
+        if self.companion:
+            self.companion_container = self._client.containers.run(
+                "angr/archr-companion",
+                name=f"{self.container.name}_companion",
+                entrypoint=["/bin/sh"],
+                detach=True, auto_remove=self.rm,
+                stdin_open=True, stdout=True, stderr=True,
+                privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
+                network_mode=f"container:{self.container.id}",
+                pid_mode=f"container:{self.container.id}"
+            )
+            self.companion_container.reload()
+
         return self
 
     def save(self, repository=None, tag=None, **kwargs):
@@ -333,6 +350,29 @@ class DockerImageTarget(Target):
 
         return subprocess.Popen(docker_args + args, \
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0) #pylint:disable=consider-using-with
+
+
+    def run_companion_command(
+            self, args, env=None,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            ):
+
+        if not self.companion:
+            raise ArchrError("The target must be created with `companion=True`")
+
+        if self.companion_container is None:
+            raise ArchrError("target.start() must be called before target.run_companion_command()")
+
+        env = env or {}
+
+        docker_args = [ "docker", "exec", "-i" ]
+        for e in env:
+            docker_args += [ "-e", e ]
+        docker_args.append(self.companion_container.id)
+
+        return subprocess.Popen(docker_args + args, \
+            stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0) #pylint:disable=consider-using-with
+
 
     #
     # Docker wrappers

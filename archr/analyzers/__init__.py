@@ -102,6 +102,7 @@ from .strace import STraceAnalyzer, STraceAttachAnalyzer
 from .input_fd import InputFDAnalyzer
 from .rr import RRTracerAnalyzer, RRReplayAnalyzer
 from .gdb import GDBAnalyzer
+from .tcpdump import TCPDumpAnalyzer
 from .. import implants
 
 # backwards compatibility
