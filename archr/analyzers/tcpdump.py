@@ -15,38 +15,26 @@ class TCPDumpAnalyzer(ContextAnalyzer):
     Launches a process under tcpdump
     """
 
-    @contextlib.contextmanager
-    def fire_context(self, args_prefix=None, **kwargs): #pylint:disable=arguments-differ
-        """
-        Starts tcpdump with a fresh process.
+    pcap_path = "/tmp/target.pcap"
 
-        :param kwargs: Additional arguments to run_command
-        :return: Target instance returned by run_command
-        """
-        pcap_path = "/tmp/target.pcap"
-
-        tcpdump = self.target.run_companion_command(
-            ["tcpdump", "-i", "any", "-w", pcap_path, "--immediate-mode"],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-        )
-
-        tcpdump.stderr.read(0x1000)
-
-        with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
-            yield flight
-
-        self.target.run_companion_command(["pkill", "tcpdump"]).wait()
-        tcpdump.communicate()
-
+    def extract_conversations(self):
         tshark = self.target.run_companion_command(
             [
                 "tshark",
-                "-r", pcap_path,
-                "-T", "json",
-                "-e", "tcp.payload",
-                "-e", "tcp.srcport",
-                "-e", "tcp.dstport",
+                "-r",
+                self.pcap_path,
+                "-T",
+                "json",
+                "-e",
+                "tcp.stream",
+                "-e",
+                "tcp.srcport",
+                "-e",
+                "tcp.dstport",
+                "-e",
+                "tcp.payload",
+                "-e",
+                "tcp.flags.fin",
             ],
             stdin=subprocess.DEVNULL,
         )
@@ -54,8 +42,7 @@ class TCPDumpAnalyzer(ContextAnalyzer):
         pcap_data, _ = tshark.communicate()
         pcap_data = json.loads(pcap_data)
         packets = [
-            {k: v[0] for k, v in e['_source']['layers'].items()}
-            for e in pcap_data
+            {k: v[0] for k, v in e["_source"]["layers"].items()} for e in pcap_data
         ]
 
         conversations = collections.defaultdict(list)
@@ -64,11 +51,47 @@ class TCPDumpAnalyzer(ContextAnalyzer):
             if not packet:
                 continue
             payload = bytes.fromhex(packet.get("tcp.payload", ""))
-            if not payload:
+            fin = packet["tcp.flags.fin"] == "1"
+            if not payload and not fin:
                 continue
+            stream = int(packet["tcp.stream"])
             src = int(packet["tcp.srcport"])
             dst = int(packet["tcp.dstport"])
-            conversation_id = tuple(sorted((src, dst)))
-            conversations[conversation_id].append((src, dst, payload))
+            conversations[stream].append((src, dst, payload))
+            if payload and fin:
+                payload = ""
+                conversations[stream].append((src, dst, payload))
 
-        flight.result = dict(conversations)
+        return dict(conversations)
+
+    @contextlib.contextmanager
+    def fire_context(self, port=None, *args, **kwargs):
+        """
+        Starts tcpdump with a fresh process.
+        """
+        if port is None:
+            port = self.target.tcp_ports[0]
+        tcpdump = self.target.run_companion_command(
+            [
+                "tcpdump",
+                "-i",
+                "any",
+                "-w",
+                self.pcap_path,
+                "--immediate-mode",
+                "--packet-buffered",
+                f"tcp port {port}",
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+        )
+
+        tcpdump.stderr.read(0x1000)
+
+        with self.target.flight_context(*args, **kwargs) as flight:
+            yield flight
+
+        self.target.run_companion_command(["pkill", "tcpdump"]).wait()
+        tcpdump.communicate()
+
+        flight.result = self.extract_conversations()

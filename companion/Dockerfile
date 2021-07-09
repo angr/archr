@@ -10,4 +10,5 @@ RUN apt-get update && \
                        curl \
                        wget \
                        tcpdump \
-                       tshark
+                       tshark \
+                       inotify-tools
