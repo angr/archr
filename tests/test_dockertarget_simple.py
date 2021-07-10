@@ -30,7 +30,7 @@ class TestDockerTargetSimple(unittest.TestCase):
             p = t.run_command()
             p.stdin.write(b"Hello!\n")
             response = p.stderr.read(7)
-            assert response == b"Hello!\n", resposne
+            assert response == b"Hello!\n", response
 
     def test_entrypoint_true(self):
         with archr.targets.DockerImageTarget('archr-test:entrypoint-true').build().start() as t:
