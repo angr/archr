@@ -27,6 +27,7 @@ class DockerImageTarget(Target):
         network=None,
         use_init=False,
         companion=False,
+        hostname="archr-target",
         **kwargs
         ):
         super().__init__(**kwargs)
@@ -71,6 +72,7 @@ class DockerImageTarget(Target):
 
         self.network = network
         self.network_mode = network_mode if not network else None
+        self.hostname = hostname
 
     #
     # Lifecycle
@@ -124,7 +126,7 @@ class DockerImageTarget(Target):
             name=name,
             entrypoint=entry_point, command=[], environment=self.target_env,
             user=user, labels=labels,
-            hostname='archr-target',
+            hostname=self.hostname,
             detach=True, auto_remove=self.rm, working_dir=working_dir,
             stdin_open=True, stdout=True, stderr=True,
             privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
