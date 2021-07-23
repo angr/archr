@@ -28,7 +28,6 @@ class DockerImageTarget(Target):
         use_init=False,
         companion=False,
         hostname="archr-target",
-        use_qemu=False,
         **kwargs
         ):
         super().__init__(**kwargs)
@@ -49,7 +48,6 @@ class DockerImageTarget(Target):
         self.use_init = use_init
         self.companion = companion
         self.companion_container = None
-        self.use_qemu = use_qemu
 
         self._client = docker.client.from_env()
 
@@ -336,12 +334,12 @@ class DockerImageTarget(Target):
 
     def _run_command(
         self, args, env,
-        user=None, aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        user=None, aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, use_qemu=False,
         ): #pylint:disable=arguments-differ
         if self.container is None:
             raise ArchrError("target.start() must be called before target.run_command()")
 
-        if self.use_qemu:
+        if use_qemu:
             from ..analyzers.qemu_tracer import QEMUTracerAnalyzer  # pylint:disable=import-outside-toplevel
             qemu_variant = QEMUTracerAnalyzer.qemu_variant(self.target_os, self.target_arch, False)
             fire_path = os.path.join(self.tmpwd, "shellphish_qemu", "fire")
@@ -360,7 +358,7 @@ class DockerImageTarget(Target):
 
         l.debug("running command: %s", docker_args + args)
 
-        return subprocess.Popen(docker_args + args, \
+        return subprocess.Popen(docker_args + args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0) #pylint:disable=consider-using-with
 
 
@@ -382,7 +380,7 @@ class DockerImageTarget(Target):
             docker_args += [ "-e", e ]
         docker_args.append(self.companion_container.id)
 
-        return subprocess.Popen(docker_args + args, \
+        return subprocess.Popen(docker_args + args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0) #pylint:disable=consider-using-with
 
 
