@@ -28,6 +28,7 @@ class DockerImageTarget(Target):
         use_init=False,
         companion=False,
         hostname="archr-target",
+        use_qemu=False,
         **kwargs
         ):
         super().__init__(**kwargs)
@@ -48,6 +49,7 @@ class DockerImageTarget(Target):
         self.use_init = use_init
         self.companion = companion
         self.companion_container = None
+        self.use_qemu = use_qemu
 
         self._client = docker.client.from_env()
 
@@ -309,6 +311,7 @@ class DockerImageTarget(Target):
         procs = ps_info['Processes']
         pid_idx = titles.index('PID')
         cmd_idx = titles.index('CMD')
+        host_pid = None
         for p in procs:
             if p[cmd_idx].split()[0] == proc:
                 host_pid = int(p[pid_idx])
@@ -338,8 +341,15 @@ class DockerImageTarget(Target):
         if self.container is None:
             raise ArchrError("target.start() must be called before target.run_command()")
 
-        if not aslr and self.target_arch in ['x86_64', 'i386']:
-            args = ['setarch', 'x86_64', '-R'] + args
+        if self.use_qemu:
+            from ..analyzers.qemu_tracer import QEMUTracerAnalyzer  # pylint:disable=import-outside-toplevel
+            qemu_variant = QEMUTracerAnalyzer.qemu_variant(self.target_os, self.target_arch, False)
+            fire_path = os.path.join(self.tmpwd, "shellphish_qemu", "fire")
+            args = [fire_path, qemu_variant] + args
+        else:
+            if not aslr and self.target_arch in ['x86_64', 'i386']:
+                # use setarch to disable ASLR
+                args = ['setarch', 'x86_64', '-R'] + args
 
         docker_args = [ "docker", "exec", "-i" ]
         for e in env:
