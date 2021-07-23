@@ -309,6 +309,7 @@ class DockerImageTarget(Target):
         procs = ps_info['Processes']
         pid_idx = titles.index('PID')
         cmd_idx = titles.index('CMD')
+        host_pid = None
         for p in procs:
             if p[cmd_idx].split()[0] == proc:
                 host_pid = int(p[pid_idx])
@@ -333,13 +334,21 @@ class DockerImageTarget(Target):
 
     def _run_command(
         self, args, env,
-        user=None, aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        user=None, aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, use_qemu=False,
         ): #pylint:disable=arguments-differ
         if self.container is None:
             raise ArchrError("target.start() must be called before target.run_command()")
 
-        if not aslr and self.target_arch in ['x86_64', 'i386']:
-            args = ['setarch', 'x86_64', '-R'] + args
+        if use_qemu:
+            from ..analyzers.qemu_tracer import QEMUTracerAnalyzer  # pylint:disable=import-outside-toplevel
+            qemu_variant = QEMUTracerAnalyzer.qemu_variant(self.target_os, self.target_arch, False)
+            qemu_path = os.path.join(self.tmpwd, "shellphish_qemu", qemu_variant)
+            fire_path = os.path.join(self.tmpwd, "shellphish_qemu", "fire")
+            args = [fire_path, qemu_path] + args
+        else:
+            if not aslr and self.target_arch in ['x86_64', 'i386']:
+                # use setarch to disable ASLR
+                args = ['setarch', 'x86_64', '-R'] + args
 
         docker_args = [ "docker", "exec", "-i" ]
         for e in env:
@@ -350,7 +359,7 @@ class DockerImageTarget(Target):
 
         l.debug("running command: %s", docker_args + args)
 
-        return subprocess.Popen(docker_args + args, \
+        return subprocess.Popen(docker_args + args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0) #pylint:disable=consider-using-with
 
 
@@ -372,7 +381,7 @@ class DockerImageTarget(Target):
             docker_args += [ "-e", e ]
         docker_args.append(self.companion_container.id)
 
-        return subprocess.Popen(docker_args + args, \
+        return subprocess.Popen(docker_args + args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0) #pylint:disable=consider-using-with
 
 
