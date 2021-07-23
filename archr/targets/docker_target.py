@@ -342,8 +342,9 @@ class DockerImageTarget(Target):
         if use_qemu:
             from ..analyzers.qemu_tracer import QEMUTracerAnalyzer  # pylint:disable=import-outside-toplevel
             qemu_variant = QEMUTracerAnalyzer.qemu_variant(self.target_os, self.target_arch, False)
+            qemu_path = os.path.join(self.tmpwd, "shellphish_qemu", qemu_variant)
             fire_path = os.path.join(self.tmpwd, "shellphish_qemu", "fire")
-            args = [fire_path, qemu_variant] + args
+            args = [fire_path, qemu_path] + args
         else:
             if not aslr and self.target_arch in ['x86_64', 'i386']:
                 # use setarch to disable ASLR
