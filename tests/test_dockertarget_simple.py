@@ -1,4 +1,7 @@
 import socket
+
+import docker.errors
+
 import archr
 import time
 import unittest
@@ -83,6 +86,17 @@ class TestDockerTargetSimple(unittest.TestCase):
         assert t.target_args == [ "/usr/bin/env", "YEAH" ]
         t = archr.targets.DockerImageTarget('archr-test:entrypoint-setarch-env').build()
         assert t.target_args == [ "/usr/bin/env", "HAHAHA" ]
+
+    def test_timeout(self):
+        t = archr.targets.DockerImageTarget('archr-test:cat').build().start(timeout=3)
+        import time
+        time.sleep(8)
+        # the target should be gone by now
+        try:
+            t.container.top()
+            assert False, "The container did not exit after timeout."
+        except docker.errors.NotFound:
+            pass
 
 
 if __name__ == '__main__':

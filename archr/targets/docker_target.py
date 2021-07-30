@@ -113,13 +113,19 @@ class DockerImageTarget(Target):
         super().build()
         return self
 
-    def start(self, user=None, name=None, working_dir=None, labels=None, entry_point=None): #pylint:disable=arguments-differ
+    def start(self, user=None, name=None, working_dir=None, labels=None, entry_point=None, timeout=None):  #pylint:disable=arguments-differ
         if labels is None:
             labels = []
         if entry_point is None:
             entry_point = ["/bin/sh"]
         if self.tmp_bind:
             self.volumes[self.tmp_bind] = {'bind': '/tmp/', 'mode': 'rw'}
+        if timeout is not None:
+            if not isinstance(timeout, int):
+                raise TypeError("Timeout must be an int.")
+            use_init = True
+        else:
+            use_init = self.use_init
 
         self.container = self._client.containers.run(
             self.image,
@@ -132,10 +138,15 @@ class DockerImageTarget(Target):
             privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
             network_mode=self.network_mode,
             network=self.network,
-            init=self.use_init
+            init=use_init
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
         )
         self.container.reload()  # update self.container.attrs
+
+        if timeout is not None:
+            # it will kill the init process since use_init is True when timeout is set
+            command = ["/bin/sh", "-c", f"sleep {timeout}; kill 1"]
+            self.run_command(command)
 
         if self.companion:
             self.companion_container = self._client.containers.run(
@@ -146,8 +157,13 @@ class DockerImageTarget(Target):
                 stdin_open=True, stdout=True, stderr=True,
                 privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
                 network_mode=f"container:{self.container.id}",
-                pid_mode=f"container:{self.container.id}"
+                pid_mode=f"container:{self.container.id}",
+                init=use_init
             )
+            if timeout is not None:
+                # it will kill the init process since use_init is True when timeout is set
+                command = ["/bin/sh", "-c", f"sleep {timeout}; kill 1"]
+                self.run_companion_command(command)
             self.companion_container.reload()
 
         return self
@@ -361,7 +377,6 @@ class DockerImageTarget(Target):
 
         return subprocess.Popen(docker_args + args,
             stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0) #pylint:disable=consider-using-with
-
 
     def run_companion_command(
             self, args, env=None,
