@@ -177,7 +177,11 @@ class DockerImageTarget(Target):
 
     def stop(self):
         if self.container:
-            self.container.kill()
+            try:
+                self.container.kill()
+            except docker.errors.APIError:
+                # the container is stopped before we attempt to kill it
+                pass
             self.container = None
         if self.tmp_bind:
             os.system(_super_mount_cmd + "rm -rf %s" % self.tmp_bind)
