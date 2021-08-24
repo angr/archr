@@ -29,7 +29,7 @@ class TestShellcode(unittest.TestCase):
             assert stdout == b"TESTING THIS THING!"
             assert p.wait() == 42
 
-        with t.shellcode_context(asm_code=b.sendfile_shellcode("/proc/self/cmdline")) as p:
+        with t.shellcode_context(asm_code=b.read_file_shellcode("/proc/self/cmdline")) as p:
             stdout,_ = p.communicate()
             assert stdout == t.target_path.encode('utf-8') + b'\0'
 
