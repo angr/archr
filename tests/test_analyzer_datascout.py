@@ -60,16 +60,13 @@ class TestDatascout(unittest.TestCase):
     def test_datascout(self):
         with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
             _,_,_,maps = self.datascout_checks(t)
-            docker_ref = {
-                '/usr/lib/x86_64-linux-gnu/libc-2.31.so': 0x7ffff7dd5000,
-                '/usr/lib/x86_64-linux-gnu/ld-2.31.so': 0x7ffff7fcf000,
-                '[stack-end]': 0x7ffffffff000,
-                '[heap]': 0x555555560000,
-                '[vvar]': 0x7ffff7fcb000,
-                '[vdso]': 0x7ffff7fce000,
-                '[vsyscall]': 0xffffffffff600000
-            }
-            assert all(maps[x] == docker_ref[x] for x in docker_ref), maps
+            assert next(v for k,v in maps.items() if k.startswith("/usr/lib/x86_64-linux-gnu/libc-")) & 0xffffff000000 == 0x7ffff7000000
+            assert next(v for k,v in maps.items() if k.startswith("/usr/lib/x86_64-linux-gnu/ld-")) & 0xffffff000000 == 0x7ffff7000000
+            assert maps["[stack-end]"] == 0x7ffffffff000
+            assert maps["[vsyscall]"] == 0xffffffffff600000
+            assert maps["[vdso]"] & 0xffffff000000 == 0x7ffff7000000
+            assert maps["[vvar]"] & 0xffffff000000 == 0x7ffff7000000
+            assert maps["[heap]"] == 0x555555560000
 
     def test_datascout_local(self):
         # copy to a writable location
