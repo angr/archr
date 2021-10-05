@@ -2,6 +2,14 @@ import subprocess
 import struct
 import cle
 import io
+import re
+
+import logging
+
+from . import strace_parser
+
+l = logging.getLogger("archr.utils")
+
 
 def parse_ldd(mem_map_str):
     entries = [l.strip() for l in mem_map_str.decode('utf-8').splitlines()]
@@ -55,6 +63,125 @@ def hook_entry(binary, asm_code=None, bin_code=None):
     main_bin.write(b.main_object.arch.asm(asm_code) if asm_code else bin_code)
     main_bin.seek(0)
     return main_bin.read()
+
+def filter_strace_output(lines):
+    """
+    a function to filter QEMU logs returning only the strace entries
+    
+    Parameters
+    ----------
+    lines : list
+        a list of strings representing the lines from a QEMU log/trace.
+
+    Returns
+    -------
+    list
+        a list of strings representing only the strace log entries
+        the entries will also be cleaned up if a page dump occurs in the middle of them
+    """
+
+    #we only want the strace lines, so remove/ignore lines that start with the following:
+    line_starts= ['^[\d,a-f]{16}-',
+                      '^page',
+                      '^start',
+                      '^host',
+                      '^Locating',
+                      '^guest_base',
+                      '^end_',
+                      '^brk',
+                      '^entry',
+                      '^argv_',
+                      '^env_',
+                      '^auxv_',
+                      '^Trace',
+                      '^--- SIGSEGV',
+                      '^qemu'
+                      ]
+    filter_string = '|'.join(line_starts)
+
+    filtered = []
+    prev_line = ""
+    for line in lines:
+        if re.match(filter_string,line):
+            continue
+        # workaround for https://gitlab.com/qemu-project/qemu/-/issues/654
+        if re.search("page layout changed following target_mmap",line):
+            prev_line = line.replace("page layout changed following target_mmap","")
+            continue
+        if re.match('^ = |^= ', line):
+            line = prev_line+line
+        
+        filtered.append(line)
+    return filtered
+
+
+def get_file_maps(strace_log_lines):
+    """
+    a function to return a mapping of filenames and associated mmaped addressed for process under QEMU
+    this is accomplished by tracking the filenames through file-desciptors across mmap() calls.
+
+    Parameters
+    ----------
+    strace_log_lines : list
+        a list of strings representing only the strace info logged by QEMU
+
+    Returns
+    -------
+    dict
+        a dictionary of filenames and mmapped addresses associated with each file
+    
+    """
+    files = {
+        'open':{},
+        'closed':{}
+    }
+
+    entries = strace_parser.parse(strace_log_lines)
+    entries = [entry for entry in entries if entry.syscall in ('openat','mmap','mmap2','close')]
+
+    for entry in entries:
+        # for an openat, create a dict entry for the file descriptor
+        # the entry should be a tuple of the filename, and mmaps (initially empty)
+        if entry.syscall == 'openat':
+            fd = entry.syscall.result
+            # only care about file descriptors other than STDIN,STDOUT,STDERR
+            # also ignore errors
+            if fd >= 3:
+                #use only the base filename
+                filename = entry.syscall.args[1].split("/")[-1]
+                #tracking if an executable page was ever mapped from the file descriptor
+                files['open'][fd] = [filename,[]]
+        
+        # if a file descriptor is closed, we need to remove it from the open files dictionary
+        # we want to track the mmaps, so move it to 'closed' by file name since the file descriptor will likely be re-used.
+        elif entry.syscall == 'close':
+            fd = entry.syscall.args[0]
+            # only care about file descriptors other than STDIN,STDOUT,STDERR
+            if fd >= 3:
+                filename = files['open'][fd][0]
+                mmaps = files['open'][fd][1]
+                
+                # if we never mapped any pages, then we don't care about it.
+                if mmaps:
+                    # otherwise move to 'closed'
+                    files['closed'][filename] = mmaps
+                
+                del files['open'][fd]
+        
+        # we can use the file descriptor to look up the dict entry to update the mmaps
+        #TODO: track sizes which should be capturable from the mmap arguments
+        elif entry.syscall == 'mmap' or entry.syscall == 'mmap2':
+            # only care about valid file descriptors
+            fd = entry.syscall.args[4]
+            if fd >= 3:
+                files['open'][fd][1].append(entry.syscall.result)
+
+    #lets "close" everything that never got closed
+    for fd,(filename,mmaps) in files['open'].items():
+        files['closed'][filename] = mmaps
+
+    return files['closed']
+
 
 def hook_addr(binary, addr, asm_code=None, bin_code=b''):
     main_bin = io.BytesIO(binary)
