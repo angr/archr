@@ -24,10 +24,10 @@ setup(
         'docker',
         'nclib>=1.0.0rc3',
         'patchelf-wrapper',
-        'cle'
+        'cle==9.0.gitrolling'
     ],
     extras_require = {
-        'angr':  ["angr"],
+        'angr':  ["angr==9.0.gitrolling"],
         'qtrace': ["qtrace"],
     },
     description='Target-centric program analysis.',
