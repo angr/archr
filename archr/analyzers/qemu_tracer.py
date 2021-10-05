@@ -175,10 +175,10 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                             break
 
                     r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
-                    
+
                     # for a dynamically linked binary, the entry point is in the runtime linker
                     # in this case it can be useful to keep track of the entry point
-                    r.entry_point = int(next(t.split()[1] for t in trace_iter if t.startswith(b"entry")), 16)                   
+                    r.entry_point = int(next(t.split()[1] for t in trace_iter if t.startswith(b"entry")), 16)
                 except StopIteration as e:
                     raise QEMUTracerError("The trace does not include any data. Did you forget to chmod +x the binary?") from e
 
@@ -276,7 +276,6 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         else:
             if 'cgc' in qemu_variant:
                 cmd_args += ["-enable_double_empty_exiting"]
-            
 
         # save CGC magic page
         if magic_filename:

@@ -1,19 +1,23 @@
 """Simple Strace-Style Log Entry Parser
 
-The parser converts a string representing a strace-style log entry into an object representing the log entry and syscall
+The parser converts a string representing a strace-style log entry
+into an object representing the log entry and syscall
 
 Grammar
 -------
     The highest level expression is a single strace log entry
-    Each strace entry is composed of a NUMBER representing the PID followed by a syscall or syscall and an error message.
-        
+    Each strace entry is composed of a NUMBER representing the PID followed
+    by a syscall or syscall and an error message.
+
         strace_line : NUMBER syscall
         strace_line : NUMBER syscall error_message
-    
+
 
     Syscalls can be represented by a few different forms.
-    All forms look like a 'function call', starting with a SYMBOL (a alphanumeric word, starting with an alphabetical character) and has a set of parentheses.
-    Sometimes a syscall has arguments (the 'arg_list') and sometimes has a return value or a 'result'.
+    All forms look like a 'function call', starting with a SYMBOL (a alphanumeric word,
+    starting with an alphabetical character) and has a set of parentheses.
+    Sometimes a syscall has arguments (the 'arg_list'),
+    and sometimes has a return value or a 'result'.
 
         syscall : SYMBOL LEFT_PAREN arg_list RIGHT_PAREN result
         syscall : SYMBOL LEFT_PAREN RIGHT_PAREN result
@@ -21,7 +25,9 @@ Grammar
         syscall : SYMBOL LEFT_PAREN RIGHT_PAREN
 
 
-    An error message always takes the same form. This is the symbol 'errno' (ERRNO_S) with the 
+    An error message always takes the same form.
+    This is the symbol 'errno' (ERRNO_S) followed by a result, and a message in parentheses.
+    (captured as an arg_list)
 
         error_message : ERRNO_S result LEFT_PAREN arg_list RIGHT_PAREN
 
@@ -33,7 +39,7 @@ Grammar
 
 
     An argument list is will be a mixed sequence of SYMBOLS, STRINGS, or numbers
-    
+
         arg_list : arg_list SYMBOL
         arg_list : arg_list STRING
         arg_list : arg_list NUMBER
@@ -47,13 +53,12 @@ Resources
 ---------
 This parser is built on PLY (https://www.dabeaz.com/ply/)
 The design is based on the tutorials by Andrew Dalke (www.dalkescientific.com/writings/NBN/parsing_with_ply.html)
-
 """
 
-import ply.lex as lex
-import ply.yacc as yacc
-
 import logging
+
+from ply import lex
+from ply import yacc
 
 
 l = logging.getLogger("archr.strace_parser")
@@ -71,9 +76,8 @@ tokens = (
     "STRING"
 )
 
-def t_SPACE(t):
+def t_SPACE(t): # pylint: disable=unused-argument
     r"\s+"
-    pass
 
 def t_HEX_NUMBER(t):
     r"0x[0-9a-f]+"
@@ -88,9 +92,8 @@ def t_NUMBER(t):
 t_LEFT_PAREN = r"\("
 t_RIGHT_PAREN = r"\)"
 
-def t_COMMA(t):
+def t_COMMA(t): # pylint: disable=unused-argument
     r","
-    pass
 
 t_EQUALS = r"="
 
@@ -111,22 +114,47 @@ def t_STRING(t):
     return t
 
 def t_error(t):
-    raise TypeError("Unknown text '%s'" % (t.value,))
+    raise TypeError(f"Unknown text '{t.value}'")
 
 lex.lex()
 
 
 
-class StraceEntry(object):
+class StraceEntry():
+    """StraceEntry
+    a class used to record a strace log entry
+
+    Attributes
+    ----------
+    pid : int
+        the PID of the strace
+    syscall : Syscall
+        the object representing the syscall from the log entry
+    error : Error
+        the object representing an error caused by the syscall.
+        None if there was no error
+    """
     def __init__(self,pid,syscall,error):
         self.pid=pid
         self.syscall=syscall
         self.error=error
 
     def __repr__(self):
-        return "StraceEntry(%s,%s,%s)" % (self.pid, self.syscall, self.error)
+        return f"StraceEntry({self.pid},{self.syscall},{self.error})"
 
-class Syscall(object):
+class Syscall():
+    """Syscall
+    a class used to record the syscall from an strace log entry
+
+    Attributes
+    ----------
+    syscall : str
+        the name of the syscall
+    args : list
+        a list of arguments passed to the syscall function
+    result : int
+        the return value of the syscall
+    """
     def __init__(self,syscall,args,result):
         self.syscall = syscall
         self.args = args
@@ -139,15 +167,26 @@ class Syscall(object):
         return other == self.syscall
 
     def __repr__(self):
-        return "Syscall(%s, args=%s, result=%s)" % (self.syscall, self.args, self.result)
+        return f"Syscall({self.syscall}, args={self.args}, result={self.result})"
 
-class Error(object):
+class Error():
+    """Error
+    a class to record an error raised by a syscall logged in a strace entry
+    
+    Attributes
+    ----------
+    errno : int
+        the error number
+    message : str
+        the error message string if there was one
+        None otherwise
+    """
     def __init__(self,errno,message):
         self.errno = errno
         self.message = message
-    
+
     def __repr__(self):
-        return "ERROR(%s, %s)" % (self.errno, self.message)
+        return f"ERROR({self.errno}, {self.message})"
 
 def p_strace_line(p):
     """
@@ -178,7 +217,7 @@ def p_error_message(p):
     error_message : ERRNO_S result LEFT_PAREN arg_list RIGHT_PAREN
     """
     p[0] = Error(p[2],' '.join(p[4]))
-    
+
 def p_result(p):
     """
     result : EQUALS NUMBER
@@ -205,7 +244,7 @@ def p_arg_list(p):
 
 
 def p_error(p):
-    print("Syntax error at '%s'" % p.value)
+    print(f"Syntax error at '{p.value}'")
 
 yacc.yacc()
 
@@ -233,7 +272,5 @@ def parse(strace_log_lines):
 
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1], 'r') as log_f:
-        entries = parse(log_f.readlines())
-        print (entries)
-
+    with open(sys.argv[1], 'r', encoding='utf-8') as log_f:
+        print(parse(log_f.readlines()))

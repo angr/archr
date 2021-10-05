@@ -1,10 +1,9 @@
 import subprocess
 import struct
+import re
+import logging
 import cle
 import io
-import re
-
-import logging
 
 from . import strace_parser
 
@@ -67,7 +66,7 @@ def hook_entry(binary, asm_code=None, bin_code=None):
 def filter_strace_output(lines):
     """
     a function to filter QEMU logs returning only the strace entries
-    
+
     Parameters
     ----------
     lines : list
@@ -81,7 +80,7 @@ def filter_strace_output(lines):
     """
 
     #we only want the strace lines, so remove/ignore lines that start with the following:
-    line_starts= ['^[\d,a-f]{16}-',
+    line_starts= ['^[\d,a-f]{16}-', # pylint: disable=anomalous-backslash-in-string
                       '^page',
                       '^start',
                       '^host',
@@ -110,7 +109,7 @@ def filter_strace_output(lines):
             continue
         if re.match('^ = |^= ', line):
             line = prev_line+line
-        
+
         filtered.append(line)
     return filtered
 
@@ -129,7 +128,7 @@ def get_file_maps(strace_log_lines):
     -------
     dict
         a dictionary of filenames and mmapped addresses associated with each file
-    
+
     """
     files = {
         'open':{},
@@ -151,26 +150,26 @@ def get_file_maps(strace_log_lines):
                 filename = entry.syscall.args[1].split("/")[-1]
                 #tracking if an executable page was ever mapped from the file descriptor
                 files['open'][fd] = [filename,[]]
-        
+
         # if a file descriptor is closed, we need to remove it from the open files dictionary
-        # we want to track the mmaps, so move it to 'closed' by file name since the file descriptor will likely be re-used.
+        # we want to track the mmaps, so move it to 'closed' by file name since the file descriptor can be re-used.
         elif entry.syscall == 'close':
             fd = entry.syscall.args[0]
             # only care about file descriptors other than STDIN,STDOUT,STDERR
             if fd >= 3:
                 filename = files['open'][fd][0]
                 mmaps = files['open'][fd][1]
-                
+
                 # if we never mapped any pages, then we don't care about it.
                 if mmaps:
                     # otherwise move to 'closed'
                     files['closed'][filename] = mmaps
                 
                 del files['open'][fd]
-        
+
         # we can use the file descriptor to look up the dict entry to update the mmaps
         #TODO: track sizes which should be capturable from the mmap arguments
-        elif entry.syscall == 'mmap' or entry.syscall == 'mmap2':
+        elif entry.syscall in ('mmap', 'mmap2'):
             # only care about valid file descriptors
             fd = entry.syscall.args[4]
             if fd >= 3:
