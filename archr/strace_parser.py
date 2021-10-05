@@ -172,7 +172,7 @@ class Syscall():
 class Error():
     """Error
     a class to record an error raised by a syscall logged in a strace entry
-    
+
     Attributes
     ----------
     errno : int
@@ -200,7 +200,7 @@ def p_syscall(p):
     syscall : SYMBOL LEFT_PAREN arg_list RIGHT_PAREN result
     syscall : SYMBOL LEFT_PAREN RIGHT_PAREN result
     syscall : SYMBOL LEFT_PAREN arg_list RIGHT_PAREN
-    syscall : SYMBOL LEFT_PAREN RIGHT_PAREN 
+    syscall : SYMBOL LEFT_PAREN RIGHT_PAREN
     """
     if len(p) == 6:
         p[0] = Syscall(p[1], p[3], p[5])
