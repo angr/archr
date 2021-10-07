@@ -89,7 +89,7 @@ class TestAnalyzerQemu(unittest.TestCase):
         # check for shared library mapping
         assert 'libc.so.6' in r.mapped_files.keys()
         assert r.mapped_files['libc.so.6'][0]
-        
+
     def test_crasher_trace(self):
         with archr.targets.DockerImageTarget('archr-test:crasher').build().start() as t:
             self.crasher_checks(t)
@@ -115,7 +115,8 @@ class TestAnalyzerQemu(unittest.TestCase):
             self.crasher_checks(t)
 
     def test_file_maps_local(self):
-        with archr.targets.LocalTarget([os.path.realpath(os.path.join(os.path.dirname(__file__), "dockers", "file_maps", "file_maps"))]).build().start() as t:
+        with archr.targets.LocalTarget([os.path.realpath(os.path.join(os.path.dirname(__file__),
+                                            "dockers", "file_maps", "file_maps"))]).build().start() as t:
             self.file_maps_checks(t)
 
 
