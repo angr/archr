@@ -115,9 +115,24 @@ class TestAnalyzerQemu(unittest.TestCase):
             self.crasher_checks(t)
 
     def test_file_maps_local(self):
-        with archr.targets.LocalTarget([os.path.realpath(os.path.join(os.path.dirname(__file__), "dockers", "file_maps", "file_maps"))],
-                                        target_cwd=os.path.realpath(os.path.join(os.path.dirname(__file__), "dockers", "file_maps"))
-                                       ).build().start() as t:
+        with archr.targets.LocalTarget(
+            [os.path.realpath(
+                    os.path.join(
+                        os.path.dirname(__file__),
+                        "dockers",
+                        "file_maps",
+                        "file_maps"
+                    )
+                )
+            ],
+            target_cwd=os.path.realpath(
+                                os.path.join(
+                                    os.path.dirname(__file__),
+                                    "dockers",
+                                    "file_maps"
+                                )
+                            )
+        ).build().start() as t:
             self.file_maps_checks(t)
 
 
