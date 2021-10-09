@@ -37,8 +37,8 @@ class TestAnalyzerQTrace(unittest.TestCase):
 
         assert "\n".join(correct_syscalls) in "\n".join(syscalls)
 
-        mappings = {e[0] for e in machine.maps.values()}
-        correct_mappings = {machine.argv[0], "[heap]", "[stack]"}
+        mappings = {e[0].split("/")[-1] for e in machine.maps.values()}
+        correct_mappings = {machine.argv[0].split("/")[-1], "[heap]", "[stack]"}
         assert correct_mappings.issubset(mappings), (correct_mappings, mappings)
 
     def test_qtrace_local(self):
