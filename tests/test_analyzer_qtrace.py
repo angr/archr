@@ -39,7 +39,7 @@ class TestAnalyzerQTrace(unittest.TestCase):
 
         mappings = {e[0].split("/")[-1] for e in machine.maps.values()}
         correct_mappings = {machine.argv[0].split("/")[-1], "[heap]", "[stack]"}
-        assert correct_mappings.issubset(mappings), (correct_mappings, mappings)
+        assert correct_mappings.issubset(mappings)
 
     def test_qtrace_local(self):
         with archr.targets.LocalTarget(["/bin/cat"]).build().start() as target:
