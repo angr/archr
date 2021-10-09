@@ -14,6 +14,7 @@ class TestAnalyzerQemu(unittest.TestCase):
         build_container("crash-on-input")
         build_container("vuln_stacksmash")
         build_container("shellcode_tester")
+        build_container("file_maps")
 
     def test_implant_injection_docker(self):
         with archr.targets.DockerImageTarget('archr-test:crasher').build().start() as t:
@@ -39,6 +40,8 @@ class TestAnalyzerQemu(unittest.TestCase):
         assert r.signal == signal.SIGSEGV
         assert os.path.exists(r.core_path)
         assert os.path.getsize(r.core_path) > 0
+        assert r.image_base
+        assert r.entry_point
 
     def crash_on_input_checks(self, t):
         crashing = b"A"*120
@@ -75,6 +78,18 @@ class TestAnalyzerQemu(unittest.TestCase):
         assert not flight.result.timed_out
         assert flight.result.crashed
 
+    def file_maps_checks(self, t):
+        b = archr.analyzers.QEMUTracerAnalyzer(t)
+        r = b.fire(record_file_maps=True)
+
+        # check for the explicitly mapped file
+        assert 'mapped_file' in r.mapped_files.keys()
+        assert r.mapped_files['mapped_file'][0]
+
+        # check for shared library mapping
+        assert 'libc.so.6' in r.mapped_files.keys()
+        assert r.mapped_files['libc.so.6'][0]
+
     def test_crasher_trace(self):
         with archr.targets.DockerImageTarget('archr-test:crasher').build().start() as t:
             self.crasher_checks(t)
@@ -91,9 +106,34 @@ class TestAnalyzerQemu(unittest.TestCase):
         with archr.targets.DockerImageTarget('archr-test:shellcode_tester', target_os='cgc').build().start() as t:
             self.shellcode_checks(t)
 
+    def test_file_maps(self):
+        with archr.targets.DockerImageTarget('archr-test:file_maps').build().start() as t:
+            self.file_maps_checks(t)
+
     def test_crasher_trace_local(self):
         with archr.targets.LocalTarget([os.path.realpath(os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher"))]).build().start() as t:
             self.crasher_checks(t)
+
+    def test_file_maps_local(self):
+        with archr.targets.LocalTarget(
+            [os.path.realpath(
+                    os.path.join(
+                        os.path.dirname(__file__),
+                        "dockers",
+                        "file_maps",
+                        "file_maps"
+                    )
+                )
+            ],
+            target_cwd=os.path.realpath(
+                                os.path.join(
+                                    os.path.dirname(__file__),
+                                    "dockers",
+                                    "file_maps"
+                                )
+                            )
+        ).build().start() as t:
+            self.file_maps_checks(t)
 
 
 if __name__ == '__main__':

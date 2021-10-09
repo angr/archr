@@ -18,6 +18,8 @@ from .. import _angr_available
 if _angr_available:
     import angr
 
+from ..utils import filter_strace_output, get_file_maps
+
 class QEMUTracerError(BaseException):
     pass
 
@@ -30,8 +32,11 @@ class QemuTraceResult:
 
     # introspection
     trace = None
+    mapped_files = None
     crash_address = None
     base_address = None
+    image_base = None
+    entry_point = None
     magic_contents = None
     halfway_core_path = None
     core_path = None
@@ -88,7 +93,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             yield line.strip()
 
     @contextlib.contextmanager
-    def fire_context(self, record_trace=True, record_magic=False, save_core=False, # pylint: disable=arguments-differ
+    def fire_context(self, record_trace=True, record_magic=False, save_core=False, record_file_maps=False, # pylint: disable=arguments-differ
                      crash_addr=None, trace_bb_addr=None, taint=None, **kwargs): # pylint:disable=arguments-differ
         with self._target_mk_tmpdir() as tmpdir:
             tmp_prefix = tempfile.mktemp(dir='/tmp', prefix="tracer-")
@@ -158,8 +163,22 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                 # Find where qemu loaded the binary. Primarily for PIE
                 try:
+                    # the image base is the first mapped address in the page dump following the log line 'guest_base'
+                    for t in trace_iter:
+                        if t.startswith(b"guest_base"):
+                            # iterate to the appropriate line
+                            next(trace_iter)
+                            next(trace_iter)
+                            t = next(trace_iter)
+                            # parse out the first line
+                            r.image_base = int(t.split(b'-')[0],16)
+                            break
+
                     r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
-                    l.debug("Detected the base address of the target at %s", hex(r.base_address))
+
+                    # for a dynamically linked binary, the entry point is in the runtime linker
+                    # in this case it can be useful to keep track of the entry point
+                    r.entry_point = int(next(t.split()[1] for t in trace_iter if t.startswith(b"entry")), 16)
                 except StopIteration as e:
                     raise QEMUTracerError("The trace does not include any data. Did you forget to chmod +x the binary?") from e
 
@@ -191,6 +210,10 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     l.debug("Detected the crashing address at %s", hex(r.crash_address))
 
                 l.debug("Trace consists of %d basic blocks", len(r.trace))
+
+                if record_file_maps:
+                    strace_lines = filter_strace_output([line.decode('utf-8') for line in self.line_iter(trace)])
+                    r.mapped_files = get_file_maps(strace_lines)
 
                 # remove the trace file on the target
                 self.target.remove_path(target_trace_filename)
@@ -249,7 +272,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
         # record trace
         if trace_filename:
-            cmd_args += ["-d", "nochain,exec,page", "-D", trace_filename] if 'cgc' not in qemu_variant else ["-d", "exec", "-D", trace_filename]
+            cmd_args += ["-d", "nochain,exec,page,strace", "-D", trace_filename] if 'cgc' not in qemu_variant else ["-d", "exec", "-D", trace_filename]
         else:
             if 'cgc' in qemu_variant:
                 cmd_args += ["-enable_double_empty_exiting"]
