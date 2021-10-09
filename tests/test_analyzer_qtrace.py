@@ -37,12 +37,9 @@ class TestAnalyzerQTrace(unittest.TestCase):
 
         assert "\n".join(correct_syscalls) in "\n".join(syscalls)
 
-        pathname_name = machine.argv[0].split("/")[-1]
-        program_map_permissions = set(
-            e[2] for e in machine.maps.values() if e[0].split("/")[-1] == pathname_name
-        )
-        correct_permissions = {"r--p", "r-xp", "rw-p"}
-        assert program_map_permissions == correct_permissions
+        mappings = {e[0].split("/")[-1] for e in machine.maps.values()}
+        correct_mappings = {machine.argv[0].split("/")[-1], "[heap]", "[stack]"}
+        assert correct_mappings.issubset(mappings)
 
     def test_qtrace_local(self):
         with archr.targets.LocalTarget(["/bin/cat"]).build().start() as target:
