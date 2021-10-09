@@ -42,7 +42,7 @@ class TestAnalyzerQTrace(unittest.TestCase):
             e[2] for e in machine.maps.values() if e[0].split("/")[-1] == pathname_name
         )
         correct_permissions = {"r--p", "r-xp", "rw-p"}
-        assert program_map_permissions == correct_permissions, (program_map_permissions, machine.maps)
+        assert program_map_permissions == correct_permissions, (program_map_permissions, machine.maps, __import__("subprocess").check_output(["cat", "/proc/self/maps"]).decode())
 
     def test_qtrace_local(self):
         with archr.targets.LocalTarget(["/bin/cat"]).build().start() as target:
