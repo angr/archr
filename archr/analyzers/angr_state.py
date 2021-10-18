@@ -2,11 +2,10 @@ import os
 import angr
 import logging
 
-from docker.errors import NotFound
-
 l = logging.getLogger("archr.analyzers.angr_state")
 
 from . import Analyzer
+
 
 class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
     def __init__(self, target=None, **kwargs):
@@ -20,6 +19,7 @@ class SimArchrMount(angr.state_plugins.filesystem.SimConcreteFilesystem):
         return o
 
     def _load_file(self, guest_path):
+        from docker.errors import NotFound  # pylint:disable=import-outside-toplevel
         try:
             target_path = self.target.realpath(guest_path)
             content = self.target.retrieve_contents(target_path)
