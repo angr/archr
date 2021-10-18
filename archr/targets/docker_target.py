@@ -1,17 +1,28 @@
 import subprocess
+import sys
 import tempfile
 import logging
-import docker
 import shlex
 import os
 import re
 
-l = logging.getLogger("archr.target.docker_target")
-
 from . import Target
 
-os.system("mkdir -p /tmp/archr_mounts")
-_super_mount_cmd = "docker run --rm --privileged --mount type=bind,src=/tmp/archr_mounts/,target=/tmp/archr_mounts,bind-propagation=rshared --mount type=bind,src=/var/lib/docker,target=/var/lib/docker,bind-propagation=rshared ubuntu "
+
+docker = None
+
+l = logging.getLogger("archr.target.docker_target")
+
+_super_mount_cmd = "docker run --rm --privileged " \
+                   "--mount type=bind,src=/tmp/archr_mounts/,target=/tmp/archr_mounts,bind-propagation=rshared " \
+                   "--mount type=bind,src=/var/lib/docker,target=/var/lib/docker,bind-propagation=rshared " \
+                   "ubuntu "
+
+
+def import_docker():
+    global docker  # pylint:disable=global-statement
+    import docker  # pylint:disable=import-outside-toplevel
+
 
 class DockerImageTarget(Target):
     """
@@ -31,6 +42,12 @@ class DockerImageTarget(Target):
         **kwargs
         ):
         super().__init__(**kwargs)
+
+        if sys.platform == "win32":
+            raise RuntimeError("DockerImageTarget has not been tested on Windows.")
+
+        os.system("mkdir -p /tmp/archr_mounts")
+        import_docker()
 
         if bind_tmp:
             self.tmp_bind = tempfile.mkdtemp(dir="/tmp/archr_mounts", prefix="tmp_")
@@ -191,7 +208,7 @@ class DockerImageTarget(Target):
     def remove(self):
         if self.container:
             l.debug("Force removing container %r. If this is not intended, please ensure variable %r "
-                      "is still alive and in scope.", self.container, self)
+                    "is still alive and in scope.", self.container, self)
             try:
                 self.container.remove(force=True)
             except docker.errors.NotFound:
@@ -216,15 +233,18 @@ class DockerImageTarget(Target):
                 tarball_contents = t.read()
         p = self.run_command(["mkdir", "-p", target_path])
         if p.wait() != 0:
-            raise ArchrError("Unexpected error when making target_path in container: " + p.stdout.read().decode() + " " + p.stderr.read().decode())
+            raise ArchrError("Unexpected error when making target_path in container: " + p.stdout.read().decode() +
+                             " " + p.stderr.read().decode())
         p.stdin.close()
         p.stdout.close()
         if p.stderr:
             p.stderr.close()
         self.container.put_archive(target_path, tarball_contents)
         if self.user != 'root':
-            # TODO: this is probably important, but as implemented (path resolves to /), it is way to slow. If someone wants this, implement it correctly.
-            p = self.run_command(["chown", "-R", f"{self.user}:{self.user}", '/tmp'], user="root", stderr=subprocess.DEVNULL)
+            # TODO: this is probably important, but as implemented (path resolves to /), it is way to slow.
+            # TODO: If someone wants this, implement it correctly.
+            p = self.run_command(["chown", "-R", f"{self.user}:{self.user}", '/tmp'], user="root",
+                                 stderr=subprocess.DEVNULL)
             p.wait()
             p.stdin.close()
             p.stdout.close()
@@ -280,14 +300,17 @@ class DockerImageTarget(Target):
     def tcp_ports(self):
         ports = []
         try:
-            ports.extend([int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'tcp' in k])
+            ports.extend([int(k.split('/')[0])
+                          for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'tcp' in k])
         except KeyError:
             pass
         try:
             if self.image.attrs['ContainerConfig']['Env']:
-                ports.extend([int(k.split('=')[-1]) for k in self.image.attrs['ContainerConfig']['Env'] if k.startswith('TCP_PORT')])
+                ports.extend([int(k.split('=')[-1])
+                              for k in self.image.attrs['ContainerConfig']['Env'] if k.startswith('TCP_PORT')])
         except ValueError:
-            l.warning('An enviroment variable for %s starts with "TCP_PORT", but the value is not an integer.', self.image_id)
+            l.warning('An enviroment variable for %s starts with "TCP_PORT", but the value is not an integer.',
+                      self.image_id)
         except KeyError:
             pass
         return ports
@@ -296,14 +319,17 @@ class DockerImageTarget(Target):
     def udp_ports(self):
         ports = []
         try:
-            ports.extend([int(k.split('/')[0]) for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k])
+            ports.extend([int(k.split('/')[0])
+                          for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k])
         except KeyError:
             pass
         try:
             if self.image.attrs['ContainerConfig']['Env']:
-                ports.extend([int(k.split('=')[-1]) for k in self.image.attrs['ContainerConfig']['Env'] if k.startswith('UDP_PORT')])
+                ports.extend([int(k.split('=')[-1])
+                              for k in self.image.attrs['ContainerConfig']['Env'] if k.startswith('UDP_PORT')])
         except ValueError:
-            l.warning('An enviroment variable for %s starts with "UDP_PORT", but the value is not an integer.', self.image_id)
+            l.warning('An enviroment variable for %s starts with "UDP_PORT", but the value is not an integer.',
+                      self.image_id)
         except KeyError:
             pass
         return ports
