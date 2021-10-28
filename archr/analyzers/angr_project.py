@@ -75,7 +75,7 @@ class angrProjectAnalyzer(Analyzer):
         if self.project is not None:
             return self.project if not return_loader else self.project.loader
 
-        auto_load_libs = cle_args.get("auto_load_libs", False)
+        auto_load_libs = cle_args.get("auto_load_libs", True)
 
         # from now on, try to create a angr project
         if project_kwargs is None:
