@@ -94,6 +94,7 @@ if _angr_available:
 if _qtrace_available:
     from .qtrace import QTraceAnalyzer
 from .qemu_tracer import QEMUTracerAnalyzer
+from .core_fake_qemu_tracer import Core_FakeQEMUTracerAnalyzer
 from .datascout import DataScoutAnalyzer
 from .gdbserver import GDBServerAnalyzer
 from .core import CoreAnalyzer
