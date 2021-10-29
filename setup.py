@@ -24,7 +24,8 @@ setup(
         'docker',
         'nclib>=1.0.0rc3',
         'patchelf-wrapper',
-        'cle==9.0.gitrolling'
+        'cle==9.0.gitrolling',
+        'ply'
     ],
     extras_require = {
         'angr':  ["angr==9.0.gitrolling"],
