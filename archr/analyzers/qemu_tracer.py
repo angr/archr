@@ -71,6 +71,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
     def _target_mk_tmpdir(self):
         tmpdir = tempfile.mktemp(prefix="/tmp/tracer_target_")
         self.target.run_command(["mkdir", tmpdir]).wait()
+        self.target.run_command(["chmod", "777", tmpdir]).wait()
         try:
             yield tmpdir
         finally:
@@ -124,6 +125,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 elif r.returncode == [ 132, -9 ]:
                     r.crashed = True
                     r.signal = signal.SIGILL
+
+            l.debug("Qemu tracer returned with code=%s timed_out=%s crashed=%s signal=%s", r.returncode, r.timed_out, r.crashed, r.signal)
 
             if local_core_filename or crash_addr:
                 # choose the correct core dump to retrieve
