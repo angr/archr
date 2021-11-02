@@ -103,9 +103,14 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             local_core_filename = tmp_prefix + ".core" if save_core else None
             local_halfway_core_filename = tmp_prefix + f'.halfway_{hex(crash_addr[0])}_{crash_addr[1]}.core' if crash_addr else None
 
-            target_cmd = self._build_command(trace_filename=target_trace_filename, magic_filename=target_magic_filename,
-                                             coredump_dir=tmpdir, crash_addr=crash_addr, start_trace_addr=trace_bb_addr,
-                                             taint=taint)
+            target_cmd = self._build_command(
+                trace_filename=target_trace_filename,
+                magic_filename=target_magic_filename,
+                coredump_dir=tmpdir,
+                crash_addr=crash_addr,
+                start_trace_addr=trace_bb_addr,
+                taint=taint)
+            
             l.debug("launch QEMU with command: %s", ' '.join(target_cmd))
             r = QemuTraceResult()
 
@@ -126,7 +131,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     r.crashed = True
                     r.signal = signal.SIGILL
 
-            l.debug("Qemu tracer returned with code=%s timed_out=%s crashed=%s signal=%s", r.returncode, r.timed_out, r.crashed, r.signal)
+            l.debug("Qemu tracer returned with code=%s timed_out=%s crashed=%s signal=%s",
+                    r.returncode, r.timed_out, r.crashed, r.signal)
 
             if local_core_filename or crash_addr:
                 # choose the correct core dump to retrieve
@@ -147,8 +153,9 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                     # sanity check core dumps
                     if save_core and not tmp_crash_core_path:
-                        raise QEMUTracerError("the target didn't crash inside qemu! Make sure you launch it correctly!\n" +
-                                         "command: %s" % ' '.join(target_cmd))
+                        raise QEMUTracerError("the target didn't crash inside qemu or no corefile was created!" + 
+                                              "Make sure you launch it correctly!\n" + 
+                                              "command: %s" % ' '.join(target_cmd))
                     if crash_addr and not tmp_halfway_core_path:
                         raise QEMUTracerError("the target didn't generate a halfway core file!" +
                                          "command: %s" % ' '.join(target_cmd))
@@ -275,7 +282,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
         # record trace
         if trace_filename:
-            cmd_args += ["-d", "nochain,exec,page,strace", "-D", trace_filename] if 'cgc' not in qemu_variant else ["-d", "exec", "-D", trace_filename]
+            flags = "nochain,exec,page,strace" if 'cgc' not in qemu_variant else "exec"
+            cmd_args += ["-d", flags, "-D", trace_filename]
         else:
             if 'cgc' in qemu_variant:
                 cmd_args += ["-enable_double_empty_exiting"]
