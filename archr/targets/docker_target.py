@@ -46,7 +46,7 @@ class DockerImageTarget(Target):
         if sys.platform == "win32":
             raise RuntimeError("DockerImageTarget has not been tested on Windows.")
 
-        os.system("mkdir -p /tmp/archr_mounts")
+        os.makedirs(os.path.join("/", "tmp", "archr_mounts"), exist_ok=True)
         import_docker()
 
         if bind_tmp:
@@ -301,13 +301,13 @@ class DockerImageTarget(Target):
         ports = []
         try:
             ports.extend([int(k.split('/')[0])
-                          for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'tcp' in k])
+                          for k in self.image.attrs['Config']['ExposedPorts'].keys() if 'tcp' in k])
         except KeyError:
             pass
         try:
-            if self.image.attrs['ContainerConfig']['Env']:
+            if self.image.attrs['Config']['Env']:
                 ports.extend([int(k.split('=')[-1])
-                              for k in self.image.attrs['ContainerConfig']['Env'] if k.startswith('TCP_PORT')])
+                              for k in self.image.attrs['Config']['Env'] if k.startswith('TCP_PORT')])
         except ValueError:
             l.warning('An enviroment variable for %s starts with "TCP_PORT", but the value is not an integer.',
                       self.image_id)
@@ -320,13 +320,13 @@ class DockerImageTarget(Target):
         ports = []
         try:
             ports.extend([int(k.split('/')[0])
-                          for k in self.image.attrs['ContainerConfig']['ExposedPorts'].keys() if 'udp' in k])
+                          for k in self.image.attrs['Config']['ExposedPorts'].keys() if 'udp' in k])
         except KeyError:
             pass
         try:
-            if self.image.attrs['ContainerConfig']['Env']:
+            if self.image.attrs['Config']['Env']:
                 ports.extend([int(k.split('=')[-1])
-                              for k in self.image.attrs['ContainerConfig']['Env'] if k.startswith('UDP_PORT')])
+                              for k in self.image.attrs['Config']['Env'] if k.startswith('UDP_PORT')])
         except ValueError:
             l.warning('An enviroment variable for %s starts with "UDP_PORT", but the value is not an integer.',
                       self.image_id)
