@@ -116,9 +116,6 @@ def t_STRING(t):
 def t_error(t):
     raise TypeError(f"Unknown text '{t.value}'")
 
-lex.lex()
-
-
 
 class StraceEntry():
     """StraceEntry
@@ -246,7 +243,6 @@ def p_arg_list(p):
 def p_error(p):
     print(f"Syntax error at '{p.value}'")
 
-yacc.yacc()
 
 def parse(strace_log_lines):
     """
