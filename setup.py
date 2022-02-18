@@ -30,6 +30,7 @@ setup(
     extras_require = {
         'angr':  ["angr==9.1.gitrolling"],
         'qtrace': ["qtrace"],
+        'bintrace': ['bintrace'],
     },
     description='Target-centric program analysis.',
     url='https://github.com/angr/archr',

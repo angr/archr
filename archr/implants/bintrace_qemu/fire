@@ -1,0 +1,16 @@
+#!/bin/sh
+set -x
+ulimit -c unlimited
+ulimit -f unlimited
+
+OUR_DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+TRACE_PATH=$1
+LOADER=$(find "$OUR_DIR" -name ld-linux*.so*)
+shift
+
+exec "$LOADER" \
+	--library-path "$OUR_DIR" \
+	"$OUR_DIR"/bintrace-qemu-x86_64 \
+		-d plugin,nochain \
+		-plugin "$OUR_DIR/libtrace.so",arg="$TRACE_PATH" \
+		"$@"

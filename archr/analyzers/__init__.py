@@ -94,6 +94,7 @@ if _angr_available:
 if _qtrace_available:
     from .qtrace import QTraceAnalyzer
 from .qemu_tracer import QEMUTracerAnalyzer
+from .bintrace_qemu_tracer import BintraceQEMUTracerAnalyzer
 from .datascout import DataScoutAnalyzer
 from .gdbserver import GDBServerAnalyzer
 from .core import CoreAnalyzer
@@ -111,6 +112,7 @@ if _angr_available:
     angrStateBow = angrStateAnalyzer
     angrUltimateTracerBow = angrUltimateTracerAnalyzer
 QEMUTracerBow = QEMUTracerAnalyzer
+BintraceQEMUTracerBow = BintraceQEMUTracerAnalyzer
 DataScoutBow = DataScoutAnalyzer
 GDBServerBow = GDBServerAnalyzer
 CoreBow = CoreAnalyzer
