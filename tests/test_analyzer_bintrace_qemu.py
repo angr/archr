@@ -30,7 +30,7 @@ class TestAnalyzerBintraceQemu(unittest.TestCase):
 
     def crasher_checks(self, t):
         b = archr.analyzers.BintraceQEMUTracerAnalyzer(t)
-        r = b.fire(save_core=True)
+        r = b.fire()
 
         assert r.tracepath
         assert not r.timed_out
@@ -40,7 +40,7 @@ class TestAnalyzerBintraceQemu(unittest.TestCase):
     def crash_on_input_checks(self, t):
         crashing = b"A"*120
         b = archr.analyzers.BintraceQEMUTracerAnalyzer(t)
-        with b.fire_context(save_core=True) as flight:
+        with b.fire_context() as flight:
             flight.default_channel.send(crashing)
             flight.default_channel.shutdown_wr()
             #flight.default_channel.recvall()
