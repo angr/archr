@@ -81,6 +81,7 @@ def filter_strace_output(lines):
 
     #we only want the strace lines, so remove/ignore lines that start with the following:
     line_starts= ['^[\d,a-f]{16}-', # pylint: disable=anomalous-backslash-in-string
+                      '^[\d,a-f]{8}-', # pylint: disable=anomalous-backslash-in-string
                       '^page',
                       '^start',
                       '^host',
