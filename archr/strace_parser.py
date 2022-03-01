@@ -102,7 +102,7 @@ special_symbols = {
 }
 
 def t_SYMBOL(t):
-    r"[a-zA-Z][a-zA-Z0-9_|]+"
+    r"[a-zA-Z_][a-zA-Z0-9_|]+"
     t.type = special_symbols.get(t.value, t.type)
     return t
 
