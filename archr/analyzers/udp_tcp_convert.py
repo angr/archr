@@ -1,22 +1,25 @@
-from . import ContextAnalyzer
 import contextlib
 import logging
 import os
 
+from . import ContextAnalyzer
 l = logging.getLogger("archr.analyzers.udp_tcp_convert")
 
 class UDPTCPConvert(ContextAnalyzer):
+    """
+    Returns a fresh instance of the process LD_PRELOADed to convert it's udp sockets to tcp
+    """
+
     REQUIRED_IMPLANT = "udp_tcp_convert"
 
-    def __init__(self, target, timeout=10, local_trace_dir=None, symbolic_fd=None):
+    def __init__(self, target):
         super().__init__(target)
 
     @contextlib.contextmanager
     def fire_context(self, args_prefix=None, **kwargs): #pylint:disable=arguments-differ
         """
-        Starts strace attaching to a given process
+        LD_PRELOAD a given process converting it's udp sockets into tcp
 
-        :param pid: PID of target process, if already existing
         :param kwargs: Additional arguments to run_command
         :return: Target instance returned by run_command
         """
