@@ -4,29 +4,6 @@ import logging
 from contextlib import contextmanager
 from archr.targets.actions import OpenChannelAction, SendAction, CloseChannelAction
 
-from .. import _angr_available, _qtrace_available
-
-if _angr_available:
-    from .angr_project import angrProjectAnalyzer
-    from .angr_state import angrStateAnalyzer
-    from .angr_ultimate_tracer import angrUltimateTracerAnalyzer
-if _qtrace_available:
-    from .qtrace import QTraceAnalyzer
-
-from .qemu_tracer import QEMUTracerAnalyzer
-from .bintrace_qemu_tracer import BintraceQEMUTracerAnalyzer
-from .datascout import DataScoutAnalyzer
-from .gdbserver import GDBServerAnalyzer
-from .core import CoreAnalyzer
-from .ltrace import LTraceAnalyzer, LTraceAttachAnalyzer
-from .strace import STraceAnalyzer, STraceAttachAnalyzer
-from .input_fd import InputFDAnalyzer
-from .rr import RRTracerAnalyzer, RRReplayAnalyzer
-from .gdb import GDBAnalyzer
-from .tcpdump import TCPDumpAnalyzer
-from .udp_tcp_convert import UDPTCPConvert
-from .. import implants
-
 l = logging.getLogger(name=__name__)
 
 class Analyzer:
@@ -108,6 +85,27 @@ class ContextAnalyzer(Analyzer):
             yield flight
 
 
+from .. import _angr_available, _qtrace_available
+
+if _angr_available:
+    from .angr_project import angrProjectAnalyzer
+    from .angr_state import angrStateAnalyzer
+    from .angr_ultimate_tracer import angrUltimateTracerAnalyzer
+if _qtrace_available:
+    from .qtrace import QTraceAnalyzer
+from .qemu_tracer import QEMUTracerAnalyzer
+from .bintrace_qemu_tracer import BintraceQEMUTracerAnalyzer
+from .datascout import DataScoutAnalyzer
+from .gdbserver import GDBServerAnalyzer
+from .core import CoreAnalyzer
+from .ltrace import LTraceAnalyzer, LTraceAttachAnalyzer
+from .strace import STraceAnalyzer, STraceAttachAnalyzer
+from .input_fd import InputFDAnalyzer
+from .rr import RRTracerAnalyzer, RRReplayAnalyzer
+from .gdb import GDBAnalyzer
+from .tcpdump import TCPDumpAnalyzer
+from .udp_tcp_convert import UDPTCPConvert
+from .. import implants
 
 # backwards compatibility
 if _angr_available:
