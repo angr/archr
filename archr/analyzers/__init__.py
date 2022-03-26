@@ -104,6 +104,7 @@ from .input_fd import InputFDAnalyzer
 from .rr import RRTracerAnalyzer, RRReplayAnalyzer
 from .gdb import GDBAnalyzer
 from .tcpdump import TCPDumpAnalyzer
+from .udp_tcp_convert import UDPTCPConvert
 from .. import implants
 
 # backwards compatibility
@@ -116,6 +117,7 @@ BintraceQEMUTracerBow = BintraceQEMUTracerAnalyzer
 DataScoutBow = DataScoutAnalyzer
 GDBServerBow = GDBServerAnalyzer
 CoreBow = CoreAnalyzer
+UDPTCPConvertBow = UDPTCPConvert
 LTraceBow = LTraceAnalyzer
 LTraceAttachBow = LTraceAttachAnalyzer
 STraceBow = STraceAnalyzer
