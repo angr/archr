@@ -104,7 +104,6 @@ from .input_fd import InputFDAnalyzer
 from .rr import RRTracerAnalyzer, RRReplayAnalyzer
 from .gdb import GDBAnalyzer
 from .tcpdump import TCPDumpAnalyzer
-from .udp_tcp_convert import UDPTCPConvert
 from .. import implants
 
 # backwards compatibility
@@ -114,15 +113,14 @@ if _angr_available:
     angrUltimateTracerBow = angrUltimateTracerAnalyzer
 QEMUTracerBow = QEMUTracerAnalyzer
 BintraceQEMUTracerBow = BintraceQEMUTracerAnalyzer
-CoreBow = CoreAnalyzer
 DataScoutBow = DataScoutAnalyzer
-GDBBow = GDBAnalyzer
 GDBServerBow = GDBServerAnalyzer
-InputFDBow = InputFDAnalyzer
+CoreBow = CoreAnalyzer
 LTraceBow = LTraceAnalyzer
 LTraceAttachBow = LTraceAttachAnalyzer
-RRTracerBow = RRTracerAnalyzer
-RRReplayBow = RRReplayAnalyzer
 STraceBow = STraceAnalyzer
 STraceAttachBow = STraceAttachAnalyzer
-UDPTCPConvertBow = UDPTCPConvert
+InputFDBow = InputFDAnalyzer
+RRTracerBow = RRTracerAnalyzer
+RRReplayBow = RRReplayAnalyzer
+GDBBow = GDBAnalyzer
