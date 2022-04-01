@@ -78,6 +78,7 @@ class QemuTraceResult:
 
     # introspection
     trace = None
+    syscall_data = None
     mapped_files = None
     crash_address = None
     base_address = None
@@ -89,9 +90,10 @@ class QemuTraceResult:
     taint_fd = None
 
     def tracer_technique(self, **kwargs):
-        return angr.exploration_techniques.Tracer(self.trace, crash_addr=self.crash_address, **kwargs)
+        return angr.exploration_techniques.Tracer(self.trace, crash_addr=self.crash_address,
+                                                  syscall_data=self.syscall_data, **kwargs)
 
-
+_rand_vals_re = re.compile(br"RANDOM \((?P<value>\d+), (?P<size>\d+)\)")
 _trace_old_re = re.compile(rb"Trace (.*) \[(?P<addr>.*)\].*")
 _trace_new_re = re.compile(rb"Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P<flags>.*)\].*")
 
@@ -291,10 +293,16 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 bbl_trace_len = 0
                 strace_lines = []
                 prev_strace_entry = ""
+                syscall_data = {"random": []}
+                syscall_values_found = False
                 for entry in trace_fh:
                     if entry.startswith(b"Trace "):
                         bbl_trace_fh.write(struct.pack("<Q", int(_trace_re.match(entry).group("addr"), 16)))
                         bbl_trace_len += 1
+                    elif entry.startswith(b"RANDOM"):
+                        match = _rand_vals_re.match(entry)
+                        syscall_values_found = True
+                        syscall_data["random"].append((int(match.group('value'), 16), int(match.group('size'))))
                     elif record_file_maps:
                         curr_entry = entry.decode("utf-8").strip()
                         if "page layout changed following target_mmap" in curr_entry:
@@ -318,6 +326,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 trace_fh.close()
                 temp_trace_file.close()
                 r.trace = QEMUBBLTrace(bbl_trace_file.name, bbl_trace_len)
+                if syscall_values_found:
+                    r.syscall_data = syscall_data
 
                 if r.crashed:
                     if r.taint_fd is None and self.target.target_os != "cgc":
