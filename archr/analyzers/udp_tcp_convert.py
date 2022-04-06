@@ -14,6 +14,7 @@ class UDPTCPConvert(ContextAnalyzer):
 
     def __init__(self, target):
         super().__init__(target)
+        self.bin_path = os.path.join(self.target.tmpwd, "udp_tcp_convert", "libudp_to_tcp.so")
 
     @contextlib.contextmanager
     def fire_context(self, args_prefix=None, **kwargs): #pylint:disable=arguments-differ
