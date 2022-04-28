@@ -26,7 +26,7 @@ class Target(ABC):
 
     def __init__(
         self,
-        target_args=None, target_path=None, target_env=None, target_cwd=None, target_os='linux', target_arch='x86_64',
+        target_args=None, target_path=None, target_env=None, target_cwd=None, target_os=None, target_arch=None,
         ip_version=4, *, auto_remove=True
         ):
         """
@@ -55,6 +55,13 @@ class Target(ABC):
 
         self.tmp_bind = None  # the /tmp in the target is mapped to `tmp_bind` on the host. currently only used in
                               # DockerTarget. it impacts how resolve_local_path() works.
+
+        if self.target_arch is None:
+            l.warning("target architecture not specified, using `x86_64` by default")
+            self.target_arch = 'x86_64'
+        if self.target_os is None:
+            l.warning("target OS not specified, using `linux` by default")
+            self.target_os = 'linux'
 
         self.local_workdir = tempfile.mkdtemp(prefix="archr_target_")
 
