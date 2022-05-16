@@ -1,3 +1,5 @@
+__version__ = "9.2.4.dev0"
+
 import logging
 
 _LOG = logging.getLogger("archr")

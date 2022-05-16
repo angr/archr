@@ -108,6 +108,7 @@ def filter_strace_output(lines):
         if re.search("page layout changed following target_mmap",line):
             prev_line = line.replace("page layout changed following target_mmap","")
             continue
+        # workaround for unimplemented newselect handling
         if re.search("newselect", line):
             continue #ignore _newselect syscalls
         if re.match('^ = |^= ', line):
@@ -133,7 +134,6 @@ def get_file_maps(strace_log_lines):
         a dictionary of filenames and mmapped addresses associated with each file
 
     """
-
     files = {
         'open':{},
         'closed':{},
@@ -144,7 +144,6 @@ def get_file_maps(strace_log_lines):
     entries = [entry for entry in entries if entry.syscall in ('openat','open','socket','mmap','mmap2','close')]
 
     for entry in entries:
-        print(entry)
         # for an openat, create a dict entry for the file descriptor
         # the entry should be a tuple of the filename, and mmaps (initially empty)
         if entry.syscall == 'openat':
@@ -190,6 +189,7 @@ def get_file_maps(strace_log_lines):
                         files['closed'][filename] = mmaps
                 
                     del files['open'][fd]
+
 
         # we can use the file descriptor to look up the dict entry to update the mmaps
         #TODO: track sizes which should be capturable from the mmap arguments

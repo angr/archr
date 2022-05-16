@@ -94,6 +94,7 @@ if _angr_available:
 if _qtrace_available:
     from .qtrace import QTraceAnalyzer
 from .qemu_tracer import QEMUTracerAnalyzer
+from .bintrace_qemu_tracer import BintraceQEMUTracerAnalyzer
 from .datascout import DataScoutAnalyzer
 from .gdbserver import GDBServerAnalyzer
 from .core import CoreAnalyzer
@@ -103,6 +104,7 @@ from .input_fd import InputFDAnalyzer
 from .rr import RRTracerAnalyzer, RRReplayAnalyzer
 from .gdb import GDBAnalyzer
 from .tcpdump import TCPDumpAnalyzer
+from .udp_tcp_convert import UDPTCPConvert
 from .. import implants
 
 # backwards compatibility
@@ -111,9 +113,11 @@ if _angr_available:
     angrStateBow = angrStateAnalyzer
     angrUltimateTracerBow = angrUltimateTracerAnalyzer
 QEMUTracerBow = QEMUTracerAnalyzer
+BintraceQEMUTracerBow = BintraceQEMUTracerAnalyzer
 DataScoutBow = DataScoutAnalyzer
 GDBServerBow = GDBServerAnalyzer
 CoreBow = CoreAnalyzer
+UDPTCPConvertBow = UDPTCPConvert
 LTraceBow = LTraceAnalyzer
 LTraceAttachBow = LTraceAttachAnalyzer
 STraceBow = STraceAnalyzer

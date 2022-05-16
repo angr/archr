@@ -75,9 +75,11 @@ class angrProjectAnalyzer(Analyzer):
         if self.project is not None:
             return self.project if not return_loader else self.project.loader
 
+        auto_load_libs = cle_args.get("auto_load_libs", True)
+
         # from now on, try to create a angr project
         if project_kwargs is None:
-            project_kwargs = { }
+            project_kwargs = dict(auto_load_libs=auto_load_libs)
 
         # TODO: this introduce file leak. However, we probably need some redesign to fix it
         tmpdir = tempfile.mkdtemp(prefix="archr_angr_project_analyzer")
@@ -107,7 +109,8 @@ class angrProjectAnalyzer(Analyzer):
         for target_lib in target_libs:
             local_lib = os.path.join(tmpdir, os.path.basename(target_lib))
             self.target.retrieve_into(target_lib, tmpdir)
-            the_libs.append(local_lib)
+            if auto_load_libs:
+                the_libs.append(local_lib)
         lib_opts = {os.path.basename(lib): {'base_addr': libaddr} for lib, libaddr in self._mem_mapping.items()}
         bin_opts = {}
         if preloader.main_object.pic:
