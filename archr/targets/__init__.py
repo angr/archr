@@ -57,10 +57,10 @@ class Target(ABC):
                               # DockerTarget. it impacts how resolve_local_path() works.
 
         if self.target_arch is None:
-            l.warning("target architecture not specified, using `x86_64` by default")
+            l.debug("target architecture not specified, using `x86_64` by default")
             self.target_arch = 'x86_64'
         if self.target_os is None:
-            l.warning("target OS not specified, using `linux` by default")
+            l.debug("target OS not specified, using `linux` by default")
             self.target_os = 'linux'
 
         self.local_workdir = tempfile.mkdtemp(prefix="archr_target_")
