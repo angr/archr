@@ -108,7 +108,8 @@ def filter_strace_output(lines):
         if re.search("page layout changed following target_mmap",line):
             prev_line = line.replace("page layout changed following target_mmap","")
             continue
-        # workaround for unimplemented newselect handling
+        # The strace_parser does not properly handle _newselect strace lines (It's format differs significantly).
+        # so, workaround by simply removing those lines. We currently do not use them.
         if re.search("newselect", line):
             continue #ignore _newselect syscalls
         if re.match('^ = |^= ', line):
