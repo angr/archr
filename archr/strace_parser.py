@@ -202,6 +202,7 @@ def p_syscall(p):
     syscall : SYMBOL LEFT_PAREN RIGHT_PAREN result
     syscall : SYMBOL LEFT_PAREN arg_list RIGHT_PAREN
     syscall : SYMBOL LEFT_PAREN RIGHT_PAREN
+    syscall : SYMBOL SYMBOL NUMBER
     """
     if len(p) == 6:
         p[0] = Syscall(p[1], p[3], p[5])
@@ -211,7 +212,10 @@ def p_syscall(p):
         elif isinstance(p[4],int):
             p[0] = Syscall(p[1], None, p[4])
     else:
-        p[0] = Syscall(p[1], p[3], None)
+        if p[1] == "Unknown":
+            p[0] = Syscall("unknown_"+str(p[3]), None, None)
+        else:
+            p[0] = Syscall(p[1], p[3], None)
 
 def p_error_message(p):
     """
@@ -242,7 +246,6 @@ def p_arg_list(p):
     else:
         p[0] = p[1]
         p[0].append(p[2])
-
 
 def p_error(p):
     print(f"Syntax error at '{p.value}'")
