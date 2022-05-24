@@ -202,11 +202,11 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                 if r.crashed:
                     # grab the taint_fd
-                    if not endings[0].startswith(b"qemu: last read marker was read through fd:") \
-                       and self.target.target_os != 'cgc':
-                        l.error(
-                            "Unexpected status line from qemu tracer. Cannot get the last read marker to set taint_fd. "
-                            "Please make sure you are using the latest shellphish-qemu.")
+                    if not endings[0].startswith(b"qemu: last read marker was read through fd:"):
+                        if self.target.target_os != 'cgc':
+                            l.error(
+                                "Unexpected status line from qemu tracer. Cannot get the last read marker to set taint_fd. "
+                                "Please make sure you are using the latest shellphish-qemu.")
                     else:
                         r.taint_fd = int(re.search(br'\[(\d+)\]', endings[0]).group(1))
                         l.debug("Detected the tainted fd to be %s", r.taint_fd)
