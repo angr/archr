@@ -126,16 +126,25 @@ class BintraceQEMUTracerAnalyzer(ContextAnalyzer):
             l.debug("Qemu tracer returned with code=%s timed_out=%s crashed=%s signal=%s",
                     r.returncode, r.timed_out, r.crashed, r.signal)
 
-            tracefile = tempfile.NamedTemporaryFile(prefix='tracer-', delete=False)
-            r.tracepath = tracefile.name
-            data = self.target.retrieve_contents(target_trace_filename)
-            tracefile.write(data)
+            trace_output_dir = tempfile.TemporaryDirectory(prefix='tracer-')
+            trace_outputs = self.target.resolve_glob(target_trace_filename + '*')
+            l.debug('Found trace files: %s', trace_outputs)
+            for f in trace_outputs:
+                l.debug('Copying %s', f)
+                data = self.target.retrieve_contents(f)
+                with open(os.path.join(trace_output_dir.name, os.path.basename(f)), 'wb') as f:
+                    f.write(data)
+
+            tracefile = tempfile.NamedTemporaryFile(prefix='tracer-', suffix='.tar.gz', delete=False)
             tracefile.close()
 
+            r.tracepath = tracefile.name
             l.debug("Compressing trace file")
-            subprocess.run(['gzip', r.tracepath], check=True)
-            r.tracepath += '.gz'
+            subprocess.run(['tar', 'czvf',
+                os.path.basename(r.tracepath),
+                os.path.basename(trace_output_dir.name)], check=True, cwd='/tmp')
             l.error('Trace saved to %s', r.tracepath)
+            trace_output_dir.cleanup()
 
     @staticmethod
     def qemu_variant(target_os, target_arch, record_trace):
