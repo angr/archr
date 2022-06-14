@@ -250,7 +250,7 @@ def p_arg_list(p):
 def p_error(p):
     print(f"Syntax error at '{p.value}'")
 
-yacc.yacc()
+yacc.yacc(debug=False, write_tables=False)
 
 def parse(strace_log_lines):
     """
