@@ -19,8 +19,6 @@ def _build_support_libraries():
     env["CMAKE_GENERATOR"] = "Ninja"
 
     curr_dir = pathlib.Path(__file__).parent.absolute()
-    print(curr_dir)
-    print(list(os.listdir(curr_dir)))
     tcp_udp_dir = os.path.join(curr_dir, "archr/implants/udp_tcp_convert")
 
     cmd = ["cmake", ".", "-Bbuild"]
