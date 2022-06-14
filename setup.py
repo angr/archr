@@ -19,7 +19,7 @@ def _build_support_libraries():
     env["CMAKE_GENERATOR"] = "Ninja"
 
     curr_dir = pathlib.Path(__file__).parent.absolute()
-    tcp_udp_dir = os.path.join(curr_dir, "archr/implants/udp_tcp_convert")
+    tcp_udp_dir = os.path.join(curr_dir, "archr", "implants", "udp_tcp_convert")
 
     cmd = ["cmake", ".", "-Bbuild"]
     subprocess.run(cmd, cwd=tcp_udp_dir, env=env, check=True)
@@ -34,7 +34,7 @@ def _build_support_libraries():
 
 def _clean_support_libraries():
     curr_dir = pathlib.Path(__file__).parent.absolute()
-    build_dir = os.path.join(curr_dir, "archr/implants/udp_tcp_convert/build")
+    build_dir = os.path.join(curr_dir, "archr", "implants", "udp_tcp_convert", "build")
     shutil.rmtree(build_dir, ignore_errors=True)
 
 class build(st_build):
