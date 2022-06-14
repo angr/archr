@@ -20,14 +20,10 @@ def _build_support_libraries():
 
     curr_dir = pathlib.Path(__file__).parent.absolute()
     tcp_udp_dir = os.path.join(curr_dir, "archr", "implants", "udp_tcp_convert")
-
-    cmd = ["cmake", ".", "-Bbuild"]
-    subprocess.run(cmd, cwd=tcp_udp_dir, env=env, check=True)
+    subprocess.run(["cmake", ".", "-Bbuild"], cwd=tcp_udp_dir, env=env, check=True)
 
     build_dir = os.path.join(tcp_udp_dir, "build")
-
-    cmd = ["ninja"]
-    subprocess.run(cmd, cwd=build_dir, env=env, check=True)
+    subprocess.run(["ninja"], cwd=build_dir, env=env, check=True)
 
     shutil.copy(os.path.join(build_dir, "lib", "libudp_to_tcp.so"), tcp_udp_dir)
 
