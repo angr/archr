@@ -166,7 +166,7 @@ def get_file_maps(strace_log_lines):
                 filename = entry.syscall.args[0].split("/")[-1]
                 #tracking if an executable page was ever mapped from the file descriptor
                 files['open'][fd] = [filename,[]]
-        
+
         elif entry.syscall == 'socket':
             fd = entry.syscall.result
             if fd >= 3:
@@ -188,7 +188,7 @@ def get_file_maps(strace_log_lines):
                     if mmaps:
                         # otherwise move to 'closed'
                         files['closed'][filename] = mmaps
-                
+
                     del files['open'][fd]
 
 
