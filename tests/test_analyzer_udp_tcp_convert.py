@@ -1,11 +1,13 @@
+import unittest
 from time import sleep
 
 import archr
-import unittest
 
 from common import build_container
 
+
 class TestAnalyzerUDPTCPConvert(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         build_container("udp_tcp_convert")
@@ -33,6 +35,7 @@ class TestAnalyzerUDPTCPConvert(unittest.TestCase):
     def test_udp_tcp_convert_proc_docker(self):
         with archr.targets.DockerImageTarget('archr-test:udp_tcp_convert').build().start() as t:
             self.check_udp_tcp_convert(t)
+
 
 if __name__ == '__main__':
     unittest.main()
