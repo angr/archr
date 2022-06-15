@@ -6,7 +6,7 @@ mkdir -p $BUNDLE_DIR/libs
 mkdir -p $BUNDLE_DIR/bin
 
 FIRE_SCRIPT=${0//bundle/fire}
-UDP_TCP_PATH=$(python -c "import os, angr;print(os.path.join(os.path.dirname(os.path.realpath(angr.__file__)), '..', '..', 'binaries', 'archr', 'udp_to_tcp', 'libudp_to_tcp.so'))")
+UDP_TCP_PATH=$(python -c "import os, archr;print(os.path.join(os.path.dirname(os.path.realpath(archr.__file__)), 'implants', 'udp_tcp_convert', 'libudp_to_tcp.so'))")
 UDP_TCP_LIBS=$(ldd $UDP_TCP_PATH | grep "=>" | awk '{print $3}' | sort -u)
 cp -L $UDP_TCP_LIBS $BUNDLE_DIR/libs/
 cp -L $UDP_TCP_PATH $BUNDLE_DIR/bin
