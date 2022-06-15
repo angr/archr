@@ -6,9 +6,9 @@ import unittest
 from common import build_container
 
 class TestAnalyzerUDPTCPConvert(unittest.TestCase):
-    #@classmethod
-    #def setUpClass(cls):
-    #    build_container("udp_tcp_convert")
+    @classmethod
+    def setUpClass(cls):
+        build_container("udp_tcp_convert")
 
     def check_udp_tcp_convert(self, t, **kwargs):# pylint:disable=no-self-use
         target = t.run_command() # start target
