@@ -17,7 +17,6 @@ class TestAnalyzerUDPTCPConvert(unittest.TestCase):
             sleep(2)
             p = t.run_command(["/udp_tcp_convert/tcp_client"])
             output = p.stdout.read()
-            print(output.decode())
             assert b"connection with the server failed" not in output
 
 
