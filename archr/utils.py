@@ -81,6 +81,7 @@ def filter_strace_output(lines):
 
     #we only want the strace lines, so remove/ignore lines that start with the following:
     line_starts= ['^[\d,a-f]{16}-', # pylint: disable=anomalous-backslash-in-string
+                      '^[\d,a-f]{8}-', # pylint: disable=anomalous-backslash-in-string
                       '^page',
                       '^start',
                       '^host',
@@ -107,6 +108,10 @@ def filter_strace_output(lines):
         if re.search("page layout changed following target_mmap",line):
             prev_line = line.replace("page layout changed following target_mmap","")
             continue
+        # The strace_parser does not properly handle _newselect strace lines (It's format differs significantly).
+        # so, workaround by simply removing those lines. We currently do not use them.
+        if re.search("newselect", line):
+            continue #ignore _newselect syscalls
         if re.match('^ = |^= ', line):
             line = prev_line+line
 
@@ -131,12 +136,13 @@ def get_file_maps(strace_log_lines):
 
     """
     files = {
-        'open':{},
-        'closed':{}
+        'open': {},
+        'closed': {},
+        'sockets': []
     }
 
     entries = strace_parser.parse(strace_log_lines)
-    entries = [entry for entry in entries if entry.syscall in ('openat','mmap','mmap2','close')]
+    entries = [entry for entry in entries if entry.syscall in ('openat','open','socket','mmap','mmap2','close')]
 
     for entry in entries:
         # for an openat, create a dict entry for the file descriptor
@@ -151,21 +157,40 @@ def get_file_maps(strace_log_lines):
                 #tracking if an executable page was ever mapped from the file descriptor
                 files['open'][fd] = [filename,[]]
 
+        elif entry.syscall == 'open':
+            fd = entry.syscall.result
+            # only care about file descriptors other than STDIN,STDOUT,STDERR
+            # also ignore errors
+            if fd >= 3:
+                #use only the base filename
+                filename = entry.syscall.args[0].split("/")[-1]
+                #tracking if an executable page was ever mapped from the file descriptor
+                files['open'][fd] = [filename,[]]
+
+        elif entry.syscall == 'socket':
+            fd = entry.syscall.result
+            if fd >= 3:
+                files['sockets'].append(fd)
+
         # if a file descriptor is closed, we need to remove it from the open files dictionary
         # we want to track the mmaps, so move it to 'closed' by file name since the file descriptor can be re-used.
         elif entry.syscall == 'close':
             fd = entry.syscall.args[0]
             # only care about file descriptors other than STDIN,STDOUT,STDERR
             if fd >= 3:
-                filename = files['open'][fd][0]
-                mmaps = files['open'][fd][1]
+                if fd in files['sockets']:
+                    files['sockets'].remove(fd)
+                else:
+                    filename = files['open'][fd][0]
+                    mmaps = files['open'][fd][1]
 
-                # if we never mapped any pages, then we don't care about it.
-                if mmaps:
-                    # otherwise move to 'closed'
-                    files['closed'][filename] = mmaps
-                
-                del files['open'][fd]
+                    # if we never mapped any pages, then we don't care about it.
+                    if mmaps:
+                        # otherwise move to 'closed'
+                        files['closed'][filename] = mmaps
+
+                    del files['open'][fd]
+
 
         # we can use the file descriptor to look up the dict entry to update the mmaps
         #TODO: track sizes which should be capturable from the mmap arguments
