@@ -213,7 +213,7 @@ def p_syscall(p):
             p[0] = Syscall(p[1], None, p[4])
     else:
         if p[1] == "Unknown":
-            p[0] = Syscall("unknown_"+str(p[3]), None, None)
+            p[0] = Syscall("unknown_" + str(p[3]), None, None)
         else:
             p[0] = Syscall(p[1], p[3], None)
 

@@ -136,9 +136,9 @@ def get_file_maps(strace_log_lines):
 
     """
     files = {
-        'open':{},
-        'closed':{},
-        'sockets':[]
+        'open': {},
+        'closed': {},
+        'sockets': []
     }
 
     entries = strace_parser.parse(strace_log_lines)
