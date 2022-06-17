@@ -1,10 +1,13 @@
-import subprocess
-import sys
-import tempfile
-import logging
-import shlex
 import os
 import re
+import sys
+import shlex
+import random
+import string
+import logging
+import tempfile
+import ipaddress
+import subprocess
 
 from . import Target
 
@@ -36,11 +39,18 @@ class DockerImageTarget(Target):
         bind_tmp=False,
         network_mode='bridge',
         network=None,
+        ip_addr=None,
         use_init=False,
         companion=False,
         hostname="archr-target",
         **kwargs
         ):
+        """
+        ip_addr:    use which IP address to communicate with the target (currently, ipv4 only)
+                    archr will automatically set up a network interface for the IP address
+                    if not set, it will be extracted during runtime
+        """
+
         super().__init__(**kwargs)
 
         if sys.platform == "win32":
@@ -61,12 +71,12 @@ class DockerImageTarget(Target):
         self.container = None
         self.volumes = { }
         self.rm = rm
-        self._client = None
         self.use_init = use_init
         self.companion = companion
         self.companion_container = None
-
         self._client = docker.client.from_env()
+        self._internal_network = None
+
 
         if pull:
             self._pull()
@@ -90,6 +100,8 @@ class DockerImageTarget(Target):
         self.network = network
         self.network_mode = network_mode if not network else None
         self.hostname = hostname
+        self.ip_addr = ip_addr
+        self.bridge_name = None
 
     #
     # Lifecycle
@@ -159,6 +171,7 @@ class DockerImageTarget(Target):
             #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
         )
         self.container.reload()  # update self.container.attrs
+        self._connect_network()
 
         if timeout is not None:
             # it will kill the init process since use_init is True when timeout is set
@@ -194,6 +207,7 @@ class DockerImageTarget(Target):
 
     def stop(self):
         if self.container:
+            self._disconnect_network()
             try:
                 self.container.kill()
             except docker.errors.APIError:
@@ -269,6 +283,46 @@ class DockerImageTarget(Target):
             self.retrieve_into(target_path, os.path.dirname(local_path))
         return local_path
 
+    #
+    # Network access
+    #
+    def _get_gateway(self, subnet, reserved_ip):
+        # find an IP for the gateway
+        for ip in subnet.network.hosts():
+            ip_str = str(ip)
+            if ip_str != reserved_ip:
+                return ip_str
+        raise RuntimeError(f"Failed to find gateway addr for subnet: {subnet}")
+
+    def _create_network(self):
+        subnet = ipaddress.ip_interface(f"{self.ip_addr}/24") # let's just allow 255 machines
+        subnet_addr = str(subnet.network).split('/')[0]
+        # make sure no existing docker network is using the subnet
+        for dnet in self._client.networks.list():
+            configs = dnet.attrs['IPAM']['Config']
+            for conf in configs:
+                tmp_subnet = ipaddress.ip_interface(conf['Subnet'])
+                tmp_subnet_addr = str(tmp_subnet.network).split("/")[0]
+                if tmp_subnet_addr == subnet_addr:
+                    raise RuntimeError(f"Docker network {dnet.attrs['Id']} is using subnet {conf['Subnet']}!")
+
+        # actually create the network
+        gateway = self._get_gateway(subnet, self.ip_addr)
+        ipam_pool = docker.types.IPAMPool(subnet=f"{self.ip_addr}/24", gateway=gateway)
+        ipam_config = docker.types.IPAMConfig(pool_configs=[ipam_pool])
+        if self.bridge_name is None:
+            self.bridge_name = "archr_%s" % ''.join(random.choices(string.ascii_lowercase, k=10))
+        self._internal_network = self._client.networks.create(self.bridge_name, driver="bridge", ipam=ipam_config)
+
+    def _connect_network(self):
+        # in archr, we create the network every time we connect it
+        self._create_network()
+        self._internal_network.connect(self.container, ipv4_address=self.ip_addr)
+
+    def _disconnect_network(self):
+        # in archr, we remove the network every time we disconnect from it
+        self._internal_network.disconnect(self.container)
+        self._internal_network.remove()
 
     #
     # Info access
@@ -276,6 +330,8 @@ class DockerImageTarget(Target):
 
     @property
     def ipv4_address(self):
+        if self.ip_addr:
+            return self.ip_addr
         if self.container is None:
             return None
         if self.network == "host":
@@ -287,6 +343,8 @@ class DockerImageTarget(Target):
 
     @property
     def ipv6_address(self):
+        if self.ip_addr:
+            raise NotImplementedError("Fixed IPv6 address is not supported yet!")
         if self.container is None:
             return None
         if self.network == "host":
