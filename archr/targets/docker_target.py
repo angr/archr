@@ -371,6 +371,8 @@ class DockerImageTarget(Target):
                       self.image_id)
         except KeyError:
             pass
+        if not ports:
+            l.warning("Failed to discover TCP ports from the docker image!")
         return ports
 
     @property
@@ -390,6 +392,8 @@ class DockerImageTarget(Target):
                       self.image_id)
         except KeyError:
             pass
+        if not ports:
+            l.warning("Failed to discover UDP ports from the docker image!")
         return ports
 
     @property
