@@ -315,11 +315,15 @@ class DockerImageTarget(Target):
         self._internal_network = self._client.networks.create(self.bridge_name, driver="bridge", ipam=ipam_config)
 
     def _connect_network(self):
+        if not self.ip_addr:
+            return
         # in archr, we create the network every time we connect it
         self._create_network()
         self._internal_network.connect(self.container, ipv4_address=self.ip_addr)
 
     def _disconnect_network(self):
+        if not self.ip_addr:
+            return
         # in archr, we remove the network every time we disconnect from it
         self._internal_network.disconnect(self.container)
         self._internal_network.remove()
