@@ -94,9 +94,9 @@ class TestSync(unittest.TestCase):
         state = asb.fire(add_options={angr.sim_options.STRICT_PAGE_ACCESS}) # for now
         simgr = project.factory.simulation_manager(state)
         simgr.run()
-        assert len(simgr.errored) == 0
-        assert len(simgr.deadended) == 1
-        assert len(sum(simgr.stashes.values(), [])) == 1
+        self.assertEqual(len(simgr.errored), 0)
+        self.assertEqual(len(simgr.deadended), 1)
+        self.assertEqual(len(sum(simgr.stashes.values(), [])), 1)
         #assert simgr.deadended[0].posix.dumps(1) == reference_str
 
         t.stop()
