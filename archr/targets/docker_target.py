@@ -24,7 +24,7 @@ _super_mount_cmd = "docker run --rm --privileged " \
 
 def import_docker():
     global docker  # pylint:disable=global-statement
-    import docker  # pylint:disable=import-outside-toplevel
+    import docker  # pylint:disable=import-outside-toplevel,redefined-outer-name
 
 
 class DockerImageTarget(Target):
@@ -84,7 +84,7 @@ class DockerImageTarget(Target):
         # If we're running in docker-by-docker, default the network to the same network
         if check_in_docker() and not check_dockerd_running() and network is None:
             try:
-                with open("/proc/self/cgroup") as f:
+                with open("/proc/self/cgroup", 'r') as f:
                     cgroups = dict(e.split(':', 2)[1:] for e in f.read().strip().split('\n'))
                 container_id = re.search("/([0-9a-f]{64})", cgroups["pids"]).group(1)
                 container_inspect = self._client.api.inspect_container(container_id)
@@ -95,7 +95,7 @@ class DockerImageTarget(Target):
                     # Don't implicitly start the target with host network
                     network = None
             except (KeyError, IndexError, AttributeError, docker.errors.APIError):
-                l.warning("Detected archr is being run from a docker container, but couldn't retrieve network information")
+                l.warning("Detected archr is being run from a docker container, but couldn't retrieve network information") #pylint: disable=line-too-long
 
         self.network = network
         self.network_mode = network_mode if not network else None
@@ -291,7 +291,8 @@ class DockerImageTarget(Target):
     #
     # Network access
     #
-    def _get_gateway(self, subnet, reserved_ip):
+    @staticmethod
+    def _get_gateway(subnet, reserved_ip):
         # find an IP for the gateway
         for ip in subnet.network.hosts():
             ip_str = str(ip)
@@ -301,13 +302,13 @@ class DockerImageTarget(Target):
 
     def _create_network(self):
         subnet = ipaddress.ip_interface(f"{self.ip_addr}/24") # let's just allow 255 machines
-        subnet_addr = str(subnet.network).split('/')[0]
+        subnet_addr = str(subnet.network).split('/', maxsplit=1)[0]
         # make sure no existing docker network is using the subnet
         for dnet in self._client.networks.list():
             configs = dnet.attrs['IPAM']['Config']
             for conf in configs:
                 tmp_subnet = ipaddress.ip_interface(conf['Subnet'])
-                tmp_subnet_addr = str(tmp_subnet.network).split("/")[0]
+                tmp_subnet_addr = str(tmp_subnet.network).split("/", maxsplit=1)[0]
                 if tmp_subnet_addr == subnet_addr:
                     raise RuntimeError(f"Docker network {dnet.attrs['Id']} is using subnet {conf['Subnet']}!")
 
@@ -548,4 +549,4 @@ def check_dockerd_running() -> bool:
     return b"dockerd" in ps.stdout
 
 
-from ..errors import ArchrError
+from ..errors import ArchrError # pylint:disable=wrong-import-position
