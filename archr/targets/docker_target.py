@@ -124,8 +124,13 @@ class DockerImageTarget(Target):
         if self.target_args[:3] == [ "setarch", "x86_64", "-R" ]:
             self.target_args = self.target_args[3:]
         if "qemu-" in self.target_args[0]:
-            self.target_args_prefix = self.target_args[:1]
-            self.target_args = self.target_args[1:]
+            if '--' not in self.target_args:
+                self.target_args_prefix = self.target_args[:1]
+                self.target_args = self.target_args[1:]
+            else:
+                idx = self.target_args.index('--')
+                self.target_args_prefix = self.target_args[:idx]
+                self.target_args = self.target_args[idx+1:]
             self.target_arch = re.search(r"qemu-(\w+)(-\w+)?", self.target_args_prefix[0]).group(1)
 
         if re.match(r"ld[0-9A-Za-z\-]*\.so.*", os.path.basename(self.target_args[0])) is not None:

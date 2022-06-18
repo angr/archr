@@ -37,6 +37,7 @@ class Target(ABC):
         - The image, if needed, or Dockerfile/Vagrant....
 
         Produces a target ready to run build()
+        :param target_arch: the architecture of the target binary, it should match how QEMU calls them
         :param args:
         :param kwargs:
         """
