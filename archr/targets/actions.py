@@ -4,7 +4,7 @@ from abc import abstractmethod
 
 import nclib
 
-l = logging.getLogger("archr.target.actions")
+l = logging.getLogger(__name__)
 
 class ActionError(BaseException):
     pass
