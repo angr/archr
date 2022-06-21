@@ -148,9 +148,6 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                         if 'coreaddr' in x.rsplit("_")[-1]:
                             tmp_halfway_core_path = x
 
-                    if tmp_crash_core_path is None and len(target_cores) == 1:
-                        tmp_crash_core_path = target_cores[0]
-
                     # sanity check core dumps
                     if save_core and not tmp_crash_core_path:
                         raise QEMUTracerError("the target didn't crash inside qemu or no corefile was created!" + 
