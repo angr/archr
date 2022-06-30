@@ -453,6 +453,7 @@ class Target(ABC):
         return self._run_command(command_args, self.target_env if env is None else env, **kwargs)
 
 
+from .docker_compose_target import DockerComposeImageTarget
 from .docker_target import DockerImageTarget
 from .local_target import LocalTarget
 from ..utils import hook_entry, hook_addr
