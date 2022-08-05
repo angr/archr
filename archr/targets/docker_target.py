@@ -440,7 +440,11 @@ class DockerImageTarget(Target):
     #
     def _pull(self):
         try:
-            self._client.images.pull(self.image_id)
+            if ':' in self.image_id:
+                image, tag = self.image_id.split(':')
+                self._client.images.pull(image, tag=tag)
+            else:
+                self._client.images.pull(self.image_id)
         except docker.errors.ImageNotFound as err:
             l.info("Unable to pull image %s, got error %s, ignoring and continuing on", self.image_id, err)
 
