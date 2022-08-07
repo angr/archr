@@ -104,6 +104,9 @@ class DockerImageTarget(Target):
             (self.image.attrs['Config']['Entrypoint'] or [ ]) + (self.image.attrs['Config']['Cmd'] or [ ])
         )
 
+        if not self.target_args:
+            raise ArchrError("Canot build: target_args is empty!")
+
         # let's assume that we're not analyzing setarch, /bin/sh, or any variant of qemu
         if self.target_args[:2] == [ "/bin/sh", "-c" ]:
             self.target_args = shlex.split(self.target_args[-1])
