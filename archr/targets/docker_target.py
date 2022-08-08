@@ -7,6 +7,7 @@ import os
 import re
 
 from . import Target
+from docker.errors import APIError
 
 
 docker = None
@@ -147,20 +148,25 @@ class DockerImageTarget(Target):
         else:
             use_init = self.use_init
 
-        self.container = self._client.containers.run(
-            self.image,
-            name=name,
-            entrypoint=entry_point, command=[], environment=self.target_env,
-            user=user, labels=labels,
-            hostname=self.hostname,
-            detach=True, auto_remove=self.rm, working_dir=working_dir,
-            stdin_open=True, stdout=True, stderr=True,
-            privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
-            network_mode=self.network_mode,
-            network=self.network,
-            init=use_init
-            #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
-        )
+        try:
+            self.container = self._client.containers.run(
+                self.image,
+                name=name,
+                entrypoint=entry_point, command=[], environment=self.target_env,
+                user=user, labels=labels,
+                hostname=self.hostname,
+                detach=True, auto_remove=self.rm, working_dir=working_dir,
+                stdin_open=True, stdout=True, stderr=True,
+                privileged=True, security_opt=["seccomp=unconfined"], volumes=self.volumes,
+                network_mode=self.network_mode,
+                network=self.network,
+                init=use_init
+                #network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
+            )
+        except APIError as e:
+            if f'stat {entry_point[0]}: no such file or directory: unknown' in e.explanation:
+                raise ArchrError(f"Entrypoint not found in container: {entry_point[0]}")
+
         self.container.reload()  # update self.container.attrs
 
         if timeout is not None:
