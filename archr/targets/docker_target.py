@@ -166,6 +166,8 @@ class DockerImageTarget(Target):
         except APIError as e:
             if f'stat {entry_point[0]}: no such file or directory: unknown' in e.explanation:
                 raise ArchrError(f"Entrypoint not found in container: {entry_point[0]}")
+            else:
+                raise e
 
         self.container.reload()  # update self.container.attrs
 
