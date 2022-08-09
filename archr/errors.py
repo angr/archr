@@ -6,3 +6,6 @@ class ArchrError(Exception):
 
     def __str__(self):
         return f'{self.message}'
+
+class ArchrValueError(ArchrError, ValueError):
+    pass
