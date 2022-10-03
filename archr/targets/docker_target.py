@@ -7,7 +7,7 @@ import os
 import re
 
 from . import Target
-from docker.errors import APIError
+from docker.errors import APIError, ArchrValueError
 
 
 docker = None
