@@ -11,10 +11,17 @@ import yaml
 import json
 
 from . import Target
+import traceback
 
 docker = None
 
 l = logging.getLogger("archr.target.docker_compose_target")
+l.setLevel(logging.DEBUG)
+
+
+class TargetInfoClass:
+    def __init__(self, config):
+        self.attrs = config
 
 
 class DockerComposeImageTarget(Target):
@@ -37,45 +44,115 @@ class DockerComposeImageTarget(Target):
         self.docker_compose_path = os.path.abspath(docker_compose_path)
         self.container_proc = ""
         self.network_settings = None
-        self.container = None
+        self._container = None
+        self.image_info = None
+        self.removed = False
+        self.startup_command = []
         if not os.path.exists(self.docker_compose_path):
             raise ArchrError(f"Error supplied docker compose path does not exist {docker_compose_path}")
 
         os.chdir(self.docker_compose_path)
+        self.docker_compose_filepath = os.path.join(self.docker_compose_path,"docker-compose.yml")
+        print(self.docker_compose_filepath)
+        print(docker_compose_path)
+        assert os.path.exists(self.docker_compose_filepath)
 
         self.image_name = ""
 
         if pull:
             self._pull()
 
+        self.remove()
+
     #
     # Lifecycle
     #
 
-    def build(self, pull=False):  # pylint:disable=arguments-differ
-
-        p = subprocess.Popen(["docker-compose", "build", "--no-cache"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    def build(self, pull=False, config=None):  # pylint:disable=arguments-differ
+        #"--no-cache"
+        p = subprocess.Popen(["docker-compose", "-f",self.docker_compose_filepath, "build",], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
 
-        regex = r".*writing image sha256:([a-f0-9]{64})"
+        regex = r"(.*writing image sha256:|Successfully built )([a-f0-9]{12,64})"
 
-        lines = stderr.decode("latin-1").splitlines()
+        lines = stderr.decode("latin-1").splitlines() + stdout.decode("latin-1").splitlines()
         for line in lines:
             match = re.match(regex, line)
             if match:
-                self.image_id = match.group(1)
+                self.image_id = match.group(2)
                 break
+
+        print(stderr)
+        print(stdout)
+
+        self.init_image_name()
+
+        #self.config_for_archr()
+
+        self._do_config(config)
+
+        self.image_info = self.init_image_info() # should be called after _do_config b/c commit changes image_id
 
         return self
 
+    def _do_config(self, config):
+        pre_image_info = self.init_image_info()
+        entrypoint = pre_image_info['Config']['Entrypoint'] or []
+        cmd = pre_image_info['Config']['Cmd'] or []
+        print(f"{cmd=} {entrypoint=}")
+        docker_cmd = ["docker", "run", "--rm", "-id", self.image_name, '/bin/bash']
+        p = subprocess.Popen(docker_cmd, cwd=self.docker_compose_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate(timeout=30)
+        print(' '.join(docker_cmd))
+        tmp_container_id = stdout.decode('latin-1').strip()
+        self.container_id = tmp_container_id  # self.container_id used by inject_tarball
+        if not self.container_id:
+            print("no container_id, WTF")
+        if config:
+            config(self)
+        entrystr = " ".join(entrypoint)
+
+        docker_cmd = ["docker", "commit", """--change""", f'entrypoint {" ".join(entrypoint)}', """--change""", f'CMD {" ".join(cmd)}', tmp_container_id, self.image_name]
+        p = subprocess.Popen(docker_cmd, cwd=self.docker_compose_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate(timeout=30)
+        stdout = stdout.decode("latin-1").strip()
+        print(' '.join(docker_cmd))
+        if stdout.startswith("sha256:"):
+            self.image_id = stdout[7:]
+        print(f"{' '.join(docker_cmd)}")
+        docker_cmd = ["docker", "kill", tmp_container_id]
+        p = subprocess.Popen(docker_cmd, cwd=self.docker_compose_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p.wait(timeout=30)
+
+        docker_cmd = ["docker", "rm", tmp_container_id]
+        p = subprocess.Popen(docker_cmd, cwd=self.docker_compose_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p.wait(timeout=30)
+
+        docker_cmd = ["docker-compose", "-f",self.docker_compose_filepath, "down"]
+        p = subprocess.Popen(docker_cmd, cwd=self.docker_compose_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p.wait(timeout=30)
+
+        self.container_id = None
+
     def start(self):  # pylint:disable=arguments-differ
-        docker_cmd = ["docker-compose", "up", "-d"]
+        self.removed = False
+        docker_cmd = ["docker-compose","-f",self.docker_compose_filepath, "--env-file", os.path.join("/tmp", "foreign_witcher.env"), "up", "-d", self.service_name]
 
         p = subprocess.Popen(docker_cmd, cwd=self.docker_compose_path)
         p.wait(timeout=30)
 
         self.init_docker_names()
-        self.init_container_info()
+        self.init__container()
+
+        return self
+
+    def start_entrypoint(self):
+        entrypoint = (self.image.attrs['Config']['Entrypoint'] or self.image.attrs['Config']['Cmd'] or [])
+        docker_cmd = ["docker-compose", "-f",self.docker_compose_filepath, "exec", "-T", "-d", self.service_name] + entrypoint
+        l.info(f"Starting up backend service inside container.  {' '.join(entrypoint)}\nDocker CMD: {' '.join(docker_cmd)}")
+
+        p = subprocess.Popen(docker_cmd, cwd=self.docker_compose_path)
+        p.wait(timeout=30)
 
         return self
 
@@ -87,23 +164,42 @@ class DockerComposeImageTarget(Target):
         self.start()
         return self
 
-    def stop(self):
-        subprocess.check_call(["docker-compose", "stop"], cwd=self.docker_compose_path)
-        self.container = None
+    def _stop(self):
+        #subprocess.Popen(["docker-compose", "-f",self.docker_compose_filepath, "stop"], cwd=self.docker_compose_path)
+        l.info("Stopping docker container with docker-compose ")
+        subprocess.Popen(f"docker-compose -f {self.docker_compose_filepath} down &", cwd=self.docker_compose_path, shell=True)
+        self.removed = True
+        self._container = None
+
         return self
+
+    def stop(self):
+        self.remove()
 
     def remove(self):
-        if self.container is not None:
-            self.stop()
-        subprocess.check_call(["docker-compose", "rm", "-f", self.service_name], cwd=self.docker_compose_path)
+        if self._container is not None:
+            self._stop()
+        try:
+            if not self.removed:
+                l.info("Container not removed, stopping docker container with docker-compose ")
+                p = subprocess.Popen(f"docker-compose -f {self.docker_compose_filepath} down &", shell=True, cwd=self.docker_compose_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                #stdout, stderr = p.communicate(timeout=30)
+                self.removed = True
+
+        except subprocess.CalledProcessError as cpe:
+            pass
+        except Exception as ex:
+            traceback.print_exc()
+            l.exception(ex)
+
         return self
 
-    def init_docker_names(self):
+    def init_image_name(self):
         dc_fpath = f"{self.docker_compose_path}/docker-compose.yml"
         with open(dc_fpath) as rf:
             data = yaml.load(rf, Loader=yaml.FullLoader)
 
-        service_name = list(data["services"].keys())[0]
+        self.service_name = list(data["services"].keys())[0]
 
         image_body = os.path.abspath(self.docker_compose_path)
 
@@ -111,21 +207,25 @@ class DockerComposeImageTarget(Target):
             image_body = image_body[:-1]
 
         image_body = os.path.basename(image_body).lower().replace(".", "")
-        docker_cmd = ["docker-compose", "ps", service_name]
+
+        self.image_name = f"{image_body}_{self.service_name}"
+
+    def init_docker_names(self):
+
+        docker_cmd = ["docker-compose", "-f",self.docker_compose_filepath, "ps", self.service_name, '-q']
 
         # for some reason Popen was not playing nice with the -q option to just get the sha container id
         p = subprocess.Popen(docker_cmd, cwd=self.docker_compose_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         stdout, stderr = p.communicate()
-
-        self.service_name = service_name
+        print(f"docker ps :: STDOUT is {stdout} STDERR is {stderr}");
         container_line = stdout.decode("latin-1").splitlines()[2].strip()  # we want the first line after the top 2 headers
+        l.info(container_line)
         self.container_id = container_line.split(" ")[0].strip()
 
-        self.image_name = f"{image_body}_{service_name}"
-        l.debug(f"GOT {self.service_name=} {self.container_id=} {self.image_name=}")
+        l.info(f"GOT {self.service_name=} {self.container_id=} {self.image_name=}")
 
-    def init_container_info(self):
-        docker_cmd = ["docker", "inspect", self.container_id]
+    def init_image_info(self):
+        docker_cmd = ["docker", "inspect", self.image_name]
 
         l.debug(f"Docker command is: {' '.join(docker_cmd)}")
         p = subprocess.Popen(docker_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -133,26 +233,38 @@ class DockerComposeImageTarget(Target):
         strjson = stdout.decode("latin-1")
         inspected_containers = json.loads(strjson)
 
-        self.container = inspected_containers[0]
-        self.network_settings = self.container["NetworkSettings"]
+        return inspected_containers[0]
+
+    def init__container(self):
+        docker_cmd = ["docker", "inspect", self.container_id]
+
+        l.info(f"Docker command is: {' '.join(docker_cmd)}")
+        p = subprocess.Popen(docker_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        strjson = stdout.decode("latin-1")
+        inspected_containers = json.loads(strjson)
+
+        self._container = inspected_containers[0]
+        self.network_settings = self._container["NetworkSettings"]
 
     #
     # File access
     #
     @property
     def _merged_path(self):
-        return self.container['GraphDriver']['Data']['MergedDir']
+        return self._container['GraphDriver']['Data']['MergedDir']
 
     def inject_tarball(self, target_path, tarball_path=None, tarball_contents=None):
         if tarball_contents is not None:
             raise ArchrError("Tarball contens not supported in docker_compose_target")
 
         docker_cmd = ["docker", "cp", tarball_path, f"{self.container_id}:{target_path}"]
-        p = self.run_command(docker_cmd)
-        p.wait(timeout=300)
+        l.debug(f"Docker copy command: {' '.join(docker_cmd)}")
+        p = subprocess.Popen(docker_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate(timeout=300)
 
         if p.returncode != 0:
-            raise ArchrError(f"Received Error code when attempting to copy tarball {tarball_path} to {self.container_id}:{target_path}")
+            raise ArchrError(f"Received Error code when attempting to copy tarball {tarball_path} to {self.container_id}:{target_path}\n{stdout}\n{stderr}")
 
         p.terminate()
 
@@ -206,6 +318,14 @@ class DockerComposeImageTarget(Target):
     #
 
     @property
+    def image(self):
+        return TargetInfoClass(self.image_info)
+
+    @property
+    def container(self):
+        return TargetInfoClass(self._container)
+
+    @property
     def ipv4_address(self):
         if self.network_settings is None:
             return None
@@ -225,13 +345,13 @@ class DockerComposeImageTarget(Target):
         ports = []
         try:
             ports.extend([int(k.split('/')[0])
-                          for k in self.container['Config']['ExposedPorts'].keys() if 'tcp' in k])
+                          for k in self._container['Config']['ExposedPorts'].keys() if 'tcp' in k])
         except KeyError:
             pass
         try:
-            if self.container['Config']['Env']:
+            if self._container['Config']['Env']:
                 ports.extend([int(k.split('=')[-1])
-                              for k in self.container['Config']['Env'] if k.startswith('TCP_PORT')])
+                              for k in self._container['Config']['Env'] if k.startswith('TCP_PORT')])
         except ValueError:
             l.warning('An enviroment variable for %s starts with "TCP_PORT", but the value is not an integer.',
                       self.image_id)
@@ -244,13 +364,13 @@ class DockerComposeImageTarget(Target):
         ports = []
         try:
             ports.extend([int(k.split('/')[0])
-                          for k in self.container['Config']['ExposedPorts'].keys() if 'udp' in k])
+                          for k in self._container['Config']['ExposedPorts'].keys() if 'udp' in k])
         except KeyError:
             pass
         try:
-            if self.container['Config']['Env']:
+            if self._container['Config']['Env']:
                 ports.extend([int(k.split('=')[-1])
-                              for k in self.container['Config']['Env'] if k.startswith('UDP_PORT')])
+                              for k in self._container['Config']['Env'] if k.startswith('UDP_PORT')])
         except ValueError:
             l.warning('An enviroment variable for %s starts with "UDP_PORT", but the value is not an integer.',
                       self.image_id)
@@ -264,10 +384,10 @@ class DockerComposeImageTarget(Target):
 
     @property
     def user(self):
-        return self.container['Config'].get('User', 'root')
+        return self._container['Config'].get('User', 'root')
 
     def get_proc_pid(self, proc):
-        if not self.container:
+        if not self._container:
             return None
 
         # For now lets just return the guest pid
@@ -285,12 +405,23 @@ class DockerComposeImageTarget(Target):
     #
     # Execution
     #
+    def run_setup_command(self, cmd, fail=True):
+        p = self._run_command(cmd, env=None, building=True)
+        stdout, stderr = p.communicate()
+        if p.returncode != 0:
+            print(f"Command sent = {' '.join(cmd)}")
+            print(f"{stdout=}")
+            print(f"\033[31m{stderr=}\033[0m")
+            if fail:
+                raise Exception("Error command failed to run successfully against docker container")
+        return p.returncode
+
     def _run_command(
             self, args, env,
             user=None, aslr=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, use_qemu=False,
-            privileged=False
+            privileged=False, building=True
     ):  # pylint:disable=arguments-differ
-        if self.container is None:
+        if self._container is None and not building:
             raise ArchrError("target.start() must be called before target.run_command()")
 
         if use_qemu:
@@ -304,7 +435,11 @@ class DockerComposeImageTarget(Target):
                 # use setarch to disable ASLR
                 args = ['setarch', 'x86_64', '-R'] + args
 
-        docker_args = [ "docker-compose", "exec", "-T" ]
+        if building:
+            docker_args = ["docker", "exec", "-i"]
+        else:
+            docker_args = [ "docker-compose", "-f",self.docker_compose_filepath, "exec", "-T" ]
+
 
         if privileged:
             docker_args.append("--privileged")
@@ -313,7 +448,10 @@ class DockerComposeImageTarget(Target):
                 docker_args += [ "-e", f"{ekey}={eval}" ]
         if user:
             docker_args += [ "-u", user ]
-        docker_args.append(self.service_name)
+        if building:
+            docker_args.append(self.container_id)
+        else:
+            docker_args.append(self.service_name)
 
         l.debug("running command: %s", " ".join(docker_args + args))
 
@@ -327,7 +465,7 @@ class DockerComposeImageTarget(Target):
     # Docker wrappers
     #
     def _pull(self):
-        subprocess.check_call(["docker-compose","pull"], cwd=self.docker_compose_path)
+        subprocess.check_call(["docker-compose","-f",self.docker_compose_filepath, "pull"], cwd=self.docker_compose_path)
 
 
 def check_in_docker() -> bool:
