@@ -74,7 +74,10 @@ class ContextAnalyzer(Analyzer):
 
     def _fire_testcase(self, flight, channel=None): #pylint:disable=no-self-use
         flight.start()
-        return flight.get_channel(channel)
+        # return the existing connection if there is one
+        # but do not try to open a new connection. In some cases, it is expected that
+        # the target crashes after the interaction actions
+        return flight._channels.get(channel, None)
 
     @contextmanager
     def fire_context(self, *args, **kwargs):  # -> ContextManager[Flight]:
