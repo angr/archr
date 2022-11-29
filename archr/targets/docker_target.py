@@ -1,4 +1,5 @@
 import subprocess
+import shutil
 import sys
 import tarfile
 import tempfile
@@ -271,15 +272,15 @@ class DockerImageTarget(Target):
 
     def copy_file(self, target_path, dst_path, dereference=False):
         with tempfile.NamedTemporaryFile() as temp_archive:
-            with open(temp_archive, 'wb') as fh:
+            with open(temp_archive.name, 'wb') as fh:
                 stream, _ = self.container.get_archive(target_path)
                 for content in stream:
                     fh.write(content)
 
-            with open(temp_archive, 'rb') as fh:
+            with open(temp_archive.name, 'rb') as fh:
                 with tarfile.open(fileobj=fh, mode='r') as t:
-                    os.makedirs(dst_path, exist_ok=True)
-                    t.extractall(dst_path, members=[target_path])
+                    with t.extractfile(t.getmember(os.path.basename(target_path))) as ifh, open(dst_path, 'wb') as ofh:
+                        shutil.copyfileobj(ifh, ofh)
 
     def retrieve_tarball(self, target_path, dereference=False):
         stream, _ = self.container.get_archive(target_path)
