@@ -275,6 +275,14 @@ class Target(ABC):
             f.seek(0)
             self.inject_tarball("/", tarball_contents=f.read())
 
+    def copy_file(self, target_path, dst_path, dereference=False):
+        """
+        Copy file out from target
+
+        :param str target_path: File to copy out
+        :param str dst_path   : Destination of copy
+        """
+
     def retrieve_into(self, target_path, local_path):
         """
         Retrieves a path on the target into a path locally.
