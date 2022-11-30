@@ -203,14 +203,26 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 r.trace = numpy.require(numpy.memmap(r.trace_file.name, dtype=numpy.uint64, mode='w+', shape=1024), requirements=['O'])
                 curr_bbl_trace_index = 0
                 strace_lines = []
+                prev_strace_entry = ""
                 for entry in trace_fh:
                     if entry.startswith(b"Trace "):
                         if curr_bbl_trace_index == r.trace.shape[0]:
                             r.trace.resize(curr_bbl_trace_index * 2)
                         r.trace[curr_bbl_trace_index] = int(_trace_re.match(entry).group('addr'), 16)
                         curr_bbl_trace_index += 1
-                    elif record_file_maps and filter_strace_output([entry.decode('utf-8')]):
-                        strace_lines.append(entry)
+                    elif record_file_maps:
+                        curr_entry = entry.decode('utf-8').strip()
+                        if "page layout changed following target_mmap" in curr_entry:
+                            prev_strace_entry = curr_entry.replace("page layout changed following target_mmap","")
+                        else:
+                            if re.match('^ = |^= ', curr_entry) and prev_strace_entry:
+                                ret_val = filter_strace_output([prev_strace_entry + curr_entry])
+                            else:
+                                ret_val = filter_strace_output([curr_entry])
+
+                            if ret_val:
+                                strace_lines.append(ret_val[-1].strip())
+                                prev_strace_entry = ""
                     elif r.crashed and entry.startswith(b"qemu: last read marker was read through fd:"):
                         # grab the taint_fd
                         r.taint_fd = int(re.search(br'\[(\d+)\]', entry).group(1))
