@@ -1,14 +1,14 @@
 import contextlib
+import glob
+import logging
+import mmap
+import os
+import re
+import shutil
+import signal
+import struct
 import subprocess
 import tempfile
-import logging
-import signal
-import shutil
-import glob
-import re
-import os
-import mmap
-import struct
 
 from io import BytesIO
 
