@@ -7,10 +7,10 @@ import shutil
 import glob
 import re
 import os
+import mmap
+import struct
 
 from io import BytesIO
-
-import numpy
 
 
 l = logging.getLogger("archr.analyzers.qemu_tracer")
@@ -25,6 +25,50 @@ from ..utils import filter_strace_output, get_file_maps
 class QEMUTracerError(BaseException):
     pass
 
+
+class QEMUBBLTrace:
+    _element_size = 8  # bytes
+    _mmaped_trace = None
+    _trace_file_fh = None
+    _trace_len = None
+
+    def __del__(self):
+        self._mmaped_trace.close()
+        self._trace_file_fh.close()
+
+    def __getitem__(self, index):
+        if index < 0:
+            index = self._trace_len + index
+
+        return struct.unpack_from("<Q", self._mmaped_trace, index * self._element_size)[0]
+
+    def __init__(self, trace_file, trace_len):
+        self._trace_file_fh = open(trace_file, 'rb')
+        self._mmaped_trace = mmap.mmap(self._trace_file_fh.fileno(), 0, mmap.MAP_PRIVATE, mmap.PROT_READ)
+        self._trace_len = trace_len
+
+    def __len__(self):
+        return self._trace_len
+
+    def count(self, element):
+        count = 0
+        for curr_index in range(0, self._trace_len):
+            curr_elem = self.__getitem__(curr_index)
+            if curr_elem == element:
+                count = count + 1
+
+        return count
+
+    def index(self, element, start=0, stop=None):
+        stop = stop if stop else self._trace_len
+        for curr_index in range(start, stop):
+            curr_elem = self.__getitem__(curr_index)
+            if curr_elem == element:
+                return curr_index
+
+        raise ValueError(f"{element} is not in trace")
+
+
 class QemuTraceResult:
     # results
     returncode = None
@@ -34,8 +78,6 @@ class QemuTraceResult:
 
     # introspection
     trace = None
-    trace_file = None
-    trace_len = None
     mapped_files = None
     crash_address = None
     base_address = None
@@ -199,17 +241,15 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                 # record the trace
                 _trace_re = _trace_old_re if self.target.target_os == 'cgc' else _trace_new_re
-                r.trace_file = tempfile.NamedTemporaryFile(dir="/tmp", prefix="bbl-trace-")
-                r.trace = numpy.require(numpy.memmap(r.trace_file.name, dtype=numpy.uint64, mode='w+', shape=1024), requirements=['O'])
-                curr_bbl_trace_index = 0
+                bbl_trace_file = tempfile.NamedTemporaryFile(dir="/tmp", prefix="bbl-trace-")
+                bbl_trace_fh = open(bbl_trace_file.name, 'wb')
+                bbl_trace_len = 0
                 strace_lines = []
                 prev_strace_entry = ""
                 for entry in trace_fh:
                     if entry.startswith(b"Trace "):
-                        if curr_bbl_trace_index == r.trace.shape[0]:
-                            r.trace.resize(curr_bbl_trace_index * 2)
-                        r.trace[curr_bbl_trace_index] = int(_trace_re.match(entry).group('addr'), 16)
-                        curr_bbl_trace_index += 1
+                        bbl_trace_fh.write(struct.pack("<Q", int(_trace_re.match(entry).group('addr'), 16)))
+                        bbl_trace_len += 1
                     elif record_file_maps:
                         curr_entry = entry.decode('utf-8').strip()
                         if "page layout changed following target_mmap" in curr_entry:
@@ -228,9 +268,9 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                         r.taint_fd = int(re.search(br'\[(\d+)\]', entry).group(1))
                         l.debug("Detected the tainted fd to be %s", r.taint_fd)
 
-                r.trace_len = curr_bbl_trace_index
-                r.trace.resize(r.trace_len)
                 lastline = entry
+                bbl_trace_fh.close()
+                r.trace = QEMUBBLTrace(bbl_trace_file.name, bbl_trace_len)
 
                 if r.crashed:
                     if r.taint_fd is None and self.target.target_os != 'cgc':
@@ -247,7 +287,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     r.crash_address = int(lastline.split(b'[')[1].split(b']')[0], 16)
                     l.debug("Detected the crashing address at %s", hex(r.crash_address))
 
-                l.debug("Trace consists of %d basic blocks", r.trace_len)
+                l.debug("Trace consists of %d basic blocks", len(r.trace))
 
                 if record_file_maps:
                     r.mapped_files = get_file_maps(strace_lines)
