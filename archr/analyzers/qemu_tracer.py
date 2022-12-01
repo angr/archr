@@ -53,8 +53,7 @@ class QEMUBBLTrace:
     def count(self, element):
         count = 0
         for curr_index in range(0, self._trace_len):
-            curr_elem = self.__getitem__(curr_index)
-            if curr_elem == element:
+            if self[curr_index] == element:
                 count = count + 1
 
         return count
@@ -62,8 +61,7 @@ class QEMUBBLTrace:
     def index(self, element, start=0, stop=None):
         stop = stop if stop else self._trace_len
         for curr_index in range(start, stop):
-            curr_elem = self.__getitem__(curr_index)
-            if curr_elem == element:
+            if self[curr_index] == element:
                 return curr_index
 
         raise ValueError(f"{element} is not in trace")
