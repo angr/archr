@@ -10,9 +10,14 @@ def super_yama():
     with open("/proc/sys/kernel/yama/ptrace_scope", 'rb') as c:
         if c.read().strip() != b"0":
             l.warning("/proc/sys/kernel/yama/ptrace_scope needs to be '0'. I am setting this system-wide.")
-            os.system(_super_yama_cmd)
+            import docker  # pylint:disable=import-outside-toplevel
+            with docker.from_env() as d:
+                d.containers.run(
+                    "ubuntu:jammy",
+                    "echo 0 | tee /proc/sys/kernel/yama/ptrace_scope",
+                    privileged=True
+                )
 
-_super_yama_cmd = "echo 0 | docker run --rm --privileged -i ubuntu tee /proc/sys/kernel/yama/ptrace_scope"
 
 class STraceAnalyzer(ContextAnalyzer):
     """
