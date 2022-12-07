@@ -15,11 +15,6 @@ docker = None
 
 l = logging.getLogger("archr.target.docker_target")
 
-_super_mount_cmd = "docker run --rm --privileged " \
-                   "--mount type=bind,src=/tmp/archr_mounts/,target=/tmp/archr_mounts,bind-propagation=rshared " \
-                   "--mount type=bind,src=/var/lib/docker,target=/var/lib/docker,bind-propagation=rshared " \
-                   "ubuntu "
-
 
 def import_docker():
     global docker  # pylint:disable=global-statement
@@ -218,7 +213,20 @@ class DockerImageTarget(Target):
                 pass
             self.container = None
         if self.tmp_bind:
-            os.system(_super_mount_cmd + "rm -rf %s" % self.tmp_bind)
+            self._client.containers.run(
+                "ubuntu:jammy",
+                f"rm -rf {self.tmp_bind}",
+                mounts=[
+                    docker.types.Mount(
+                        type="bind",
+                        source="/tmp/archr_mounts",
+                        target="/tmp/archr_mounts",
+                        propagation="rshared",
+                    ),
+                ],
+                privileged=True,
+                remove=True,
+            )
         super().stop()
         return self
 
