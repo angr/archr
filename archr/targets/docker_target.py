@@ -466,7 +466,13 @@ class DockerImageTarget(Target):
     def _pull(self):
         try:
             if ':' in self.image_id:
-                image, tag = self.image_id.split(':')
+                col_count = self.image_id.count(':')
+                if col_count == 1:
+                    image, tag = self.image_id.split(':')
+                elif col_count == 2:
+                    host, port_name, tag = self.image_id.split(':')
+                    image = host + ":" + port_name
+
                 self._client.images.pull(image, tag=tag)
             else:
                 self._client.images.pull(self.image_id)
