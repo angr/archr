@@ -1,12 +1,14 @@
 import contextlib
+import glob
+import logging
+import mmap
+import os
+import re
+import shutil
+import signal
+import struct
 import subprocess
 import tempfile
-import logging
-import signal
-import shutil
-import glob
-import re
-import os
 
 from io import BytesIO
 
@@ -22,6 +24,48 @@ from ..utils import filter_strace_output, get_file_maps
 
 class QEMUTracerError(BaseException):
     pass
+
+
+class QEMUBBLTrace:
+    _element_size = 8  # bytes
+    _mmaped_trace = None
+    _trace_file_fh = None
+    _trace_len = None
+
+    def __del__(self):
+        self._mmaped_trace.close()
+        self._trace_file_fh.close()
+
+    def __getitem__(self, index):
+        if index < 0:
+            index = self._trace_len + index
+
+        return struct.unpack_from("<Q", self._mmaped_trace, index * self._element_size)[0]
+
+    def __init__(self, trace_file, trace_len):
+        self._trace_file_fh = open(trace_file, 'rb')
+        self._mmaped_trace = mmap.mmap(self._trace_file_fh.fileno(), 0, mmap.MAP_PRIVATE, mmap.PROT_READ)
+        self._trace_len = trace_len
+
+    def __len__(self):
+        return self._trace_len
+
+    def count(self, element):
+        count = 0
+        for curr_index in range(0, self._trace_len):
+            if self[curr_index] == element:
+                count = count + 1
+
+        return count
+
+    def index(self, element, start=0, stop=None):
+        stop = stop if stop else self._trace_len
+        for curr_index in range(start, stop):
+            if self[curr_index] == element:
+                return curr_index
+
+        raise ValueError(f"{element} is not in trace")
+
 
 class QemuTraceResult:
     # results
@@ -168,50 +212,71 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     r.halfway_core_path = local_halfway_core_filename
 
             if target_trace_filename:
-                trace = self.target.retrieve_contents(target_trace_filename)
-                trace_iter = self.line_iter(trace)
+                temp_trace_file = tempfile.mktemp(dir="/tmp", prefix="tracer-")
+                self.target.copy_file(target_trace_filename, temp_trace_file)
+                trace_fh = open(temp_trace_file, 'rb')
 
                 # Find where qemu loaded the binary. Primarily for PIE
                 try:
                     # the image base is the first mapped address in the page dump following the log line 'guest_base'
-                    for t in trace_iter:
+                    for t in trace_fh:
                         if t.startswith(b"guest_base"):
                             # iterate to the appropriate line
-                            next(trace_iter)
-                            next(trace_iter)
-                            t = next(trace_iter)
+                            next(trace_fh)
+                            next(trace_fh)
+                            t = next(trace_fh)
                             # parse out the first line
                             r.image_base = int(t.split(b'-')[0],16)
                             break
 
-                    r.base_address = int(next(t.split()[1] for t in trace_iter if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
+                    r.base_address = int(next(t.split()[1] for t in trace_fh if t.startswith(b"start_code")), 16) #pylint:disable=stop-iteration-return
 
                     # for a dynamically linked binary, the entry point is in the runtime linker
                     # in this case it can be useful to keep track of the entry point
-                    r.entry_point = int(next(t.split()[1] for t in trace_iter if t.startswith(b"entry")), 16)
+                    r.entry_point = int(next(t.split()[1] for t in trace_fh if t.startswith(b"entry")), 16)
                 except StopIteration as e:
                     raise QEMUTracerError("The trace does not include any data. Did you forget to chmod +x the binary?") from e
 
                 # record the trace
                 _trace_re = _trace_old_re if self.target.target_os == 'cgc' else _trace_new_re
-                r.trace = [
-                    int(_trace_re.match(t).group('addr'), 16) for t in trace_iter if t.startswith(b"Trace ")
-                ]
+                bbl_trace_file = tempfile.NamedTemporaryFile(dir="/tmp", prefix="bbl-trace-")
+                bbl_trace_fh = open(bbl_trace_file.name, 'wb')
+                bbl_trace_len = 0
+                strace_lines = []
+                prev_strace_entry = ""
+                for entry in trace_fh:
+                    if entry.startswith(b"Trace "):
+                        bbl_trace_fh.write(struct.pack("<Q", int(_trace_re.match(entry).group('addr'), 16)))
+                        bbl_trace_len += 1
+                    elif record_file_maps:
+                        curr_entry = entry.decode('utf-8').strip()
+                        if "page layout changed following target_mmap" in curr_entry:
+                            prev_strace_entry = curr_entry.replace("page layout changed following target_mmap","")
+                        else:
+                            if re.match('^ = |^= ', curr_entry) and prev_strace_entry:
+                                ret_val = filter_strace_output([prev_strace_entry + curr_entry])
+                            else:
+                                ret_val = filter_strace_output([curr_entry])
 
-                endings = trace.rsplit(b'\n', 3)[1:3]
+                            if ret_val:
+                                strace_lines.append(ret_val[-1].strip())
+                                prev_strace_entry = ""
+                    elif r.crashed and entry.startswith(b"qemu: last read marker was read through fd:"):
+                        # grab the taint_fd
+                        r.taint_fd = int(re.search(br'\[(\d+)\]', entry).group(1))
+                        l.debug("Detected the tainted fd to be %s", r.taint_fd)
+
+                lastline = entry
+                bbl_trace_fh.close()
+                r.trace = QEMUBBLTrace(bbl_trace_file.name, bbl_trace_len)
 
                 if r.crashed:
-                    # grab the taint_fd
-                    if not endings[0].startswith(b"qemu: last read marker was read through fd:"):
-                        if self.target.target_os != 'cgc':
-                            l.error(
-                                "Unexpected status line from qemu tracer. Cannot get the last read marker to set taint_fd. "
-                                "Please make sure you are using the latest shellphish-qemu.")
-                    else:
-                        r.taint_fd = int(re.search(br'\[(\d+)\]', endings[0]).group(1))
-                        l.debug("Detected the tainted fd to be %s", r.taint_fd)
+                    if r.taint_fd is None and self.target.target_os != 'cgc':
+                        l.error(
+                            "Unexpected status line from qemu tracer. Cannot get the last read marker to set taint_fd. "
+                            "Please make sure you are using the latest shellphish-qemu.")
+
                     # grab the faulting address
-                    lastline = endings[-1]
                     if lastline.startswith(b"Trace") or lastline.find(b"Segmentation") == -1:
                         l.warning("Trace return code was less than zero, but the last line of the trace does not"
                                   "contain the uncaught exception error from qemu."
@@ -223,7 +288,6 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 l.debug("Trace consists of %d basic blocks", len(r.trace))
 
                 if record_file_maps:
-                    strace_lines = filter_strace_output([line.decode('utf-8') for line in self.line_iter(trace)])
                     r.mapped_files = get_file_maps(strace_lines)
 
                 # remove the trace file on the target

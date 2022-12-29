@@ -63,6 +63,9 @@ class LocalTarget(Target):
             os.makedirs(target_path)
         t.extractall(path=target_path)
 
+    def copy_file(self, target_path, dst_path, dereference=False):
+        shutil.copy(target_path, dst_path, follow_symlinks=dereference)
+
     def retrieve_tarball(self, target_path, dereference=False):
         f = io.BytesIO()
         t = tarfile.TarFile(fileobj=f, mode="w", dereference=dereference)
