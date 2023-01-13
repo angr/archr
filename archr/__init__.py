@@ -6,6 +6,7 @@ _LOG = logging.getLogger("archr")
 
 try:
     import angr
+
     _angr_available = True
 except ImportError:
     _LOG.debug("angr import failed. angr support disabled")
@@ -13,6 +14,7 @@ except ImportError:
 
 try:
     import qtrace
+
     _qtrace_available = True
 except ImportError:
     _LOG.debug("qtrace import failed. qtrace support disabled")

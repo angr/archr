@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import os
 
+
 @contextlib.contextmanager
 def bundle(implant_name: str):
     bundle_path = tempfile.mkdtemp(prefix="archr_bundle_")
@@ -17,6 +18,7 @@ def bundle(implant_name: str):
     yield bundle_path
 
     shutil.rmtree(bundle_path)
+
 
 @contextlib.contextmanager
 def bundle_binary(path: str):

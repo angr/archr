@@ -28,10 +28,9 @@ class FakeTempdir:
 
 
 def fix_perf():
-    with open("/proc/sys/kernel/perf_event_paranoid", 'rb') as c:
+    with open("/proc/sys/kernel/perf_event_paranoid", "rb") as c:
         if c.read().strip() != b"-1":
-            l.warning(
-                "/proc/sys/kernel/perf_event_paranoid needs to be '-1'. I am setting this system-wide.")
+            l.warning("/proc/sys/kernel/perf_event_paranoid needs to be '-1'. I am setting this system-wide.")
             os.system(_super_perf_cmd)
 
 
@@ -50,8 +49,7 @@ class RRTraceResult:
 
     def __init__(self, trace_dir=None, symbolic_fd=None):
         if trace_dir is None:
-            self.trace_dir = tempfile.TemporaryDirectory(
-                prefix='rr_trace_dir_')
+            self.trace_dir = tempfile.TemporaryDirectory(prefix="rr_trace_dir_")
         else:
             self.trace_dir = FakeTempdir(trace_dir)
         self.symbolic_fd = symbolic_fd
@@ -59,7 +57,9 @@ class RRTraceResult:
     def tracer_technique(self, **kwargs):
         if trraces is None:
             raise Exception("need to install trraces")
-        return trraces.replay_interfaces.angr.technique.Trracer(self.trace_dir.name, symbolic_fd=self.symbolic_fd, **kwargs)
+        return trraces.replay_interfaces.angr.technique.Trracer(
+            self.trace_dir.name, symbolic_fd=self.symbolic_fd, **kwargs
+        )
 
 
 class RRAnalyzer(ContextAnalyzer):
@@ -93,10 +93,10 @@ class RRAnalyzer(ContextAnalyzer):
                 shutil.rmtree(tmpdir)
 
     def find_target_home_dir(self):
-        with self.target.run_context(['env']) as p:
+        with self.target.run_context(["env"]) as p:
             stdout, stderr = p.communicate()
             assert not stderr.split()
-            home_dir = stdout.split(b'\nHOME=')[1].split(b'\n')[0]
+            home_dir = stdout.split(b"\nHOME=")[1].split(b"\n")[0]
             return home_dir.decode("utf-8")
 
     def _build_command(self, options=None):
@@ -135,17 +135,23 @@ class RRTracerAnalyzer(RRAnalyzer):
 
         with self._target_mk_tmpdir() as remote_tmpdir:
             fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
-            record_command = [fire_path, 'record', '-n']
+            record_command = [fire_path, "record", "-n"]
             if trraces:
                 record_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
             if rr_args:
                 record_command += rr_args
             record_command += self.target.target_args
-            record_env = ['_RR_TRACE_DIR=' + remote_tmpdir]
-            r = RRTraceResult(trace_dir=self.local_trace_dir,
-                              symbolic_fd=self.symbolic_fd)
+            record_env = ["_RR_TRACE_DIR=" + remote_tmpdir]
+            r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
             try:
-                with self.target.flight_context(record_command, env=record_env, timeout=self.timeout, result=r, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as flight:
+                with self.target.flight_context(
+                    record_command,
+                    env=record_env,
+                    timeout=self.timeout,
+                    result=r,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                ) as flight:
                     # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
                     time.sleep(sleep_time)
                     yield flight
@@ -164,16 +170,15 @@ class RRTracerAnalyzer(RRAnalyzer):
                 elif r.returncode == [132, -9]:
                     r.crashed = True
                     r.signal = signal.SIGILL
-            path = remote_tmpdir + '/latest-trace/'
+            path = remote_tmpdir + "/latest-trace/"
             r.remote_trace_dir = path
             fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
-            self.target.run_command([fire_path, 'pack', path]).communicate()
+            self.target.run_command([fire_path, "pack", path]).communicate()
             with self._local_mk_tmpdir() as local_tmpdir:
                 self.target.retrieve_into(path, local_tmpdir)
-                os.rename(local_tmpdir + '/latest-trace/',
-                          r.trace_dir.name.rstrip('/'))
+                os.rename(local_tmpdir + "/latest-trace/", r.trace_dir.name.rstrip("/"))
 
-            assert os.path.isfile(os.path.join(r.trace_dir.name, 'version'))
+            assert os.path.isfile(os.path.join(r.trace_dir.name, "version"))
 
 
 class RRReplayAnalyzer(RRAnalyzer):
@@ -190,7 +195,7 @@ class RRReplayAnalyzer(RRAnalyzer):
         fix_perf()
 
         fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
-        replay_command = [fire_path, 'replay']
+        replay_command = [fire_path, "replay"]
         if trraces:
             replay_command += trraces.rr_unsupported_cpuid_features.rr_cpuid_filter_cmd_line_args()
         if rr_args:
@@ -201,20 +206,17 @@ class RRReplayAnalyzer(RRAnalyzer):
             d_dst = os.path.dirname(fire_path)
             paths[d_dst] = d_src
             self.target.inject_paths(paths)
-            script_remote_path = os.path.join(
-                d_dst, os.path.basename(gdb_script))
+            script_remote_path = os.path.join(d_dst, os.path.basename(gdb_script))
             replay_command += ["-x", script_remote_path]
         if pid:
             actual_pid = self.get_trace_pid(trace_dir, pid)
             if not actual_pid:
-                l.error(
-                    "archr-ERROR: Couldn't get PID: %d from trace %s", pid, trace_dir)
+                l.error("archr-ERROR: Couldn't get PID: %d from trace %s", pid, trace_dir)
                 return None
-            replay_command += ['-p', str(actual_pid)]
+            replay_command += ["-p", str(actual_pid)]
         if trace_dir:
             replay_command += [trace_dir]
-        r = RRTraceResult(trace_dir=self.local_trace_dir,
-                          symbolic_fd=self.symbolic_fd)
+        r = RRTraceResult(trace_dir=self.local_trace_dir, symbolic_fd=self.symbolic_fd)
         try:
             with self.target.flight_context(replay_command, timeout=self.timeout, result=r) as flight:
                 # TODO: we need a better way of dealing with this, dnsmasq is too slow at initializing
@@ -239,13 +241,13 @@ class RRReplayAnalyzer(RRAnalyzer):
     def get_trace_pid(self, trace_dir, pid_idx):
         pids = []
         fire_path = os.path.join(self.target.tmpwd, "rr", "fire")
-        ps_command = [fire_path, 'ps']
+        ps_command = [fire_path, "ps"]
         ps_command += [trace_dir]
         with self.target.flight_context(ps_command, timeout=self.timeout) as flight:
-            channel = flight.get_channel('stdio')
-            output = channel.read().decode('utf-8')
-            for line in output.split('\n'):
-                parts = line.split('\t')
+            channel = flight.get_channel("stdio")
+            output = channel.read().decode("utf-8")
+            for line in output.split("\n"):
+                parts = line.split("\t")
                 try:
                     pid = int(parts[0])
                     pids.append(pid)

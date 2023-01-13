@@ -25,12 +25,12 @@ class TestGdbServer(unittest.TestCase):
 
     @unittest.skip("broken")
     def test_cat_docker(self):
-        with archr.targets.DockerImageTarget('archr-test:entrypoint-false').build().start() as t:
+        with archr.targets.DockerImageTarget("archr-test:entrypoint-false").build().start() as t:
             self.check_gdb_cat(t)
 
     @unittest.skip("broken")
     def test_env_order(self):
-        with archr.targets.DockerImageTarget('archr-test:entrypoint-env').build().start() as t:
+        with archr.targets.DockerImageTarget("archr-test:entrypoint-env").build().start() as t:
             a = self.gdb_do(t).stdout.read()
             b = self.gdb_do(t).stdout.read()
             c = self.gdb_do(t).stdout.read()
@@ -43,5 +43,5 @@ class TestGdbServer(unittest.TestCase):
             self.check_gdb_cat(t)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

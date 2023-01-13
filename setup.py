@@ -14,6 +14,7 @@ from setuptools import Command, setup
 from setuptools.command.develop import develop as st_develop
 from setuptools.errors import LibError
 
+
 def _build_support_libraries():
     env = os.environ.copy()
     env["CMAKE_GENERATOR"] = "Ninja"
@@ -32,6 +33,7 @@ def _clean_support_libraries():
     curr_dir = pathlib.Path(__file__).parent.absolute()
     build_dir = os.path.join(curr_dir, "archr", "implants", "udp_tcp_convert", "build")
     shutil.rmtree(build_dir, ignore_errors=True)
+
 
 class build(st_build):
     def run(self, *args):
@@ -76,13 +78,13 @@ try:
 except ModuleNotFoundError:
     pass
 
-if 'bdist_wheel' in sys.argv and '--plat-name' not in sys.argv:
-    sys.argv.append('--plat-name')
+if "bdist_wheel" in sys.argv and "--plat-name" not in sys.argv:
+    sys.argv.append("--plat-name")
     name = get_platform()
-    if 'linux' in name:
-        sys.argv.append('manylinux2014_' + platform.machine())
+    if "linux" in name:
+        sys.argv.append("manylinux2014_" + platform.machine())
     else:
         # https://www.python.org/dev/peps/pep-0425/
-        sys.argv.append(name.replace('.', '_').replace('-', '_'))
+        sys.argv.append(name.replace(".", "_").replace("-", "_"))
 
 setup(cmdclass=cmdclass)

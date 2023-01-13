@@ -11,12 +11,14 @@ import time
 
 l = logging.getLogger("archr.analyzers.gdb")
 
+
 class FakeTempdir:
     def __init__(self, path):
         self.name = path
 
     def cleanup(self):
         return
+
 
 class GDBResult:
     returncode = None
@@ -26,7 +28,7 @@ class GDBResult:
 
     def __init__(self, trace_dir=None):
         if trace_dir is None:
-            self.trace_dir = tempfile.TemporaryDirectory(prefix='gdb_trace_dir_')
+            self.trace_dir = tempfile.TemporaryDirectory(prefix="gdb_trace_dir_")
         else:
             self.trace_dir = FakeTempdir(trace_dir)
 
@@ -69,8 +71,7 @@ class GDBAnalyzer(ContextAnalyzer):
             d_dst = os.path.dirname(fire_path)
             paths[d_dst] = d_src
             self.target.inject_paths(paths)
-            script_remote_path = os.path.join(
-                d_dst, os.path.basename(gdb_script))
+            script_remote_path = os.path.join(d_dst, os.path.basename(gdb_script))
             gdb_command += ["-x", script_remote_path]
             gdb_command += ["--args"]
             gdb_command += self.target.target_args

@@ -1,4 +1,5 @@
 # archr
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 Traditionally, binary analysis has been implicitly _program-centric_, meaning that the atomic unit of concern is the binary being analyzed.
 This assumption is usually implicit: `angr.Project` is instantiated with the binary in question, `afl` launches the binary itself, generally hyper-modified to make it easier to fuzz, and so on.

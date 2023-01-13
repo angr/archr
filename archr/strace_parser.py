@@ -73,33 +73,40 @@ tokens = (
     "EQUALS",
     "SYMBOL",
     "ERRNO_S",
-    "STRING"
+    "STRING",
 )
 
-def t_SPACE(t): # pylint: disable=unused-argument
+
+def t_SPACE(t):  # pylint: disable=unused-argument
     r"\s+"
+
 
 def t_HEX_NUMBER(t):
     r"0x[0-9a-f]+"
-    t.value = int(t.value,16)
+    t.value = int(t.value, 16)
     return t
+
 
 def t_NUMBER(t):
     r"-*\d+"
     t.value = int(t.value)
     return t
 
+
 t_LEFT_PAREN = r"\("
 t_RIGHT_PAREN = r"\)"
 
-def t_COMMA(t): # pylint: disable=unused-argument
+
+def t_COMMA(t):  # pylint: disable=unused-argument
     r","
+
 
 t_EQUALS = r"="
 
 special_symbols = {
-    'errno': 'ERRNO_S',
+    "errno": "ERRNO_S",
 }
+
 
 def t_SYMBOL(t):
     r"[a-zA-Z_][a-zA-Z0-9_|]+"
@@ -109,19 +116,20 @@ def t_SYMBOL(t):
 
 
 def t_STRING(t):
-    r"\".*\""
-    #lets strip the quotes
+    r"\".*\" "
+    # lets strip the quotes
     t.value = t.value[1:-1]
     return t
+
 
 def t_error(t):
     raise TypeError(f"Unknown text '{t.value}'")
 
+
 lex.lex()
 
 
-
-class StraceEntry():
+class StraceEntry:
     """StraceEntry
     a class used to record a strace log entry
 
@@ -135,15 +143,17 @@ class StraceEntry():
         the object representing an error caused by the syscall.
         None if there was no error
     """
-    def __init__(self,pid,syscall,error):
-        self.pid=pid
-        self.syscall=syscall
-        self.error=error
+
+    def __init__(self, pid, syscall, error):
+        self.pid = pid
+        self.syscall = syscall
+        self.error = error
 
     def __repr__(self):
         return f"StraceEntry({self.pid},{self.syscall},{self.error})"
 
-class Syscall():
+
+class Syscall:
     """Syscall
     a class used to record the syscall from an strace log entry
 
@@ -156,13 +166,14 @@ class Syscall():
     result : int
         the return value of the syscall
     """
-    def __init__(self,syscall,args,result):
+
+    def __init__(self, syscall, args, result):
         self.syscall = syscall
         self.args = args
         self.result = result
 
     def __eq__(self, other):
-        if not isinstance(other,str):
+        if not isinstance(other, str):
             raise NotImplementedError
 
         return other == self.syscall
@@ -170,7 +181,8 @@ class Syscall():
     def __repr__(self):
         return f"Syscall({self.syscall}, args={self.args}, result={self.result})"
 
-class Error():
+
+class Error:
     """Error
     a class to record an error raised by a syscall logged in a strace entry
 
@@ -182,12 +194,14 @@ class Error():
         the error message string if there was one
         None otherwise
     """
-    def __init__(self,errno,message):
+
+    def __init__(self, errno, message):
         self.errno = errno
         self.message = message
 
     def __repr__(self):
         return f"ERROR({self.errno}, {self.message})"
+
 
 def p_strace_line(p):
     """
@@ -195,6 +209,7 @@ def p_strace_line(p):
     strace_line : NUMBER syscall error_message
     """
     p[0] = StraceEntry(p[1], p[2], p[3] if len(p) > 3 else None)
+
 
 def p_syscall(p):
     """
@@ -207,9 +222,9 @@ def p_syscall(p):
     if len(p) == 6:
         p[0] = Syscall(p[1], p[3], p[5])
     elif len(p) == 5:
-        if isinstance(p[4],str):
+        if isinstance(p[4], str):
             p[0] = Syscall(p[1], p[3], None)
-        elif isinstance(p[4],int):
+        elif isinstance(p[4], int):
             p[0] = Syscall(p[1], None, p[4])
     else:
         if p[1] == "Unknown":
@@ -217,11 +232,13 @@ def p_syscall(p):
         else:
             p[0] = Syscall(p[1], p[3], None)
 
+
 def p_error_message(p):
     """
     error_message : ERRNO_S result LEFT_PAREN arg_list RIGHT_PAREN
     """
-    p[0] = Error(p[2],' '.join(p[4]))
+    p[0] = Error(p[2], " ".join(p[4]))
+
 
 def p_result(p):
     """
@@ -229,6 +246,7 @@ def p_result(p):
     result : EQUALS HEX_NUMBER
     """
     p[0] = p[2]
+
 
 def p_arg_list(p):
     """
@@ -247,10 +265,13 @@ def p_arg_list(p):
         p[0] = p[1]
         p[0].append(p[2])
 
+
 def p_error(p):
     print(f"Syntax error at '{p.value}'")
 
+
 yacc.yacc(debug=False, write_tables=False, errorlog=yacc.NullLogger())
+
 
 def parse(strace_log_lines):
     """
@@ -274,7 +295,9 @@ def parse(strace_log_lines):
 
     return entries
 
+
 if __name__ == "__main__":
     import sys
-    with open(sys.argv[1], 'r', encoding='utf-8') as log_f:
+
+    with open(sys.argv[1], "r", encoding="utf-8") as log_f:
         print(parse(log_f.readlines()))

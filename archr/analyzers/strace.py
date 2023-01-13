@@ -6,17 +6,17 @@ from . import ContextAnalyzer
 
 l = logging.getLogger("archr.analyzers.strace")
 
+
 def super_yama():
-    with open("/proc/sys/kernel/yama/ptrace_scope", 'rb') as c:
+    with open("/proc/sys/kernel/yama/ptrace_scope", "rb") as c:
         if c.read().strip() != b"0":
             l.warning("/proc/sys/kernel/yama/ptrace_scope needs to be '0'. I am setting this system-wide.")
             import docker  # pylint:disable=import-outside-toplevel
+
             try:
                 client = docker.from_env()
                 client.containers.run(
-                    "ubuntu:jammy",
-                    "echo 0 | tee /proc/sys/kernel/yama/ptrace_scope",
-                    privileged=True
+                    "ubuntu:jammy", "echo 0 | tee /proc/sys/kernel/yama/ptrace_scope", privileged=True
                 )
             finally:
                 client.close()
@@ -30,7 +30,7 @@ class STraceAnalyzer(ContextAnalyzer):
     REQUIRED_BINARY = "/usr/bin/strace"
 
     @contextlib.contextmanager
-    def fire_context(self, trace_args=None, args_prefix=None, **kwargs): #pylint:disable=arguments-differ
+    def fire_context(self, trace_args=None, args_prefix=None, **kwargs):  # pylint:disable=arguments-differ
         """
         Starts strace with a fresh process.
 
@@ -43,9 +43,9 @@ class STraceAnalyzer(ContextAnalyzer):
         with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
             yield flight
         try:
-            flight.result = flight.process.stderr.read() # illegal, technically
+            flight.result = flight.process.stderr.read()  # illegal, technically
         except ValueError:
-            flight.result = b''
+            flight.result = b""
 
 
 class STraceAttachAnalyzer(ContextAnalyzer):
@@ -56,7 +56,7 @@ class STraceAttachAnalyzer(ContextAnalyzer):
     REQUIRED_BINARY = "/usr/bin/strace"
 
     @contextlib.contextmanager
-    def fire_context(self, pid, trace_args=None, args_prefix=None, **kwargs): #pylint:disable=arguments-differ
+    def fire_context(self, pid, trace_args=None, args_prefix=None, **kwargs):  # pylint:disable=arguments-differ
         """
         Starts strace attaching to a given process
 

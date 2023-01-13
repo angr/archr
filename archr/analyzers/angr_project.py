@@ -14,33 +14,40 @@ from . import Analyzer
 
 
 def _extract_mapping_from_core_file(core_path):
-    with open(core_path, 'rb') as core_file:
+    with open(core_path, "rb") as core_file:
         core_elf = ELFFile(core_file)
         for segment in core_elf.iter_segments():
             if isinstance(segment, NoteSegment):
                 notes = list(segment.iter_notes())
                 break
         else:
-            l.warning("The core file @ %s does not contain a NOTE segment, you should fix that. We "
-                      "will attempt to get the mapped addresses from the scout_analyzer instead I guess.", core_path)
+            l.warning(
+                "The core file @ %s does not contain a NOTE segment, you should fix that. We "
+                "will attempt to get the mapped addresses from the scout_analyzer instead I guess.",
+                core_path,
+            )
             return None
     for note in notes:
-        if note['n_type'] == 'NT_FILE':
+        if note["n_type"] == "NT_FILE":
             file_note = note
             break
     else:
-        l.warning("Could not find an NT_FILE note in the core file @ %s. This is bad, and you should fix "
-                  "it. We will fall back to trying to extract the mappings from the scout_analyzer.", core_path)
+        l.warning(
+            "Could not find an NT_FILE note in the core file @ %s. This is bad, and you should fix "
+            "it. We will fall back to trying to extract the mappings from the scout_analyzer.",
+            core_path,
+        )
         return None
 
-    mappings = file_note['n_desc']['Elf_Nt_File_Entry']
-    paths = [p.decode() for p in file_note['n_desc']['filename']]
+    mappings = file_note["n_desc"]["Elf_Nt_File_Entry"]
+    paths = [p.decode() for p in file_note["n_desc"]["filename"]]
     assert len(paths) == len(mappings)
     mem_map = {}
     for fpath, mapping in zip(paths, mappings):
-        mem_map[fpath] = min(mem_map.get(fpath, mapping['vm_start']), mapping['vm_start'])
+        mem_map[fpath] = min(mem_map.get(fpath, mapping["vm_start"]), mapping["vm_start"])
 
     return mem_map
+
 
 class angrProjectAnalyzer(Analyzer):
     """
@@ -69,7 +76,9 @@ class angrProjectAnalyzer(Analyzer):
         self._mem_mapping = None
         self._lib_folder = None
 
-    def fire(self, core_path=None, return_loader=False, project_kwargs=None, **cle_args):  # pylint:disable=arguments-differ
+    def fire(
+        self, core_path=None, return_loader=False, project_kwargs=None, **cle_args
+    ):  # pylint:disable=arguments-differ
 
         # if the the project is already created, return what the user wants
         if self.project is not None:
@@ -88,10 +97,10 @@ class angrProjectAnalyzer(Analyzer):
         the_binary = os.path.join(tmpdir, os.path.basename(self.target.target_path))
 
         # preload the binary to decide if it supports setting library options or base addresses
-        cle_args.update(cle_args.pop('load_options', {}))
-        cle_args.pop('use_sim_procedures', None)  # TODO do something less hacky than this
+        cle_args.update(cle_args.pop("load_options", {}))
+        cle_args.pop("use_sim_procedures", None)  # TODO do something less hacky than this
         preload_kwargs = dict(cle_args)
-        preload_kwargs['auto_load_libs'] = False
+        preload_kwargs["auto_load_libs"] = False
         preloader = cle.Loader(the_binary, **preload_kwargs)
 
         self._mem_mapping = None
@@ -100,7 +109,7 @@ class angrProjectAnalyzer(Analyzer):
             self._mem_mapping = _extract_mapping_from_core_file(core_path)
 
         if self._mem_mapping is None and self.scout_analyzer is not None:
-            _,_,_,self._mem_mapping = self.scout_analyzer.fire()
+            _, _, _, self._mem_mapping = self.scout_analyzer.fire()
 
         self._mem_mapping = self._mem_mapping or {}
 
@@ -111,7 +120,7 @@ class angrProjectAnalyzer(Analyzer):
             self.target.retrieve_into(target_lib, tmpdir)
             if auto_load_libs:
                 the_libs.append(local_lib)
-        lib_opts = {os.path.basename(lib): {'base_addr': libaddr} for lib, libaddr in self._mem_mapping.items()}
+        lib_opts = {os.path.basename(lib): {"base_addr": libaddr} for lib, libaddr in self._mem_mapping.items()}
         bin_opts = {}
         if preloader.main_object.pic:
             bin_opts = lib_opts.get(os.path.basename(self.target.target_path), {})
@@ -124,29 +133,24 @@ class angrProjectAnalyzer(Analyzer):
             # grab remote libraries to local machine and build the mapping
             for remote_path in self._mem_mapping:
                 # use heuristic to distinguish file mappings from others
-                if not remote_path.startswith('/'):
+                if not remote_path.startswith("/"):
                     continue
                 self.target.retrieve_into(remote_path, tmpdir)
                 local_path = os.path.join(tmpdir, os.path.basename(remote_path))
                 file_mapping[remote_path] = local_path
 
-            bin_opts = {"backend": "elfcore",
-                        "executable": the_binary,
-                        "remote_file_mapping": file_mapping}
-            self.project = angr.Project(core_path,
-                                        main_opts=bin_opts,
-                                        rebase_granularity=0x1000,
-                                        **project_kwargs)
+            bin_opts = {"backend": "elfcore", "executable": the_binary, "remote_file_mapping": file_mapping}
+            self.project = angr.Project(core_path, main_opts=bin_opts, rebase_granularity=0x1000, **project_kwargs)
             if not return_loader:
                 self._apply_all_hooks()
             self.project.loader.main_object = self.project.loader.elfcore_object._main_object
             return self.project if not return_loader else self.project.loader
 
         if return_loader:
-            return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts,
-                              **cle_args)
-        self.project = angr.Project(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts,
-                                    **project_kwargs)
+            return cle.Loader(the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **cle_args)
+        self.project = angr.Project(
+            the_binary, preload_libs=the_libs, lib_opts=lib_opts, main_opts=bin_opts, **project_kwargs
+        )
 
         self._apply_all_hooks()
 
@@ -170,9 +174,8 @@ class angrProjectAnalyzer(Analyzer):
             assert isinstance(self.project.simos, SimUserland)
 
             for name, sys_sim in self.custom_syscalls.items():
-                l.debug('Hooking system call %s with %s', name, sys_sim)
+                l.debug("Hooking system call %s with %s", name, sys_sim)
                 self.project.simos.syscall_library.procedures[name] = sys_sim
-
 
     def _apply_simprocedures(self):
         """
@@ -182,7 +185,7 @@ class angrProjectAnalyzer(Analyzer):
         """
 
         # all SimProcedures indexed by name, assuming no name conflicts exist
-        simprocs = { }
+        simprocs = {}
         for _, simproc_dict in angr.SIM_PROCEDURES.items():
             for name, simproc in simproc_dict.items():
                 simprocs[name] = simproc

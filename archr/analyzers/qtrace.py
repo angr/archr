@@ -27,9 +27,7 @@ class QTraceAnalyzer(Analyzer):
 
             def start(machine):
                 host = self.target.ipv4_address
-                machine.trace_socket = qtrace.create_connection(
-                    (host, 4242), sleep_time=0.1
-                )
+                machine.trace_socket = qtrace.create_connection((host, 4242), sleep_time=0.1)
                 machine.gdb = machine.gdb_client((host, 1234), machine)
                 machine.std_streams = (
                     process.stdin,

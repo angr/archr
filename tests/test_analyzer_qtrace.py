@@ -15,10 +15,7 @@ class TestAnalyzerQTrace(unittest.TestCase):
         analyzer = archr.analyzers.QTraceAnalyzer(target)
         machine = analyzer.fire(args_suffix=["/etc/passwd"], **kwargs)
 
-        syscalls = [
-            qtrace.syscalls["x86_64"][e[1]][1]
-            for e in machine.filtered_trace("syscall_start")
-        ]
+        syscalls = [qtrace.syscalls["x86_64"][e[1]][1] for e in machine.filtered_trace("syscall_start")]
 
         correct_syscalls = [
             "sys_openat",
@@ -46,9 +43,7 @@ class TestAnalyzerQTrace(unittest.TestCase):
             self.check_qtrace_results(target)
 
     def test_qtrace_docker(self):
-        with archr.targets.DockerImageTarget(
-            "archr-test:cat"
-        ).build().start() as target:
+        with archr.targets.DockerImageTarget("archr-test:cat").build().start() as target:
             self.check_qtrace_results(target)
 
 

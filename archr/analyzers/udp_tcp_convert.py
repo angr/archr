@@ -3,7 +3,9 @@ import logging
 import os
 
 from . import ContextAnalyzer
+
 l = logging.getLogger("archr.analyzers.udp_tcp_convert")
+
 
 class UDPTCPConvert(ContextAnalyzer):
     """
@@ -17,7 +19,7 @@ class UDPTCPConvert(ContextAnalyzer):
         self.lib_path = os.path.join(self.target.tmpwd, "udp_tcp_convert", "libudp_to_tcp.so")
 
     @contextlib.contextmanager
-    def fire_context(self, args_prefix=None, **kwargs): #pylint:disable=arguments-differ
+    def fire_context(self, args_prefix=None, **kwargs):  # pylint:disable=arguments-differ
         """
         LD_PRELOAD a given process converting it's udp sockets into tcp
 
