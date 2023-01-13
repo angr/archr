@@ -5,7 +5,8 @@ class ArchrError(Exception):
         self.message = message
 
     def __str__(self):
-        return f'{self.message}'
+        return f"{self.message}"
+
 
 class ArchrValueError(ArchrError, ValueError):
     pass

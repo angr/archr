@@ -13,7 +13,7 @@ class TestShellcodeHook(unittest.TestCase):
         build_container("entrypoint-false")
 
     def test_dockerfile_hook(self):
-        with archr.targets.DockerImageTarget('archr-test:entrypoint-false').build().start() as t:
+        with archr.targets.DockerImageTarget("archr-test:entrypoint-false").build().start() as t:
             assert t.run_command().wait() == 1
             with t.shellcode_context(asm_code="mov rax, 0x3c; mov rdi, 0x2a; syscall") as p:
                 assert p.wait() == 42
@@ -31,5 +31,5 @@ class TestShellcodeHook(unittest.TestCase):
         os.unlink(tf)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

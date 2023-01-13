@@ -6,14 +6,18 @@ from .actions import OpenChannelAction
 
 l = logging.getLogger("archr.target.flight")
 
+
 class InteractionError(BaseException):
     pass
+
+
 class Interaction:
     """
     An Interaction specifies how to interact with a target
     An Interaction is generally the result of ContextAnalyzer.fire_context.
     It has a result field, which is normally returned from ContexAnalyzer.fire.
     """
+
     def __init__(self, target, process, actions=None, result=None):
         self.target = target
         self.process = process
@@ -47,15 +51,15 @@ class Interaction:
     @property
     def default_channel_name(self):
         if self.target.tcp_ports and self.target.ip_version == 4:
-            name = 'tcp:0'
+            name = "tcp:0"
         elif self.target.tcp_ports and self.target.ip_version == 6:
-            name = 'tcp6:0'
+            name = "tcp6:0"
         elif self.target.udp_ports and self.target.ip_version == 4:
-            name = 'udp:0'
+            name = "udp:0"
         elif self.target.udp_ports and self.target.ip_version == 6:
-            name = 'udp6:0'
+            name = "udp6:0"
         elif self.process:
-            name = 'stdio'
+            name = "stdio"
         else:
             raise ValueError("Target has no default channel defined")
         return name
@@ -71,8 +75,8 @@ class Interaction:
                 sock.shutdown_wr()
         if self.process is not None:
             self.process.stdin.close()
-            #time.sleep(2)
-            #if self.process.poll() is None:
+            # time.sleep(2)
+            # if self.process.poll() is None:
             #    print("Hung process")
             #    import ipdb; ipdb.set_trace()
             try:
@@ -96,6 +100,7 @@ class Interaction:
 
         for act in self.actions:
             act.perform()
+
 
 # backward compatibility
 Flight = Interaction

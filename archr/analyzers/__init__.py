@@ -6,6 +6,7 @@ from archr.targets.actions import OpenChannelAction, SendAction, CloseChannelAct
 
 l = logging.getLogger(name=__name__)
 
+
 class Analyzer:
     REQUIRED_IMPLANT = None
     REQUIRED_BINARY = None
@@ -46,7 +47,9 @@ class ContextAnalyzer(Analyzer):
     Provides a default .fire() that replays a testcase.
     """
 
-    def fire(self, *args, testcase=None, pre_fire_hook=None, channel=None, delay=0, actions=None, **kwargs): #pylint:disable=arguments-differ
+    def fire(
+        self, *args, testcase=None, pre_fire_hook=None, channel=None, delay=0, actions=None, **kwargs
+    ):  # pylint:disable=arguments-differ
         if actions is None and testcase is not None:
             if type(testcase) is bytes:
                 open_act = OpenChannelAction(channel_name=channel)
@@ -60,7 +63,7 @@ class ContextAnalyzer(Analyzer):
             else:
                 raise TypeError("Unsupported type for testcase")
 
-        kwargs['actions'] = actions
+        kwargs["actions"] = actions
 
         with self.fire_context(*args, **kwargs) as flight:
             if delay:
@@ -72,7 +75,7 @@ class ContextAnalyzer(Analyzer):
 
         return flight.result
 
-    def _fire_testcase(self, flight, channel=None): #pylint:disable=no-self-use
+    def _fire_testcase(self, flight, channel=None):  # pylint:disable=no-self-use
         flight.start()
         # return the existing connection if there is one
         # but do not try to open a new connection. In some cases, it is expected that

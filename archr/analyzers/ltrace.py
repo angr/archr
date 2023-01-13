@@ -16,7 +16,7 @@ class LTraceAnalyzer(ContextAnalyzer):
     REQUIRED_IMPLANT = "ltrace"
 
     @contextmanager
-    def fire_context(self, args_prefix=None, trace_args=None, **kwargs): #pylint:disable=arguments-differ
+    def fire_context(self, args_prefix=None, trace_args=None, **kwargs):  # pylint:disable=arguments-differ
         """
         Starts ltrace with a fresh process.
         :param trace_args: Options for ltrace
@@ -27,7 +27,7 @@ class LTraceAnalyzer(ContextAnalyzer):
         args_prefix = (args_prefix or []) + [fire_path] + (trace_args or []) + ["--"]
         with self.target.flight_context(args_prefix=args_prefix, **kwargs) as flight:
             yield flight
-        flight.result = flight.process.stderr.read() # illegal, technically
+        flight.result = flight.process.stderr.read()  # illegal, technically
 
 
 class LTraceAttachAnalyzer(ContextAnalyzer):
@@ -38,7 +38,7 @@ class LTraceAttachAnalyzer(ContextAnalyzer):
     REQUIRED_IMPLANT = "ltrace"
 
     @contextmanager
-    def fire_context(self, pid=None, trace_args=None, **kwargs): #pylint:disable=arguments-differ
+    def fire_context(self, pid=None, trace_args=None, **kwargs):  # pylint:disable=arguments-differ
         """
         Attaches ltrace to an already existing process.
         :param pid: PID of target process
@@ -53,4 +53,4 @@ class LTraceAttachAnalyzer(ContextAnalyzer):
         cmd_args = [fire_path] + (trace_args or []) + ["-p", "%d" % pid]
         with self.target.flight_context(args=cmd_args, **kwargs) as flight:
             yield flight
-        flight.result = flight.process.stderr.read() # illegal, technically
+        flight.result = flight.process.stderr.read()  # illegal, technically

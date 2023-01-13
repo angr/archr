@@ -41,9 +41,7 @@ class TCPDumpAnalyzer(ContextAnalyzer):
 
         pcap_data, _ = tshark.communicate()
         pcap_data = json.loads(pcap_data)
-        packets = [
-            {k: v[0] for k, v in e["_source"]["layers"].items()} for e in pcap_data
-        ]
+        packets = [{k: v[0] for k, v in e["_source"]["layers"].items()} for e in pcap_data]
 
         conversations = collections.defaultdict(list)
 

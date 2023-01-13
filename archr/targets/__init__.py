@@ -26,9 +26,16 @@ class Target(ABC):
 
     def __init__(
         self,
-        target_args=None, target_path=None, target_env=None, target_cwd=None, target_os=None, target_arch=None,
-        ip_version=4, *, auto_remove=True
-        ):
+        target_args=None,
+        target_path=None,
+        target_env=None,
+        target_cwd=None,
+        target_os=None,
+        target_arch=None,
+        ip_version=4,
+        *,
+        auto_remove=True,
+    ):
         """
         Create an autom
 
@@ -40,28 +47,28 @@ class Target(ABC):
         :param args:
         :param kwargs:
         """
-        if target_os == 'cgc':
-            target_arch = 'i386'
+        if target_os == "cgc":
+            target_arch = "i386"
         self.target_args = target_args
         self.target_path = target_path
         self.target_env = target_env
         self.target_cwd = target_cwd
         self.target_os = target_os
         self.target_arch = target_arch
-        self.target_args_prefix = [ ]
+        self.target_args_prefix = []
         self.ip_version = ip_version
 
         self.auto_remove = auto_remove
 
         self.tmp_bind = None  # the /tmp in the target is mapped to `tmp_bind` on the host. currently only used in
-                              # DockerTarget. it impacts how resolve_local_path() works.
+        # DockerTarget. it impacts how resolve_local_path() works.
 
         if self.target_arch is None:
             l.debug("target architecture not specified, using `x86_64` by default")
-            self.target_arch = 'x86_64'
+            self.target_arch = "x86_64"
         if self.target_os is None:
             l.debug("target OS not specified, using `linux` by default")
-            self.target_os = 'linux'
+            self.target_os = "linux"
 
         self.local_workdir = tempfile.mkdtemp(prefix="archr_target_")
 
@@ -72,7 +79,7 @@ class Target(ABC):
         :return:
         """
         if not any(e.startswith("PWD=") for e in self.target_env):
-            self.target_env.append("PWD=%s"%self.target_cwd)
+            self.target_env.append("PWD=%s" % self.target_cwd)
         if "LD_BIND_NOW=1" not in self.target_env:
             self.target_env.append("LD_BIND_NOW=1")
         return self
@@ -107,7 +114,7 @@ class Target(ABC):
         """
         return self
 
-    def save(self, repository=None, tag=None, **kwargs):#pylint:disable=unused-argument
+    def save(self, repository=None, tag=None, **kwargs):  # pylint:disable=unused-argument
         """
         Saves a snapshot of the current image using the tag
         :return:
@@ -180,15 +187,17 @@ class Target(ABC):
         Temporary working directory in the target.
         """
 
-
     #
     # Convenience methods
     #
 
-    def __enter__(self): return self
+    def __enter__(self):
+        return self
+
     def __exit__(self, *args):
         self.stop()
         self.remove()
+
     def __del__(self):
         if self.auto_remove:
             self.remove()
@@ -214,8 +223,8 @@ class Target(ABC):
         :param string target_glob: the glob
         :returns list: a list of the resulting paths (as strings)
         """
-        stdout,_ = self.run_command(["/bin/sh", "-c", "ls -d "+target_glob]).communicate()
-        paths = [ p.decode('utf-8') for p in stdout.split() ]
+        stdout, _ = self.run_command(["/bin/sh", "-c", "ls -d " + target_glob]).communicate()
+        paths = [p.decode("utf-8") for p in stdout.split()]
         return paths
 
     @abstractmethod
@@ -232,7 +241,7 @@ class Target(ABC):
 
         :param str path: the path of the file (on the target)
         """
-        self.run_command(['rm', path])
+        self.run_command(["rm", path])
 
     def inject_path(self, src, dst=None):
         """
@@ -251,7 +260,7 @@ class Target(ABC):
         :return:
         """
         with io.BytesIO() as f, tarfile.open(fileobj=f, mode="w") as t:
-            for dst,src in files.items():
+            for dst, src in files.items():
                 t.add(src, arcname=dst)
             f.seek(0)
             self.inject_tarball("/", tarball_contents=f.read())
@@ -264,8 +273,8 @@ class Target(ABC):
         :param dict modes: An optional dict of { dst_path: permissions }
         """
         with io.BytesIO() as f:
-            with tarfile.open(fileobj=f, mode='w') as t:
-                for dst,content in files.items():
+            with tarfile.open(fileobj=f, mode="w") as t:
+                for dst, content in files.items():
                     i = tarfile.TarInfo(name=dst)
                     i.size = len(content)
                     i.mode = 0o777
@@ -293,15 +302,15 @@ class Target(ABC):
         with io.BytesIO() as f:
             f.write(self.retrieve_tarball(target_path))
             f.seek(0)
-            with tarfile.open(fileobj=f, mode='r') as t:
-                to_extract = [ m for m in t.getmembers() if m.path.startswith(os.path.basename(target_path).lstrip("/")) ]
+            with tarfile.open(fileobj=f, mode="r") as t:
+                to_extract = [m for m in t.getmembers() if m.path.startswith(os.path.basename(target_path).lstrip("/"))]
                 if not to_extract:
                     raise FileNotFoundError("%s not found on target" % target_path)
 
-                #local_extract_dir = os.path.join(local_path, os.path.dirname(target_path).lstrip("/"))
-                #with contextlib.suppress(FileExistsError):
+                # local_extract_dir = os.path.join(local_path, os.path.dirname(target_path).lstrip("/"))
+                # with contextlib.suppress(FileExistsError):
                 #   os.makedirs(local_extract_dir)
-                #assert os.path.exists(local_extract_dir)
+                # assert os.path.exists(local_extract_dir)
 
                 with contextlib.suppress(FileExistsError):
                     os.makedirs(local_path)
@@ -317,7 +326,7 @@ class Target(ABC):
         with io.BytesIO() as f:
             f.write(self.retrieve_tarball(target_path, dereference=True))
             f.seek(0)
-            with tarfile.open(fileobj=f, mode='r') as t:
+            with tarfile.open(fileobj=f, mode="r") as t:
                 with t.extractfile(os.path.basename(target_path)) as fp:
                     return fp.read()
 
@@ -344,7 +353,7 @@ class Target(ABC):
         return self.retrieve_contents(paths[0])
 
     @contextlib.contextmanager
-    def retrieval_context(self, target_path, local_thing=None, glob=False): #pylint:disable=redefined-outer-name
+    def retrieval_context(self, target_path, local_thing=None, glob=False):  # pylint:disable=redefined-outer-name
         """
         This is a context manager that retrieves a file from the target upon exiting.
 
@@ -364,7 +373,9 @@ class Target(ABC):
                 to_yield = local_thing
                 local_file = local_thing
             else:
-                raise ValueError("local_thing argument to retrieval_context() must be a str, a write()able object, or None")
+                raise ValueError(
+                    "local_thing argument to retrieval_context() must be a str, a write()able object, or None"
+                )
 
             try:
                 yield to_yield
@@ -443,8 +454,7 @@ class Target(ABC):
                 yield p
 
     def run_command(
-        self, args=None, args_prefix=None, args_suffix=None, env=None, # for us
-        **kwargs # for subclasses
+        self, args=None, args_prefix=None, args_suffix=None, env=None, **kwargs  # for us  # for subclasses
     ):
         """
         Run a command inside the target.
