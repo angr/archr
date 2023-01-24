@@ -299,5 +299,5 @@ def parse(strace_log_lines):
 if __name__ == "__main__":
     import sys
 
-    with open(sys.argv[1], "r", encoding="utf-8") as log_f:
+    with open(sys.argv[1], encoding="utf-8") as log_f:
         print(parse(log_f.readlines()))

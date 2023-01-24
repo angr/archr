@@ -1,10 +1,10 @@
 SHELL = /bin/sh
 
-OBJS =  
+OBJS =
 CFLAG = -Wall -g
 CC = gcc
 INCLUDES =
-LIBS = 
+LIBS =
 
 all:
 	${CC} ${CFLAGS} ${INCLUDES} udp_client.c -o udp_client ${OBJS} ${LIBS}

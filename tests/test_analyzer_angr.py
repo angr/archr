@@ -199,7 +199,7 @@ class TestangrAnalyzer(unittest.TestCase):
             simgr.run()
 
             self.assertEqual(len(simgr.deadended), 1)
-            (exit_code,) = [e.objects["exit_code"] for e in simgr.one_deadended.history.events if e.type == "terminate"]
+            (exit_code,) = (e.objects["exit_code"] for e in simgr.one_deadended.history.events if e.type == "terminate")
             self.assertEqual(simgr.one_deadended.posix.dumps(1), b"Hello, world!\n")
             self.assertEqual(simgr.one_deadended.solver.eval_one(exit_code), 42)
 
@@ -231,7 +231,7 @@ class TestangrAnalyzer(unittest.TestCase):
             simgr.run()
 
             self.assertEqual(len(simgr.deadended), 1)
-            (exit_code,) = [e.objects["exit_code"] for e in simgr.one_deadended.history.events if e.type == "terminate"]
+            (exit_code,) = (e.objects["exit_code"] for e in simgr.one_deadended.history.events if e.type == "terminate")
             self.assertEqual(simgr.one_deadended.posix.dumps(1), b"Hello")
             self.assertEqual(simgr.one_deadended.solver.eval_one(exit_code), 69)
 

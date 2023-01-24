@@ -43,7 +43,7 @@ class angrUltimateTracerAnalyzer(Analyzer):
         agent = syscall_agent.manager.get_agent(project.arch.name)
         if agent is None:
             raise RuntimeError(
-                "Cannot find a syscall agent for project %r (architecture %s)" % (project, project.arch.name)
+                f"Cannot find a syscall agent for project {project!r} (architecture {project.arch.name})"
             )
         project.bureau.start()  # get it ready to receive connections
         proc = agent.launch("tcp://127.0.0.1:%d" % project.bureau.zmq_port)  # launch the agent process
