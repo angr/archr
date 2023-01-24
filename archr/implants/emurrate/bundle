@@ -15,9 +15,9 @@ git -C qemu pull | grep -q "Already up to date." || REBUILD=1
 git -C emurrate pull | grep -q "Already up to date." || REBUILD=1
 
 for bin in ${QEMU_BINS[*]}
-do 
+do
 	[ -f "$bin" ] || REBUILD=1
-done 
+done
 
 if [ "$REBUILD" -eq 1 ]
 then

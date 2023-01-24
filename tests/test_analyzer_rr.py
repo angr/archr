@@ -8,13 +8,13 @@ class TestAnalyzerRR(unittest.TestCase):
         crash = b"A" * 272
         b = archr.analyzers.RRTracerAnalyzer(t)
         res = b.fire(testcase=crash)
-        print("Done! You can find your trace in {} (timed out?: {})".format(res.trace_dir.name, res.timed_out))
+        print(f"Done! You can find your trace in {res.trace_dir.name} (timed out?: {res.timed_out})")
 
     def get_ls_trace(self, t):
         crash = b"A" * 272
         b = archr.analyzers.RRTracerAnalyzer(t)
         res = b.fire(testcase=crash)
-        print("Done! You can find your trace in {} (timed out?: {})".format(res.trace_dir.name, res.timed_out))
+        print(f"Done! You can find your trace in {res.trace_dir.name} (timed out?: {res.timed_out})")
 
     # @unittest.skipUnless(archr.analyzers.rr.trraces, "trraces required")
     @unittest.skip("broken docker image")
