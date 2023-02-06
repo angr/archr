@@ -499,7 +499,6 @@ class DockerImageTarget(Target):
     def run_companion_command(
         self, args, env=None, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ):
-
         if not self.companion:
             raise ArchrError("The target must be created with `companion=True`")
 

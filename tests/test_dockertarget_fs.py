@@ -49,7 +49,6 @@ class TestDockerTargetFs(unittest.TestCase):
 
     def test_retrieval_context(self):
         with archr.targets.DockerImageTarget("archr-test:entrypoint-env").build().start() as t:
-
             # first, try temporary file
             with t.retrieval_context("/tmp/foo0") as o:
                 assert o.startswith("/tmp")
