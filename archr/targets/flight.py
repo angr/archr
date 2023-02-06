@@ -88,7 +88,6 @@ class Interaction:
                     raise
 
     def start(self):
-
         # sanity check
         ret = self.process.poll()
         if ret is not None:

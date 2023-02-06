@@ -79,7 +79,6 @@ class angrProjectAnalyzer(Analyzer):
     def fire(
         self, core_path=None, return_loader=False, project_kwargs=None, **cle_args
     ):  # pylint:disable=arguments-differ
-
         # if the the project is already created, return what the user wants
         if self.project is not None:
             return self.project if not return_loader else self.project.loader
@@ -127,7 +126,6 @@ class angrProjectAnalyzer(Analyzer):
 
         # if a core dump is specified, create a project based on the core dump
         if core_path:
-
             file_mapping = {}
 
             # grab remote libraries to local machine and build the mapping
