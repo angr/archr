@@ -1,14 +1,14 @@
-import contextlib
-import glob
-import logging
-import mmap
 import os
 import re
+import glob
+import mmap
 import shutil
 import signal
 import struct
-import subprocess
+import logging
 import tempfile
+import subprocess
+import contextlib
 
 from io import BytesIO
 
@@ -218,7 +218,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                         if "coreaddr" in x.rsplit("_")[-1]:
                             tmp_halfway_core_path = x
 
-                    if tmp_crash_core_path is None and len(target_cores) == 1:
+                    if r.crashed and tmp_crash_core_path is None and len(target_cores) == 1:
                         tmp_crash_core_path = target_cores[0]
 
                     # sanity check core dumps
