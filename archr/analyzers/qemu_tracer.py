@@ -110,6 +110,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         self.hackproc = qemu_args.pop('hackproc', False) if qemu_args else False
         self.hacksysinfo = qemu_args.pop('hacksysinfo', False) if qemu_args else False
         self.execve = qemu_args.pop('execve', False) if qemu_args else False
+        self.mmap_base = qemu_args.pop('mmap_base', False) if qemu_args else False
 
     def pickup_env(self):
         for e in self.target.target_env:
@@ -431,6 +432,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
             cmd_args += ["-hacksysinfo"]
         if self.execve:
             cmd_args += ["-execve", self.execve]
+        if self.mmap_base:
+            cmd_args += ["-S", hex(self.mmap_base)]
 
         # now set up the loader
         if self.ld_linux:
