@@ -20,7 +20,7 @@
 screenlog.0
 .idea
 *.egg-info
-/build
+build
 /tags
 MANIFEST
 dist
