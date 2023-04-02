@@ -60,7 +60,14 @@ class OpenChannelAction(Action):
             except LookupError as e:
                 raise ValueError("No mapping for channel number", kind, idx) from e
 
-            channel = nclib.Netcat((address, port), udp=udp, ipv6=ipv6, retry=30)
+            try:
+                channel = nclib.Netcat((address, port), udp=udp, ipv6=ipv6, retry=30)
+            except nclib.errors.NetcatError as e:
+                stdout, stderr = self.interaction.process.communicate()
+                l.error("Could not connect to channel (%s, %d)", address, port)
+                l.error("stdout:\n%s", stdout.decode())
+                l.error("stderr:\n%s", stderr.decode())
+                raise ValueError("Could not connect to channel", e)
         else:
             raise ValueError("Bad channel", channel_name)
 
