@@ -99,7 +99,7 @@ _trace_new_re = re.compile(rb"Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P
 class QEMUTracerAnalyzer(ContextAnalyzer):
     REQUIRED_IMPLANT = "shellphish_qemu"
 
-    def __init__(self, target, timeout=10, ld_linux=None, ld_preload=None, library_path=None, seed=None, qemu_args=None, **kwargs):
+    def __init__(self, target, timeout=10, ld_linux=None, ld_preload=None, library_path=None, seed=None, qemu_args=None, shell=False, **kwargs):
         super().__init__(target, **kwargs)
         self.timeout = timeout
         self.ld_linux = ld_linux
@@ -111,6 +111,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         self.hacksysinfo = qemu_args.pop('hacksysinfo', False) if qemu_args else False
         self.execve = qemu_args.pop('execve', False) if qemu_args else False
         self.mmap_base = qemu_args.pop('mmap_base', False) if qemu_args else False
+        self.shell = shell
 
     def pickup_env(self):
         for e in self.target.target_env:
@@ -175,6 +176,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 start_trace_addr=trace_bb_addr,
                 taint=taint,
             )
+            kwargs["shell"] = self.shell
 
             l.debug("launch QEMU with command: %s", " ".join(target_cmd))
             r = QemuTraceResult()
