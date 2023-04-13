@@ -1,6 +1,45 @@
 [build-system]
-requires = ["setuptools>=46.4.0", "wheel", "cmake", "ninja"]
+requires = ["setuptools>=67", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "archr"
+description = "Target-centric program analysis."
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+]
+dependencies = [
+    "cle~=9.2.46",
+    "docker",
+    "nclib>=1.0.0rc3",
+    "patchelf-wrapper",
+    "ply",
+    "pygdbmi",
+    "shellphish-qemu>=0.12.2",
+]
+requires-python = ">=3.8"
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/angr/archr"
+repository = "https://github.com/angr/archr"
+
+[tool.setuptools.dynamic]
+version = {attr = "archr.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["archr*"]  # package names should match these glob patterns (["*"] by default)
+
+[tool.setuptools.package-data]
+archr = [
+    "implants/*.sh",
+    "implants/*/*",
+]
 
 [tool.black]
 line-length = 120
