@@ -1,26 +1,22 @@
-import subprocess
+import contextlib
+import logging
+import os
+import re
+import shlex
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
-import logging
-import shlex
-import os
-import re
+
+import docker
+from docker.errors import APIError
+
+from archr.errors import ArchrError, ArchrValueError
 
 from . import Target
-from docker.errors import APIError
-from ..errors import ArchrValueError
 
-
-docker = None
-
-l = logging.getLogger("archr.target.docker_target")
-
-
-def import_docker():
-    global docker  # pylint:disable=global-statement
-    import docker  # pylint:disable=import-outside-toplevel
+log = logging.getLogger("archr.target.docker_target")
 
 
 class DockerImageTarget(Target):
@@ -47,7 +43,6 @@ class DockerImageTarget(Target):
             raise RuntimeError("DockerImageTarget has not been tested on Windows.")
 
         os.makedirs(os.path.join("/", "tmp", "archr_mounts"), exist_ok=True)
-        import_docker()
 
         if bind_tmp:
             self.tmp_bind = tempfile.mkdtemp(dir="/tmp/archr_mounts", prefix="tmp_")
@@ -85,8 +80,8 @@ class DockerImageTarget(Target):
                     # Don't implicitly start the target with host network
                     network = None
             except (KeyError, IndexError, AttributeError, docker.errors.APIError):
-                l.warning(
-                    "Detected archr is being run from a docker container, but couldn't retrieve network information"
+                log.warning(
+                    "Detected archr is being run from a docker container, but couldn't retrieve network information",
                 )
 
         self.network = network
@@ -143,7 +138,13 @@ class DockerImageTarget(Target):
         return self
 
     def start(
-        self, user=None, name=None, working_dir=None, labels=None, entry_point=None, timeout=None
+        self,
+        user=None,
+        name=None,
+        working_dir=None,
+        labels=None,
+        entry_point=None,
+        timeout=None,
     ):  # pylint:disable=arguments-differ
         if labels is None:
             labels = []
@@ -179,14 +180,12 @@ class DockerImageTarget(Target):
                 volumes=self.volumes,
                 network_mode=self.network_mode,
                 network=self.network,
-                init=use_init
-                # network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
+                init=use_init,
             )
         except APIError as e:
             if f"stat {entry_point[0]}: no such file or directory: unknown" in e.explanation:
-                raise ArchrError(f"Entrypoint not found in container: {entry_point[0]}")
-            else:
-                raise e
+                raise ArchrError(f"Entrypoint not found in container: {entry_point[0]}") from e
+            raise APIError from e
 
         self.container.reload()  # update self.container.attrs
 
@@ -229,11 +228,8 @@ class DockerImageTarget(Target):
 
     def stop(self):
         if self.container:
-            try:
+            with contextlib.suppress(docker.errors.APIError):
                 self.container.kill()
-            except docker.errors.APIError:
-                # the container is stopped before we attempt to kill it
-                pass
             self.container = None
         if self.tmp_bind:
             self._client.containers.run(
@@ -255,17 +251,14 @@ class DockerImageTarget(Target):
 
     def remove(self):
         if self.container:
-            l.debug(
+            log.debug(
                 "Force removing container %r. If this is not intended, please ensure variable %r "
                 "is still alive and in scope.",
                 self.container,
                 self,
             )
-            try:
+            with contextlib.suppress(docker.errors.NotFound):
                 self.container.remove(force=True)
-            except docker.errors.NotFound:
-                # the container is already gone before we attempt to remove it
-                pass
         if self._client:
             self._client.close()
         super().remove()
@@ -289,7 +282,7 @@ class DockerImageTarget(Target):
                 "Unexpected error when making target_path in container: "
                 + p.stdout.read().decode()
                 + " "
-                + p.stderr.read().decode()
+                + p.stderr.read().decode(),
             )
         p.stdin.close()
         p.stdout.close()
@@ -300,7 +293,9 @@ class DockerImageTarget(Target):
             # TODO: this is probably important, but as implemented (path resolves to /), it is way to slow.
             # TODO: If someone wants this, implement it correctly.
             p = self.run_command(
-                ["chown", "-R", f"{self.user}:{self.user}", "/tmp"], user="root", stderr=subprocess.DEVNULL
+                ["chown", "-R", f"{self.user}:{self.user}", "/tmp"],
+                user="root",
+                stderr=subprocess.DEVNULL,
             )
             p.wait()
             p.stdin.close()
@@ -308,24 +303,24 @@ class DockerImageTarget(Target):
             if p.stderr:
                 p.stderr.close()
 
-    def copy_file(self, target_path, dst_path, dereference=False):
+    def copy_file(self, target_path, dst_path):
         with tempfile.NamedTemporaryFile() as temp_archive:
             with open(temp_archive.name, "wb") as fh:
                 stream, _ = self.container.get_archive(target_path)
                 for content in stream:
                     fh.write(content)
 
-            with open(temp_archive.name, "rb") as fh:
-                with tarfile.open(fileobj=fh, mode="r") as t:
-                    with t.extractfile(t.getmember(os.path.basename(target_path))) as ifh, open(dst_path, "wb") as ofh:
-                        shutil.copyfileobj(ifh, ofh)
+            with open(temp_archive.name, "rb") as fh, tarfile.open(fileobj=fh, mode="r") as t, t.extractfile(
+                t.getmember(os.path.basename(target_path)),
+            ) as ifh, open(dst_path, "wb") as ofh:
+                shutil.copyfileobj(ifh, ofh)
 
-    def retrieve_tarball(self, target_path, dereference=False):
+    def retrieve_tarball(self, target_path):
         stream, _ = self.container.get_archive(target_path)
         return b"".join(stream)
 
     def realpath(self, target_path):
-        l.warning("docker target realpath is not implemented. things may break.")
+        log.warning("docker target realpath is not implemented. things may break.")
         return target_path
 
     def add_volume(self, src_path, dst_path, mode="rw"):
@@ -367,20 +362,19 @@ class DockerImageTarget(Target):
     @property
     def tcp_ports(self):
         ports = []
-        try:
+        with contextlib.suppress(KeyError):
             ports.extend(
-                [int(k.split("/")[0]) for k in self.image.attrs["Config"]["ExposedPorts"].keys() if "tcp" in k]
+                [int(k.split("/")[0]) for k in self.image.attrs["Config"]["ExposedPorts"] if "tcp" in k],
             )
-        except KeyError:
-            pass
         try:
             if self.image.attrs["Config"]["Env"]:
                 ports.extend(
-                    [int(k.split("=")[-1]) for k in self.image.attrs["Config"]["Env"] if k.startswith("TCP_PORT")]
+                    [int(k.split("=")[-1]) for k in self.image.attrs["Config"]["Env"] if k.startswith("TCP_PORT")],
                 )
         except ValueError:
-            l.warning(
-                'An enviroment variable for %s starts with "TCP_PORT", but the value is not an integer.', self.image_id
+            log.warning(
+                'An enviroment variable for %s starts with "TCP_PORT", but the value is not an integer.',
+                self.image_id,
             )
         except KeyError:
             pass
@@ -389,20 +383,19 @@ class DockerImageTarget(Target):
     @property
     def udp_ports(self):
         ports = []
-        try:
+        with contextlib.suppress(KeyError):
             ports.extend(
-                [int(k.split("/")[0]) for k in self.image.attrs["Config"]["ExposedPorts"].keys() if "udp" in k]
+                [int(k.split("/")[0]) for k in self.image.attrs["Config"]["ExposedPorts"] if "udp" in k],
             )
-        except KeyError:
-            pass
         try:
             if self.image.attrs["Config"]["Env"]:
                 ports.extend(
-                    [int(k.split("=")[-1]) for k in self.image.attrs["Config"]["Env"] if k.startswith("UDP_PORT")]
+                    [int(k.split("=")[-1]) for k in self.image.attrs["Config"]["Env"] if k.startswith("UDP_PORT")],
                 )
         except ValueError:
-            l.warning(
-                'An enviroment variable for %s starts with "UDP_PORT", but the value is not an integer.', self.image_id
+            log.warning(
+                'An enviroment variable for %s starts with "UDP_PORT", but the value is not an integer.',
+                self.image_id,
             )
         except KeyError:
             pass
@@ -416,8 +409,7 @@ class DockerImageTarget(Target):
     def user(self):
         if "User" in self.image.attrs["Config"]:
             return self.image.attrs["Config"]["User"]
-        else:
-            return "root"
+        return "root"
 
     def get_proc_pid(self, proc):
         if not self.container:
@@ -445,8 +437,7 @@ class DockerImageTarget(Target):
         if not matches:
             return None
 
-        guest_pid = int(matches[0])
-        return guest_pid
+        return int(matches[0])
 
     #
     # Execution
@@ -468,16 +459,15 @@ class DockerImageTarget(Target):
             raise ArchrError("target.start() must be called before target.run_command()")
 
         if use_qemu:
-            from ..analyzers.qemu_tracer import QEMUTracerAnalyzer  # pylint:disable=import-outside-toplevel
+            from archr.analyzers.qemu_tracer import QEMUTracerAnalyzer  # pylint:disable=import-outside-toplevel
 
             qemu_variant = QEMUTracerAnalyzer.qemu_variant(self.target_os, self.target_arch, False)
             qemu_path = os.path.join(self.tmpwd, "shellphish_qemu", qemu_variant)
             fire_path = os.path.join(self.tmpwd, "shellphish_qemu", "fire")
-            args = [fire_path, qemu_path] + args
-        else:
-            if not aslr and self.target_arch in ["x86_64", "i386"]:
-                # use setarch to disable ASLR
-                args = ["setarch", "x86_64", "-R"] + args
+            args = [fire_path, qemu_path, *args]
+        elif not aslr and self.target_arch in ["x86_64", "i386"]:
+            # use setarch to disable ASLR
+            args = ["setarch", "x86_64", "-R", *args]
 
         docker_args = ["docker", "exec", "-i"]
 
@@ -490,14 +480,23 @@ class DockerImageTarget(Target):
             docker_args += ["-u", user]
         docker_args.append(self.container.id)
 
-        l.debug("running command: %s", docker_args + args)
+        log.debug("running command: %s", docker_args + args)
 
         return subprocess.Popen(
-            docker_args + args, stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
+            docker_args + args,
+            stdin=stdin,
+            stdout=stdout,
+            stderr=stderr,
+            bufsize=0,
         )  # pylint:disable=consider-using-with
 
     def run_companion_command(
-        self, args, env=None, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        self,
+        args,
+        env=None,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     ):
         if not self.companion:
             raise ArchrError("The target must be created with `companion=True`")
@@ -513,7 +512,11 @@ class DockerImageTarget(Target):
         docker_args.append(self.companion_container.id)
 
         return subprocess.Popen(
-            docker_args + args, stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
+            docker_args + args,
+            stdin=stdin,
+            stdout=stdout,
+            stderr=stderr,
+            bufsize=0,
         )  # pylint:disable=consider-using-with
 
     #
@@ -533,7 +536,7 @@ class DockerImageTarget(Target):
             else:
                 self._client.images.pull(self.image_id)
         except docker.errors.ImageNotFound as err:
-            l.info("Unable to pull image %s, got error %s, ignoring and continuing on", self.image_id, err)
+            log.info("Unable to pull image %s, got error %s, ignoring and continuing on", self.image_id, err)
 
     #
     # Serialization
@@ -566,6 +569,3 @@ def check_in_docker() -> bool:
 def check_dockerd_running() -> bool:
     ps = subprocess.run(["ps", "-aux"], stdout=subprocess.PIPE, check=True)
     return b"dockerd" in ps.stdout
-
-
-from ..errors import ArchrError

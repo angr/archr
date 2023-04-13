@@ -9,15 +9,13 @@ import signal
 import struct
 import subprocess
 import tempfile
-
 from io import BytesIO
 
+from archr.utils import filter_strace_output, get_file_maps
 
-l = logging.getLogger("archr.analyzers.qemu_tracer")
+from .base import ContextAnalyzer
 
-from . import ContextAnalyzer
-
-from ..utils import filter_strace_output, get_file_maps
+log = logging.getLogger("archr.analyzers.qemu_tracer")
 
 
 class QEMUTracerError(BaseException):
@@ -164,7 +162,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 taint=taint,
             )
 
-            l.debug("launch QEMU with command: %s", " ".join(target_cmd))
+            log.debug("launch QEMU with command: %s", " ".join(target_cmd))
             r = QemuTraceResult()
 
             try:
@@ -184,7 +182,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     r.crashed = True
                     r.signal = signal.SIGILL
 
-            l.debug(
+            log.debug(
                 "Qemu tracer returned with code=%s timed_out=%s crashed=%s signal=%s",
                 r.returncode,
                 r.timed_out,
@@ -213,12 +211,12 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     if save_core and not tmp_crash_core_path:
                         raise QEMUTracerError(
                             "the target didn't crash inside qemu or no corefile was created!"
-                            + "Make sure you launch it correctly!\n"
-                            + "command: %s" % " ".join(target_cmd)
+                            "Make sure you launch it correctly!\n"
+                            "command: %s" % " ".join(target_cmd),
                         )
                     if crash_addr and not tmp_halfway_core_path:
                         raise QEMUTracerError(
-                            "the target didn't generate a halfway core file!" + "command: %s" % " ".join(target_cmd)
+                            "the target didn't generate a halfway core file!" + "command: %s" % " ".join(target_cmd),
                         )
 
                     if local_core_filename and tmp_crash_core_path:
@@ -241,13 +239,14 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                             # iterate to the appropriate line
                             next(trace_fh)
                             next(trace_fh)
-                            t = next(trace_fh)
+                            nt = next(trace_fh)
                             # parse out the first line
-                            r.image_base = int(t.split(b"-")[0], 16)
+                            r.image_base = int(nt.split(b"-")[0], 16)
                             break
 
                     r.base_address = int(
-                        next(t.split()[1] for t in trace_fh if t.startswith(b"start_code")), 16
+                        next(t.split()[1] for t in trace_fh if t.startswith(b"start_code")),
+                        16,
                     )  # pylint:disable=stop-iteration-return
 
                     # for a dynamically linked binary, the entry point is in the runtime linker
@@ -255,7 +254,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     r.entry_point = int(next(t.split()[1] for t in trace_fh if t.startswith(b"entry")), 16)
                 except StopIteration as e:
                     raise QEMUTracerError(
-                        "The trace does not include any data. Did you forget to chmod +x the binary?"
+                        "The trace does not include any data. Did you forget to chmod +x the binary?",
                     ) from e
 
                 # record the trace
@@ -285,7 +284,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     elif r.crashed and entry.startswith(b"qemu: last read marker was read through fd:"):
                         # grab the taint_fd
                         r.taint_fd = int(re.search(rb"\[(\d+)\]", entry).group(1))
-                        l.debug("Detected the tainted fd to be %s", r.taint_fd)
+                        log.debug("Detected the tainted fd to be %s", r.taint_fd)
 
                 lastline = entry
                 bbl_trace_fh.close()
@@ -293,23 +292,23 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                 if r.crashed:
                     if r.taint_fd is None and self.target.target_os != "cgc":
-                        l.error(
+                        log.error(
                             "Unexpected status line from qemu tracer. Cannot get the last read marker to set taint_fd. "
-                            "Please make sure you are using the latest shellphish-qemu."
+                            "Please make sure you are using the latest shellphish-qemu.",
                         )
 
                     # grab the faulting address
                     if lastline.startswith(b"Trace") or lastline.find(b"Segmentation") == -1:
-                        l.warning(
+                        log.warning(
                             "Trace return code was less than zero, but the last line of the trace does not"
                             "contain the uncaught exception error from qemu."
                             "If using an older version of shellphish_qemu try using 'ulimit -Sc 0' or "
-                            "updating to a newer version of shellphish_qemu."
+                            "updating to a newer version of shellphish_qemu.",
                         )
                     r.crash_address = int(lastline.split(b"[")[1].split(b"]")[0], 16)
-                    l.debug("Detected the crashing address at %s", hex(r.crash_address))
+                    log.debug("Detected the crashing address at %s", hex(r.crash_address))
 
-                l.debug("Trace consists of %d basic blocks", len(r.trace))
+                log.debug("Trace consists of %d basic blocks", len(r.trace))
 
                 if record_file_maps:
                     r.mapped_files = get_file_maps(strace_lines)
@@ -374,16 +373,12 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         # Next, we build QEMU options.
         #
 
-        # hardcode an argv[0]
-        # cmd_args += [ "-0", program_args[0] ]
-
         # record trace
         if trace_filename:
             flags = "nochain,exec,page,strace" if "cgc" not in qemu_variant else "exec"
             cmd_args += ["-d", flags, "-D", trace_filename]
-        else:
-            if "cgc" in qemu_variant:
-                cmd_args += ["-enable_double_empty_exiting"]
+        elif "cgc" in qemu_variant:
+            cmd_args += ["-enable_double_empty_exiting"]
 
         # save CGC magic page
         if magic_filename:

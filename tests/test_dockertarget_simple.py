@@ -1,12 +1,11 @@
 import socket
-
-import docker.errors
-
-import archr
 import time
 import unittest
 
+import docker.errors
 from common import build_container
+
+import archr
 
 
 class TestDockerTargetSimple(unittest.TestCase):
@@ -93,11 +92,8 @@ class TestDockerTargetSimple(unittest.TestCase):
 
         time.sleep(8)
         # the target should be gone by now
-        try:
+        with self.assertRaises(docker.errors.NotFound):
             t.container.top()
-            assert False, "The container did not exit after timeout."
-        except docker.errors.NotFound:
-            pass
 
 
 if __name__ == "__main__":

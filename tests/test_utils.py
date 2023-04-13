@@ -1,8 +1,9 @@
+import os
 import subprocess
 import tempfile
-import archr
-import os
 import unittest
+
+import archr
 
 
 def test_hook():

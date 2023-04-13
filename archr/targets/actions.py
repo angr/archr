@@ -1,10 +1,10 @@
-import time
 import logging
+import time
 from abc import abstractmethod
 
 import nclib
 
-l = logging.getLogger("archr.target.actions")
+log = logging.getLogger("archr.target.actions")
 
 
 class ActionError(BaseException):
@@ -20,7 +20,7 @@ class Action:
         """
         Specify how to perform an action
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class OpenChannelAction(Action):
@@ -73,7 +73,7 @@ class OpenChannelAction(Action):
             raise ActionError("No interaction context to perform %s" % self.__class__)
         if self.channel_name is None:
             self.channel_name = self.interaction.default_channel_name
-        l.debug("[OpenChannelAction] openning channel: %s", self.channel_name)
+        log.debug("[OpenChannelAction] openning channel: %s", self.channel_name)
         channel = self._open_channel(self.channel_name)
         self.interaction._channels[self.channel_name] = channel
         return channel
@@ -90,7 +90,7 @@ class SendAction(Action):
             raise ActionError("No interaction context to perform %s" % self.__class__)
         if self.channel_name is None:
             self.channel_name = self.interaction.default_channel_name
-        l.debug("[SendAction] sending data to channel %s: %s", self.channel_name, self.data)
+        log.debug("[SendAction] sending data to channel %s: %s", self.channel_name, self.data)
         channel = self.interaction.get_channel(self.channel_name)
         channel.write(self.data)
 
@@ -103,7 +103,7 @@ class WaitAction(Action):
     def perform(self):
         if not self.interaction:
             raise ActionError("No interaction context to perform %s" % self.__class__)
-        l.debug("[WaitAction] waiting for %d seconds", self.seconds)
+        log.debug("[WaitAction] waiting for %d seconds", self.seconds)
         time.sleep(self.seconds)
 
 
@@ -117,7 +117,7 @@ class CloseChannelAction(Action):
             raise ActionError("No interaction context to perform %s" % self.__class__)
         if self.channel_name is None:
             self.channel_name = self.interaction.default_channel_name
-        l.debug("[CloseChannelAction] closing channel: %s", self.channel_name)
+        log.debug("[CloseChannelAction] closing channel: %s", self.channel_name)
         channel = self.interaction.get_channel(self.channel_name)
         channel.shutdown_wr()
         channel.close()

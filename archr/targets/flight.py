@@ -1,10 +1,9 @@
-import subprocess
 import logging
+import subprocess
 
 from .actions import OpenChannelAction
 
-
-l = logging.getLogger("archr.target.flight")
+log = logging.getLogger("archr.target.flight")
 
 
 class InteractionError(BaseException):
@@ -25,7 +24,7 @@ class Interaction:
         self.result = result
 
         if actions is None:
-            l.warning("No actions specified, make sure this is what you want!")
+            log.warning("No actions specified, make sure this is what you want!")
             actions = ()
         self.actions = actions
         assert type(actions) in (list, tuple), "actions must be a list or a tuple"
@@ -75,10 +74,6 @@ class Interaction:
                 sock.shutdown_wr()
         if self.process is not None:
             self.process.stdin.close()
-            # time.sleep(2)
-            # if self.process.poll() is None:
-            #    print("Hung process")
-            #    import ipdb; ipdb.set_trace()
             try:
                 self.process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
@@ -91,10 +86,10 @@ class Interaction:
         # sanity check
         ret = self.process.poll()
         if ret is not None:
-            l.error("The target process crashed with return value: %d", ret)
+            log.error("The target process crashed with return value: %d", ret)
             stdout, stderr = self.process.communicate()
-            l.debug("stdout:\n%s", stdout.decode())
-            l.debug("stderr:\n%s", stderr.decode())
+            log.debug("stdout:\n%s", stdout.decode())
+            log.debug("stderr:\n%s", stderr.decode())
             raise ValueError("The target process crashed before communication")
 
         for act in self.actions:

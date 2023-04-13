@@ -1,9 +1,9 @@
-import os
 import logging
+import os
 
-l = logging.getLogger("archr.analyzers.memory_map")
+from .base import ContextAnalyzer
 
-from . import ContextAnalyzer
+log = logging.getLogger("archr.analyzers.memory_map")
 
 
 class GDBServerAnalyzer(ContextAnalyzer):

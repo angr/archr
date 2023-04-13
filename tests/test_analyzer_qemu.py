@@ -1,10 +1,10 @@
-import contextlib
-import signal
-import archr
 import os
+import signal
 import unittest
 
 from common import build_container
+
+import archr
 
 
 class TestAnalyzerQemu(unittest.TestCase):
@@ -24,7 +24,7 @@ class TestAnalyzerQemu(unittest.TestCase):
 
     def test_implant_injection_local(self):
         with archr.targets.LocalTarget(
-            [os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher")]
+            [os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher")],
         ).build().start() as t:
             archr.analyzers.QEMUTracerAnalyzer(t)
             fire_path = os.path.join(t.tmpwd, "shellphish_qemu", "fire")
@@ -51,7 +51,6 @@ class TestAnalyzerQemu(unittest.TestCase):
         with b.fire_context(save_core=True) as flight:
             flight.default_channel.send(crashing)
             flight.default_channel.shutdown_wr()
-            # flight.default_channel.recvall()
 
         assert flight.result.crashed
 
@@ -62,7 +61,6 @@ class TestAnalyzerQemu(unittest.TestCase):
         with b.fire_context(save_core=True) as flight:
             flight.default_channel.send(crash)
             flight.default_channel.shutdown_wr()
-            # flight.default_channel.recvall()
 
         assert not flight.result.timed_out
         assert flight.result.crashed
@@ -75,7 +73,6 @@ class TestAnalyzerQemu(unittest.TestCase):
         with b.fire_context(save_core=True) as flight:
             flight.default_channel.send(crash)
             flight.default_channel.shutdown_wr()
-            # flight.default_channel.recvall()
 
         assert not flight.result.timed_out
         assert flight.result.crashed
@@ -85,11 +82,11 @@ class TestAnalyzerQemu(unittest.TestCase):
         r = b.fire(record_file_maps=True)
 
         # check for the explicitly mapped file
-        assert "mapped_file" in r.mapped_files.keys()
+        assert "mapped_file" in r.mapped_files
         assert r.mapped_files["mapped_file"][0]
 
         # check for shared library mapping
-        assert "libc.so.6" in r.mapped_files.keys()
+        assert "libc.so.6" in r.mapped_files
         assert r.mapped_files["libc.so.6"][0]
 
     def test_crasher_trace(self):
@@ -114,7 +111,7 @@ class TestAnalyzerQemu(unittest.TestCase):
 
     def test_crasher_trace_local(self):
         with archr.targets.LocalTarget(
-            [os.path.realpath(os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher"))]
+            [os.path.realpath(os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher"))],
         ).build().start() as t:
             self.crasher_checks(t)
 

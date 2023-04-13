@@ -44,3 +44,37 @@ archr = [
 [tool.black]
 line-length = 120
 target-version = ['py38']
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+select =  [
+    "ALL",
+]
+ignore = [
+    "ANN", # FIXME: Type annotations
+    "C901", # Complexity
+    "D", # FIXME: Docstrings
+    "INP", # FIXME: this might just require relocating tests
+    "PLR0912", # FIXME: Too many branches
+    "PLR0915", # FIXME: Too many statements
+    "PLR2004", # FIXME: magic values
+    "PT", # We don't use pytest's fixtures
+    "PTH", # FIXME: Use pathlib
+    "S", # FIXME: Mostly asserts
+    "SLF001", # FIXME: Private method use outside class
+    "SIM115", # Use context handlers for opening files
+    # FIXME: These errors relate to using long kwarg lists
+    "FBT",
+    "PLR0913",
+    # FIXME: These errors relate to exceptions and exception handling.
+    "EM",
+    "TRY003",
+]
+
+[tool.ruff.per-file-ignores]
+"archr/strace_parser.py" = [
+    "ARG001",
+    "N802",
+    "N816",
+]

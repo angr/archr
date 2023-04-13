@@ -1,8 +1,8 @@
 import contextlib
+import os
+import shutil
 import subprocess
 import tempfile
-import shutil
-import os
 
 
 @contextlib.contextmanager

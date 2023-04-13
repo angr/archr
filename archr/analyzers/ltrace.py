@@ -1,11 +1,11 @@
-import os
 import logging
+import os
 from contextlib import contextmanager
 
-from . import ContextAnalyzer
+from .base import ContextAnalyzer
 from .strace import super_yama
 
-l = logging.getLogger("archr.analyzers.ltrace")
+log = logging.getLogger("archr.analyzers.ltrace")
 
 
 class LTraceAnalyzer(ContextAnalyzer):

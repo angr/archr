@@ -1,16 +1,17 @@
-import subprocess
 import contextlib
-import tempfile
-import tarfile
-import logging
-import shutil
-import os
 import io
+import logging
+import os
 import re
-from ..utils import hook_entry, hook_addr
+import shutil
+import subprocess
+import tarfile
+import tempfile
+from abc import ABC, abstractmethod
+
+from archr.utils import hook_addr, hook_entry
+
 from .flight import Flight
-from abc import ABC
-from abc import abstractmethod
 
 log = logging.getLogger(__name__)
 
@@ -114,7 +115,7 @@ class Target(ABC):
         """
         return self
 
-    def save(self, repository=None, tag=None, **kwargs):  # pylint:disable=unused-argument
+    def save(self):
         """
         Saves a snapshot of the current image using the tag
         :return:
@@ -218,14 +219,15 @@ class Target(ABC):
     def resolve_glob(self, target_glob):
         """
         Should resolve a glob on the target.
-        WARNING: THE DEFAULT IMPLEMENTATION OF THIS IS INSANELY INSECURE OUT OF LAZINESS AND WILL FAIL WITH SPACES IN FILES OR MULTIPLE FILES
+
+        WARNING: THE DEFAULT IMPLEMENTATION OF THIS IS INSANELY INSECURE OUT OF
+        LAZINESS AND WILL FAIL WITH SPACES IN FILES OR MULTIPLE FILES
 
         :param string target_glob: the glob
         :returns list: a list of the resulting paths (as strings)
         """
         stdout, _ = self.run_command(["/bin/sh", "-c", "ls -d " + target_glob]).communicate()
-        paths = [p.decode("utf-8") for p in stdout.split()]
-        return paths
+        return [p.decode("utf-8") for p in stdout.split()]
 
     @abstractmethod
     def get_proc_pid(self, proc):
@@ -284,6 +286,7 @@ class Target(ABC):
             f.seek(0)
             self.inject_tarball("/", tarball_contents=f.read())
 
+    @abstractmethod
     def copy_file(self, target_path, dst_path, dereference=False):
         """
         Copy file out from target
@@ -307,11 +310,6 @@ class Target(ABC):
                 if not to_extract:
                     raise FileNotFoundError("%s not found on target" % target_path)
 
-                # local_extract_dir = os.path.join(local_path, os.path.dirname(target_path).lstrip("/"))
-                # with contextlib.suppress(FileExistsError):
-                #   os.makedirs(local_extract_dir)
-                # assert os.path.exists(local_extract_dir)
-
                 with contextlib.suppress(FileExistsError):
                     os.makedirs(local_path)
                 t.extractall(local_path, members=to_extract)
@@ -326,9 +324,8 @@ class Target(ABC):
         with io.BytesIO() as f:
             f.write(self.retrieve_tarball(target_path, dereference=True))
             f.seek(0)
-            with tarfile.open(fileobj=f, mode="r") as t:
-                with t.extractfile(os.path.basename(target_path)) as fp:
-                    return fp.read()
+            with tarfile.open(fileobj=f, mode="r") as t, t.extractfile(os.path.basename(target_path)) as fp:
+                return fp.read()
 
     @abstractmethod
     def resolve_local_path(self, target_path):
@@ -355,10 +352,13 @@ class Target(ABC):
     @contextlib.contextmanager
     def retrieval_context(self, target_path, local_thing=None, glob=False):  # pylint:disable=redefined-outer-name
         """
-        This is a context manager that retrieves a file from the target upon exiting.
+        This is a context manager that retrieves a file from the target upon
+        exiting.
 
         :param str target_path: the path on the target to retrieve
-        :param local_thing: Can be a file path (str) or a write()able object (where the file will be written upon retrieval), or None, in which case a temporary file will be yielded.
+        :param local_thing: Can be a file path (str) or a write()able object
+            (where the file will be written upon retrieval), or None, in which
+            case a temporary file will be yielded.
         :param glob: Whether to glob the target_path.
         """
 
@@ -374,7 +374,7 @@ class Target(ABC):
                 local_file = local_thing
             else:
                 raise ValueError(
-                    "local_thing argument to retrieval_context() must be a str, a write()able object, or None"
+                    "local_thing argument to retrieval_context() must be a str, a write()able object, or None",
                 )
 
             try:
@@ -449,12 +449,20 @@ class Target(ABC):
         else:
             hooked_binary = hook_addr(original_binary, addr, asm_code=asm_code, bin_code=bin_code)
 
-        with self.replacement_context(self.target_path, hooked_binary, saved_contents=original_binary):
-            with self.run_context(*args, **kwargs) as p:
-                yield p
+        with self.replacement_context(
+            self.target_path,
+            hooked_binary,
+            saved_contents=original_binary,
+        ), self.run_context(*args, **kwargs) as p:
+            yield p
 
     def run_command(
-        self, args=None, args_prefix=None, args_suffix=None, env=None, **kwargs  # for us  # for subclasses
+        self,
+        args=None,
+        args_prefix=None,
+        args_suffix=None,
+        env=None,
+        **kwargs,  # for us  # for subclasses
     ):
         """
         Run a command inside the target.

@@ -1,17 +1,18 @@
-import subprocess
-import struct
-import re
-import logging
-import cle
 import io
+import logging
+import re
+import struct
+import subprocess
+
+import cle
 
 from . import strace_parser
 
-l = logging.getLogger("archr.utils")
+log = logging.getLogger("archr.utils")
 
 
 def parse_ldd(mem_map_str):
-    entries = [l.strip() for l in mem_map_str.decode("utf-8").splitlines()]
+    entries = [line.strip() for line in mem_map_str.decode("utf-8").splitlines()]
     parsed = {}
     for entry in entries:
         if "=>" in entry:
@@ -24,7 +25,7 @@ def parse_ldd(mem_map_str):
 
 
 def parse_proc_maps(proc_str):
-    entries = [l.strip() for l in proc_str.splitlines()]
+    entries = [line.strip() for line in proc_str.splitlines()]
     parsed = {}
     for entry in entries:
         what = entry.split()[-1].decode("utf-8")
@@ -55,8 +56,10 @@ def hook_entry(binary, asm_code=None, bin_code=None):
         main_bin.seek(start_addr)
         padding = (4 - (start_addr + 8) % 4) % 4  # we hardcode the shellcode so that its length is 8
 
-        # we can' use arch.asm here because the shellcode THUMB, 8+padding-4 because the shellcode has length 8+padding,
-        # we also need to take into account that in arm, pc points to two instructions ahead, which is 4 bytes in thumb mode
+        # we can use arch.asm here because the shellcode THUMB, 8+padding-4
+        # because the shellcode has length 8+padding, we also need to take into
+        # account that in arm, pc points to two instructions ahead, which is 4
+        # bytes in thumb mode
         main_bin.write(b"xF\x00\xf1" + struct.pack("<H", 8 + padding - 4) + b"\x00G" + b"A" * padding)
 
         # now place our payload after this mini shellcode
@@ -118,9 +121,10 @@ def filter_strace_output(lines):
         if re.search("newselect", line):
             continue  # ignore _newselect syscalls
         if re.match("^ = |^= ", line):
-            line = prev_line + line
-
+            filtered.append(prev_line + line)
+            continue
         filtered.append(line)
+
     return filtered
 
 
@@ -201,7 +205,7 @@ def get_file_maps(strace_log_lines):
                 files["open"][fd][1].append(entry.syscall.result)
 
     # lets "close" everything that never got closed
-    for fd, (filename, mmaps) in files["open"].items():
+    for _fd, (filename, mmaps) in files["open"].items():
         files["closed"][filename] = mmaps
 
     return files["closed"]

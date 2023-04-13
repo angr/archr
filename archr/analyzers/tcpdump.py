@@ -1,13 +1,12 @@
 import collections
-import subprocess
-import json
 import contextlib
+import json
 import logging
+import subprocess
 
-from . import ContextAnalyzer
+from .base import ContextAnalyzer
 
-
-l = logging.getLogger("archr.analyzers.tcpdump")
+log = logging.getLogger("archr.analyzers.tcpdump")
 
 
 class TCPDumpAnalyzer(ContextAnalyzer):

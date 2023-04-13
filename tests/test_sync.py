@@ -1,8 +1,9 @@
-import pygdbmi.gdbcontroller
-import archr
 import unittest
 
+import pygdbmi.gdbcontroller
 from common import build_container
+
+import archr
 
 
 class TestSync(unittest.TestCase):

@@ -1,12 +1,13 @@
 import contextlib
-import tempfile
-import shutil
-import archr
-import os
 import io
+import os
+import shutil
+import tempfile
 import unittest
 
 from common import build_container
+
+import archr
 
 
 @unittest.skip("broken")
@@ -127,7 +128,8 @@ class TestDockerTargetFs(unittest.TestCase):
             t.inject_contents({"/tmp/foo": b"asdf"})
             assert t.retrieve_contents("/tmp/foo") == b"asdf"
             assert os.path.exists(t.resolve_local_path("/tmp/foo"))
-            assert open(t.resolve_local_path("/tmp/foo"), "rb").read() == b"asdf"
+            with open(t.resolve_local_path("/tmp/foo"), "rb") as file:
+                self.assertEqual(file.read(), b"asdf")
         assert not os.path.exists(t.local_workdir)
 
 

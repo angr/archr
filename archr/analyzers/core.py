@@ -1,11 +1,14 @@
 import contextlib
-import tempfile
 import logging
 import os
+import tempfile
 
-l = logging.getLogger("archr.analyzers.core_analyzer")
+from archr import targets
+from archr.errors import ArchrError
 
-from . import ContextAnalyzer
+from .base import ContextAnalyzer
+
+log = logging.getLogger("archr.analyzers.core_analyzer")
 
 
 class CoreResults:
@@ -24,11 +27,11 @@ class CoreAnalyzer(ContextAnalyzer):
     def __init__(self, *args, **kwargs):
         with open("/proc/sys/kernel/core_pattern", "rb") as c:
             if c.read().strip() != b"core":
-                l.warning("/proc/sys/kernel/core_pattern needs to be 'core'. I am setting this system-wide.")
+                log.warning("/proc/sys/kernel/core_pattern needs to be 'core'. I am setting this system-wide.")
                 os.system(_super_core_cmd)
         super().__init__(*args, **kwargs)
         if type(self.target) is not targets.DockerImageTarget:
-            l.warning("When using a LocalTarget, this Analyzer will chmod 777 your CWD!!! Be careful.")
+            log.warning("When using a LocalTarget, this Analyzer will chmod 777 your CWD!!! Be careful.")
 
     @contextlib.contextmanager
     def fire_context(self, **kwargs):  # pylint:disable=arguments-differ
@@ -44,7 +47,3 @@ class CoreAnalyzer(ContextAnalyzer):
         finally:
             with open(r.local_core_path, "wb") as c:
                 c.write(self.target.retrieve_contents(r.target_core_path))
-
-
-from ..errors import ArchrError
-from .. import targets

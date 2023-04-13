@@ -1,5 +1,6 @@
-import archr
 import os
+
+import archr
 
 
 def setup_module():

@@ -1,9 +1,9 @@
+import unittest
 from time import sleep
 
-import archr
-import unittest
-
 from common import build_container
+
+import archr
 
 BIN_CAT = "/bin/cat"
 STRACE_ARGS = "-f".split()
@@ -48,7 +48,8 @@ class TestAnalyzerStrace(unittest.TestCase):
 
     def test_strace_attach_local(self):
         with archr.targets.LocalTarget(
-            "socat tcp-l:9137,reuseaddr exec:cat".split(), tcp_ports=[9137]
+            "socat tcp-l:9137,reuseaddr exec:cat".split(),
+            tcp_ports=[9137],
         ).build().start() as t:
             self.check_strace_attach(t)
 

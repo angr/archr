@@ -1,8 +1,9 @@
+import logging
 import os
 import time
-import logging
-import archr.implants
 from contextlib import contextmanager
+
+import archr.implants
 from archr.targets.actions import OpenChannelAction, SendAction
 
 log = logging.getLogger(name=__name__)
@@ -39,7 +40,7 @@ class Analyzer:
         """
         Fire the analyzer at the target.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class ContextAnalyzer(Analyzer):
@@ -49,7 +50,14 @@ class ContextAnalyzer(Analyzer):
     """
 
     def fire(
-        self, *args, testcase=None, pre_fire_hook=None, channel=None, delay=0, actions=None, **kwargs
+        self,
+        *args,
+        testcase=None,
+        pre_fire_hook=None,
+        channel=None,
+        delay=0,
+        actions=None,
+        **kwargs,
     ):  # pylint:disable=arguments-differ
         if actions is None and testcase is not None:
             if type(testcase) is bytes:

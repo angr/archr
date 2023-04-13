@@ -57,11 +57,9 @@ The design is based on the tutorials by Andrew Dalke (www.dalkescientific.com/wr
 
 import logging
 
-from ply import lex
-from ply import yacc
+from ply import lex, yacc
 
-
-l = logging.getLogger("archr.strace_parser")
+log = logging.getLogger(__name__)
 
 tokens = (
     "SPACE",
@@ -226,11 +224,10 @@ def p_syscall(p):
             p[0] = Syscall(p[1], p[3], None)
         elif isinstance(p[4], int):
             p[0] = Syscall(p[1], None, p[4])
+    elif p[1] == "Unknown":
+        p[0] = Syscall("unknown_" + str(p[3]), None, None)
     else:
-        if p[1] == "Unknown":
-            p[0] = Syscall("unknown_" + str(p[3]), None, None)
-        else:
-            p[0] = Syscall(p[1], p[3], None)
+        p[0] = Syscall(p[1], p[3], None)
 
 
 def p_error_message(p):
@@ -267,7 +264,7 @@ def p_arg_list(p):
 
 
 def p_error(p):
-    print(f"Syntax error at '{p.value}'")
+    log.error("Syntax error at '%s'", p.value)
 
 
 yacc.yacc(debug=False, write_tables=False, errorlog=yacc.NullLogger())
@@ -290,14 +287,7 @@ def parse(strace_log_lines):
     entries = []
     for line in strace_log_lines:
         entry = yacc.parse(line)
-        l.debug(entry)
+        log.debug(entry)
         entries.append(entry)
 
     return entries
-
-
-if __name__ == "__main__":
-    import sys
-
-    with open(sys.argv[1], encoding="utf-8") as log_f:
-        print(parse(log_f.readlines()))

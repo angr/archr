@@ -1,9 +1,9 @@
+import unittest
 from time import sleep
 
-import archr
-import unittest
-
 from common import build_container
+
+import archr
 
 BIN_CAT = "/bin/cat"
 CAT_ARGS = ["/etc/passwd"]
@@ -58,14 +58,16 @@ class TestAnalyzerLtrace(unittest.TestCase):
     @unittest.skip("broken")
     def test_ltrace_proc_docker(self):
         with archr.targets.DockerImageTarget(
-            "archr-test:cat", target_args=["/bin/cat", "/etc/passwd"]
+            "archr-test:cat",
+            target_args=["/bin/cat", "/etc/passwd"],
         ).build().start() as t:
             self.check_ltrace_proc(t)
 
     @unittest.skip("broken")
     def test_ltrace_attach_local(self):
         with archr.targets.LocalTarget(
-            "socat tcp-l:7573,reuseaddr exec:cat".split(), tcp_ports=[7573]
+            "socat tcp-l:7573,reuseaddr exec:cat".split(),
+            tcp_ports=[7573],
         ).build().start() as t:
             self.check_ltrace_attach(t)
 

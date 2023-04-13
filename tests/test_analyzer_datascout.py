@@ -1,11 +1,12 @@
-import tempfile
-import struct
-import shutil
-import archr
 import os
+import shutil
+import struct
+import tempfile
 import unittest
 
 from common import build_container
+
+import archr
 
 
 class TestShellcode(unittest.TestCase):

@@ -1,10 +1,11 @@
-import tempfile
-import shutil
-import archr
 import os
+import shutil
+import tempfile
 import unittest
 
 from common import build_container
+
+import archr
 
 
 class TestShellcodeHook(unittest.TestCase):

@@ -1,8 +1,9 @@
 import subprocess
-import archr
 import unittest
 
 from common import build_container
+
+import archr
 
 
 @unittest.skip("broken")

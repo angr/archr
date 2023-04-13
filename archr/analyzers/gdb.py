@@ -1,15 +1,15 @@
-from ..errors import ArchrError
-from . import ContextAnalyzer
 import contextlib
+import logging
+import os
+import shutil
+import signal
 import subprocess
 import tempfile
-import logging
-import signal
-import shutil
-import os
 import time
 
-l = logging.getLogger("archr.analyzers.gdb")
+from .base import ContextAnalyzer
+
+log = logging.getLogger("archr.analyzers.gdb")
 
 
 class FakeTempdir:

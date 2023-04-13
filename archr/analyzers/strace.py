@@ -2,22 +2,24 @@ import contextlib
 import logging
 import os
 
-from . import ContextAnalyzer
+from .base import ContextAnalyzer
 
-l = logging.getLogger("archr.analyzers.strace")
+log = logging.getLogger("archr.analyzers.strace")
 
 
 def super_yama():
     if os.path.exists("/proc/sys/kernel/yama/ptrace_scope"):
         with open("/proc/sys/kernel/yama/ptrace_scope", "rb") as c:
             if c.read().strip() != b"0":
-                l.warning("/proc/sys/kernel/yama/ptrace_scope needs to be '0'. I am setting this system-wide.")
+                log.warning("/proc/sys/kernel/yama/ptrace_scope needs to be '0'. I am setting this system-wide.")
                 import docker  # pylint:disable=import-outside-toplevel
 
                 try:
                     client = docker.from_env()
                     client.containers.run(
-                        "ubuntu:jammy", "echo 0 | tee /proc/sys/kernel/yama/ptrace_scope", privileged=True
+                        "ubuntu:jammy",
+                        "echo 0 | tee /proc/sys/kernel/yama/ptrace_scope",
+                        privileged=True,
                     )
                 finally:
                     client.close()
