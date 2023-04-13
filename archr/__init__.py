@@ -4,7 +4,3 @@ from . import targets
 from . import implants
 from . import utils
 from . import analyzers
-
-# backwards compatibility
-arrows = implants
-arsenal = analyzers
