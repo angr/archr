@@ -52,20 +52,6 @@ class TestSync(unittest.TestCase):
         assert qemu_dct[b"STACK"] - qemu_dct[b"ARGV"] == reference_dct[b"STACK"] - reference_dct[b"ARGV"]
         assert qemu_dct[b"STACK"] - qemu_dct[b"ENVP"] == reference_dct[b"STACK"] - reference_dct[b"ENVP"]
 
-        # COMMENTED OUT PENDING LIBC INIT OFFSETS
-        # dsb = archr.analyzers.DataScoutAnalyzer(t)
-        # apb = archr.analyzers.angrProjectAnalyzer(t, dsb)
-        # asb = archr.analyzers.angrStateAnalyzer(t, apb)
-        # project = apb.fire(use_sim_procedures=False)
-        # state = asb.fire(add_options={angr.sim_options.STRICT_PAGE_ACCESS}) # for now
-        # simgr = project.factory.simulation_manager(state)
-        ##assert not simgr.active[0].memory.load(0x7ffff7dd48f8, project.arch.bytes).symbolic # __libc_multiple_threads sanity check
-        # simgr.run()
-        # assert len(simgr.errored) == 0
-        # assert len(simgr.deadended) == 1
-        # assert len(sum(simgr.stashes.values(), [])) == 1
-        ##assert simgr.deadended[0].posix.dumps(1) == reference_str
-
     @unittest.skip("broken")
     def test_offsetprinter64(self):
         # with archr.targets.DockerImageTarget('archr-test:offsetprinter').build().start() as t:
@@ -78,27 +64,6 @@ class TestSync(unittest.TestCase):
         # with archr.targets.DockerImageTarget('archr-test:offsetprinter').build().start() as t:
         t = archr.targets.DockerImageTarget("archr-test:offsetprinter32", target_arch="i386").build().start()
         self.check_offsetprinter(t)
-        t.stop()
-
-    @unittest.skipUnless(archr._angr_available, "angr required")
-    def test_stack(self):
-        import angr
-
-        t = archr.targets.DockerImageTarget("archr-test:stackprinter64").build().start()
-        reference_str = t.run_command(aslr=False).stdout.read()
-
-        dsb = archr.analyzers.DataScoutAnalyzer(t)
-        apb = archr.analyzers.angrProjectAnalyzer(t, dsb)
-        asb = archr.analyzers.angrStateAnalyzer(t, apb)
-        project = apb.fire(use_sim_procedures=False)
-        state = asb.fire(add_options={angr.sim_options.STRICT_PAGE_ACCESS})  # for now
-        simgr = project.factory.simulation_manager(state)
-        simgr.run()
-        assert len(simgr.errored) == 0
-        assert len(simgr.deadended) == 1
-        assert len(sum(simgr.stashes.values(), [])) == 1
-        # assert simgr.deadended[0].posix.dumps(1) == reference_str
-
         t.stop()
 
 

@@ -1,7 +1,0 @@
-#!/bin/sh
-
-ulimit -c unlimited
-ulimit -f unlimited
-
-OUR_DIR=$(dirname $0)
-exec $OUR_DIR/deps/LD_PATH --library-path $OUR_DIR/deps/LIBS_PATH $OUR_DIR/deps/QEMU_PATH -g 1234 -plugin $OUR_DIR/deps/QTRACE_PATH "$@"

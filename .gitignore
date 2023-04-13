@@ -26,3 +26,5 @@ MANIFEST
 dist
 .eggs
 .vscode
+.venv
+venv

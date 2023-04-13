@@ -16,10 +16,6 @@ from io import BytesIO
 l = logging.getLogger("archr.analyzers.qemu_tracer")
 
 from . import ContextAnalyzer
-from .. import _angr_available
-
-if _angr_available:
-    import angr
 
 from ..utils import filter_strace_output, get_file_maps
 
@@ -87,9 +83,6 @@ class QemuTraceResult:
     halfway_core_path = None
     core_path = None
     taint_fd = None
-
-    def tracer_technique(self, **kwargs):
-        return angr.exploration_techniques.Tracer(self.trace, crash_addr=self.crash_address, **kwargs)
 
 
 _trace_old_re = re.compile(rb"Trace (.*) \[(?P<addr>.*)\].*")
