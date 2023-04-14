@@ -41,6 +41,13 @@ archr = [
     "implants/*/*",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "black",
+    "ruff",
+    "pytest"
+]
+
 [tool.black]
 line-length = 120
 target-version = ['py38']
