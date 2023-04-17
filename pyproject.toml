@@ -16,6 +16,7 @@ classifiers = [
 dependencies = [
     "cle~=9.2.46",
     "docker",
+    "keystone-engine",
     "nclib>=1.0.0rc3",
     "patchelf-wrapper",
     "ply",
