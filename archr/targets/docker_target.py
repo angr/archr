@@ -315,7 +315,7 @@ class DockerImageTarget(Target):
             ) as ifh, open(dst_path, "wb") as ofh:
                 shutil.copyfileobj(ifh, ofh)
 
-    def retrieve_tarball(self, target_path):
+    def retrieve_tarball(self, target_path, dereference=False):  # noqa: ARG002
         stream, _ = self.container.get_archive(target_path)
         return b"".join(stream)
 
