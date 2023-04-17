@@ -343,6 +343,9 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                 # remove the magic file on the target
                 self.target.remove_path(target_magic_filename)
 
+            if r.timed_out:
+                self.target.restart()
+
     @staticmethod
     def qemu_variant(target_os, target_arch, record_trace):
         """
