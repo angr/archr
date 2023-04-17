@@ -14,13 +14,13 @@ jobs:
         os:
         - ubuntu-latest
         python-version:
-        - 3.8
-        - 3.9
-        - 3.10
-        - 3.11
+        - "3.8"
+        - "3.9"
+        - "3.10"
+        - "3.11"
       fail-fast: false
 
-    name: Tests on ${{ matrix.os }}
+    name: Tests on ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
