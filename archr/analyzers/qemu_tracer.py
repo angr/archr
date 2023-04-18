@@ -188,6 +188,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     yield flight
             except subprocess.TimeoutExpired:
                 r.timed_out = True
+                self.target.restart()
             else:
                 r.timed_out = False
                 r.returncode = flight.process.returncode
@@ -342,9 +343,6 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                 # remove the magic file on the target
                 self.target.remove_path(target_magic_filename)
-
-            if r.timed_out:
-                self.target.restart()
 
     @staticmethod
     def qemu_variant(target_os, target_arch, record_trace):
