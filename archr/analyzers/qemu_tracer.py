@@ -243,9 +243,9 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                     r.halfway_core_path = local_halfway_core_filename
 
             if target_trace_filename:
-                temp_trace_file = tempfile.mktemp(dir="/tmp", prefix="tracer-")
-                self.target.copy_file(target_trace_filename, temp_trace_file)
-                trace_fh = open(temp_trace_file, "rb")
+                temp_trace_file = tempfile.NamedTemporaryFile()
+                self.target.copy_file(target_trace_filename, temp_trace_file.name)
+                trace_fh = open(temp_trace_file.name, "rb")
 
                 # Find where qemu loaded the binary. Primarily for PIE
                 try:
@@ -303,6 +303,8 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
                 lastline = entry
                 bbl_trace_fh.close()
+                trace_fh.close()
+                temp_trace_file.close()
                 r.trace = QEMUBBLTrace(bbl_trace_file.name, bbl_trace_len)
 
                 if r.crashed:
