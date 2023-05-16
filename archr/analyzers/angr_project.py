@@ -141,7 +141,7 @@ class angrProjectAnalyzer(Analyzer):
             self.project = angr.Project(core_path, main_opts=bin_opts, rebase_granularity=0x1000, **project_kwargs)
             if not return_loader:
                 self._apply_all_hooks()
-            self.project.loader.main_object = self.project.loader.elfcore_object._main_object
+            self.project.loader._main_object = self.project.loader.elfcore_object._main_object
             return self.project if not return_loader else self.project.loader
 
         if return_loader:
