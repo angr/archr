@@ -1,14 +1,14 @@
-import contextlib
-import glob
-import logging
-import mmap
 import os
 import re
+import glob
+import mmap
 import shutil
 import signal
 import struct
-import subprocess
+import logging
 import tempfile
+import subprocess
+import contextlib
 
 from io import BytesIO
 
@@ -99,13 +99,20 @@ _trace_new_re = re.compile(rb"Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P
 class QEMUTracerAnalyzer(ContextAnalyzer):
     REQUIRED_IMPLANT = "shellphish_qemu"
 
-    def __init__(self, target, timeout=10, ld_linux=None, ld_preload=None, library_path=None, seed=None, **kwargs):
+    def __init__(
+        self, target, timeout=10, ld_linux=None, ld_preload=None, library_path=None, seed=None, qemu_args=None, **kwargs
+    ):
         super().__init__(target, **kwargs)
         self.timeout = timeout
         self.ld_linux = ld_linux
         self.ld_preload = ld_preload
         self.library_path = library_path
         self.seed = seed
+        self.hackbind = qemu_args.pop("hackbind", False) if qemu_args else False
+        self.hackproc = qemu_args.pop("hackproc", False) if qemu_args else False
+        self.hacksysinfo = qemu_args.pop("hacksysinfo", False) if qemu_args else False
+        self.execve = qemu_args.pop("execve", False) if qemu_args else False
+        self.mmap_base = qemu_args.pop("mmap_base", False) if qemu_args else False
 
     def pickup_env(self):
         for e in self.target.target_env:
@@ -213,7 +220,7 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
                         if "coreaddr" in x.rsplit("_")[-1]:
                             tmp_halfway_core_path = x
 
-                    if tmp_crash_core_path is None and len(target_cores) == 1:
+                    if r.crashed and tmp_crash_core_path is None and len(target_cores) == 1:
                         tmp_crash_core_path = target_cores[0]
 
                     # sanity check core dumps
@@ -417,6 +424,18 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
 
         if self.library_path and not self.ld_linux:
             cmd_args += ["-E", "LD_LIBRARY_PATH=" + self.library_path]
+
+        # Greenhouse related hacks
+        if self.hackbind:
+            cmd_args += ["-hackbind"]
+        if self.hackproc:
+            cmd_args += ["-hackproc"]
+        if self.hacksysinfo:
+            cmd_args += ["-hacksysinfo"]
+        if self.execve:
+            cmd_args += ["-execve", self.execve]
+        if self.mmap_base:
+            cmd_args += ["-S", hex(self.mmap_base)]
 
         # now set up the loader
         if self.ld_linux:
