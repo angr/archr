@@ -99,8 +99,17 @@ _trace_new_re = re.compile(rb"Trace (.*) \[(?P<something1>.*)\/(?P<addr>.*)\/(?P
 class QEMUTracerAnalyzer(ContextAnalyzer):
     REQUIRED_IMPLANT = "shellphish_qemu"
 
-    def __init__(self, target, timeout=10, ld_linux=None, ld_preload=None, library_path=None, seed=None, qemu_args=None,
-                shell=False, **kwargs
+    def __init__(
+        self,
+        target,
+        timeout=10,
+        ld_linux=None,
+        ld_preload=None,
+        library_path=None,
+        seed=None,
+        qemu_args=None,
+        shell=False,
+        **kwargs,
     ):
         super().__init__(target, **kwargs)
         self.timeout = timeout
@@ -108,11 +117,11 @@ class QEMUTracerAnalyzer(ContextAnalyzer):
         self.ld_preload = ld_preload
         self.library_path = library_path
         self.seed = seed
-        self.hackbind = qemu_args.pop('hackbind', False) if qemu_args else False
-        self.hackproc = qemu_args.pop('hackproc', False) if qemu_args else False
-        self.hacksysinfo = qemu_args.pop('hacksysinfo', False) if qemu_args else False
-        self.execve = qemu_args.pop('execve', False) if qemu_args else False
-        self.mmap_base = qemu_args.pop('mmap_base', False) if qemu_args else False
+        self.hackbind = qemu_args.pop("hackbind", False) if qemu_args else False
+        self.hackproc = qemu_args.pop("hackproc", False) if qemu_args else False
+        self.hacksysinfo = qemu_args.pop("hacksysinfo", False) if qemu_args else False
+        self.execve = qemu_args.pop("execve", False) if qemu_args else False
+        self.mmap_base = qemu_args.pop("mmap_base", False) if qemu_args else False
         self.shell = shell
 
     def pickup_env(self):

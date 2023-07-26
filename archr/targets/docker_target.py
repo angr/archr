@@ -158,8 +158,7 @@ class DockerImageTarget(Target):
         else:
             use_init = self.use_init
 
-        l.debug("Running docker with arguments (image=%s, name=%s, entrypoint=%s)",
-                self.image, name, entry_point)
+        l.debug("Running docker with arguments (image=%s, name=%s, entrypoint=%s)", self.image, name, entry_point)
         try:
             self.container = self._client.containers.run(
                 self.image,
@@ -498,8 +497,7 @@ class DockerImageTarget(Target):
         if shell == True:
             cmd = " ".join(docker_args + args)
             return subprocess.Popen(
-                cmd, stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0,
-                shell=True
+                cmd, stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0, shell=True
             )  # pylint:disable=consider-using-with
             pass
         else:
