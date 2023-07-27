@@ -158,6 +158,7 @@ class DockerImageTarget(Target):
         else:
             use_init = self.use_init
 
+        l.debug("Running docker with arguments (image=%s, name=%s, entrypoint=%s)", self.image, name, entry_point)
         try:
             self.container = self._client.containers.run(
                 self.image,
@@ -463,6 +464,7 @@ class DockerImageTarget(Target):
         stderr=subprocess.PIPE,
         use_qemu=False,
         privileged=False,
+        shell=False,
     ):  # pylint:disable=arguments-differ
         if self.container is None:
             raise ArchrError("target.start() must be called before target.run_command()")
@@ -490,11 +492,18 @@ class DockerImageTarget(Target):
             docker_args += ["-u", user]
         docker_args.append(self.container.id)
 
-        l.debug("running command: %s", docker_args + args)
+        l.debug("running command: %s, shell=%s", docker_args + args, shell)
 
-        return subprocess.Popen(
-            docker_args + args, stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
-        )  # pylint:disable=consider-using-with
+        if shell == True:
+            cmd = " ".join(docker_args + args)
+            return subprocess.Popen(
+                cmd, stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0, shell=True
+            )  # pylint:disable=consider-using-with
+            pass
+        else:
+            return subprocess.Popen(
+                docker_args + args, stdin=stdin, stdout=stdout, stderr=stderr, bufsize=0
+            )  # pylint:disable=consider-using-with
 
     def run_companion_command(
         self, args, env=None, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
