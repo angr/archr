@@ -10,6 +10,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 from common import build_container
 
+have_bintrace_qemu = archr.analyzers.bintrace_qemu_tracer.have_bintrace_qemu
+
 
 class TestAnalyzerBintraceQemu(unittest.TestCase):
     @classmethod
@@ -17,14 +19,14 @@ class TestAnalyzerBintraceQemu(unittest.TestCase):
         build_container("crasher")
         build_container("crash-on-input")
 
-    @unittest.skip("broken")
+    @unittest.skipUnless(have_bintrace_qemu, "bintrace-qemu not installed")
     def test_implant_injection_docker(self):
         with archr.targets.DockerImageTarget("archr-test:crasher").build().start() as t:
             archr.analyzers.BintraceQEMUTracerAnalyzer(t)
             fire_path = os.path.join(t.tmpwd, "bintrace_qemu", "fire")
             assert t.retrieve_contents(fire_path).startswith(b"#!/bin/sh")
 
-    @unittest.skip("broken")
+    @unittest.skipUnless(have_bintrace_qemu, "bintrace-qemu not installed")
     def test_implant_injection_local(self):
         with archr.targets.LocalTarget(
             [os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher")]
@@ -33,7 +35,6 @@ class TestAnalyzerBintraceQemu(unittest.TestCase):
             fire_path = os.path.join(t.tmpwd, "bintrace_qemu", "fire")
             assert t.retrieve_contents(fire_path).startswith(b"#!/bin/sh")
 
-    @unittest.skip("broken")
     def crasher_checks(self, t):
         b = archr.analyzers.BintraceQEMUTracerAnalyzer(t)
         r = b.fire()
@@ -43,7 +44,6 @@ class TestAnalyzerBintraceQemu(unittest.TestCase):
         assert r.crashed
         assert r.signal == signal.SIGSEGV
 
-    @unittest.skip("broken")
     def crash_on_input_checks(self, t):
         crashing = b"A" * 120
         b = archr.analyzers.BintraceQEMUTracerAnalyzer(t)
@@ -54,17 +54,17 @@ class TestAnalyzerBintraceQemu(unittest.TestCase):
 
         assert flight.result.crashed
 
-    @unittest.skip("broken")
+    @unittest.skipUnless(have_bintrace_qemu, "bintrace-qemu not installed")
     def test_crasher_trace(self):
         with archr.targets.DockerImageTarget("archr-test:crasher").build().start() as t:
             self.crasher_checks(t)
 
-    @unittest.skip("broken")
+    @unittest.skipUnless(have_bintrace_qemu, "bintrace-qemu not installed")
     def test_crash_on_input_trace(self):
         with archr.targets.DockerImageTarget("archr-test:crash-on-input").build().start() as t:
             self.crash_on_input_checks(t)
 
-    @unittest.skip("broken")
+    @unittest.skipUnless(have_bintrace_qemu, "bintrace-qemu not installed")
     def test_crasher_trace_local(self):
         with archr.targets.LocalTarget(
             [os.path.realpath(os.path.join(os.path.dirname(__file__), "dockers", "crasher", "crasher"))]

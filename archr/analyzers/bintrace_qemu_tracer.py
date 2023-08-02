@@ -7,6 +7,7 @@ import shutil
 import glob
 import re
 import os
+import importlib
 
 from io import BytesIO
 
@@ -20,6 +21,12 @@ if _angr_available:
     import angr
 
 from ..utils import filter_strace_output, get_file_maps
+
+
+try:
+    have_bintrace_qemu = importlib.import_module("bintrace-qemu")
+except ModuleNotFoundError:
+    have_bintrace_qemu = False
 
 
 class BintraceQEMUTracerError(BaseException):
