@@ -180,7 +180,7 @@ class DockerImageTarget(Target):
                 volumes=self.volumes,
                 network_mode=self.network_mode,
                 network=self.network,
-                init=use_init
+                init=use_init,
                 # network_mode='bridge', ports={11111:11111, self.target_port:self.target_port}
             )
         except APIError as e:
