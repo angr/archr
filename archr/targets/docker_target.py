@@ -68,7 +68,7 @@ class DockerImageTarget(Target):
 
         self._client = docker.client.from_env()
 
-        if pull:
+        if pull and not self._client.images.list(self.image_id):
             self._pull()
 
         # If we're running in docker-by-docker, default the network to the same network
