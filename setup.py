@@ -9,7 +9,6 @@ import pathlib
 from distutils.command.build import build as st_build
 from distutils.util import get_platform
 
-import pkg_resources
 from setuptools import Command, setup
 from setuptools.command.develop import develop as st_develop
 from setuptools.errors import LibError
