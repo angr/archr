@@ -6,7 +6,6 @@ import logging
 
 from . import ContextAnalyzer
 
-
 l = logging.getLogger("archr.analyzers.tcpdump")
 
 

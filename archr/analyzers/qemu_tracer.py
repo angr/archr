@@ -12,7 +12,6 @@ import contextlib
 
 from io import BytesIO
 
-
 l = logging.getLogger("archr.analyzers.qemu_tracer")
 
 from . import ContextAnalyzer

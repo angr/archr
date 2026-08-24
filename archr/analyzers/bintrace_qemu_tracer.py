@@ -11,7 +11,6 @@ import importlib
 
 from io import BytesIO
 
-
 l = logging.getLogger(__file__)
 
 from . import ContextAnalyzer
@@ -21,7 +20,6 @@ if _angr_available:
     import angr
 
 from ..utils import filter_strace_output, get_file_maps
-
 
 try:
     have_bintrace_qemu = importlib.import_module("bintrace-qemu")

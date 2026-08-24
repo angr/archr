@@ -60,7 +60,6 @@ import logging
 from ply import lex
 from ply import yacc
 
-
 l = logging.getLogger("archr.strace_parser")
 
 tokens = (

@@ -3,7 +3,6 @@ import logging
 
 from .actions import OpenChannelAction
 
-
 l = logging.getLogger("archr.target.flight")
 
 
