@@ -12,7 +12,6 @@ from . import Target
 from docker.errors import APIError
 from ..errors import ArchrValueError
 
-
 docker = None
 
 l = logging.getLogger("archr.target.docker_target")
